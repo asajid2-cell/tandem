@@ -1,17 +1,14 @@
 # tandem
 
-**Make any coding-agent session dual-driven.** You keep driving your main agent (Claude or
-Codex) exactly as you do now — but it gains a **true co-engineer**: the *other* model, working
-the same problem in parallel from an independent vantage, cross-checking findings, and catching
-the blind spots one model can't see on its own.
+**Make any coding-agent session dual-driven.** You drive your main agent (Claude or Codex) as
+usual; it pulls in the *other* model as a real co-engineer — working the same problem from an
+independent vantage, cross-checking your findings, and catching the blind spots one model can't
+see on its own. The partner is a coupled, resumable session, and a local dashboard lets you watch
+both sides think in real time.
 
-tandem is the *in-session pairing* primitive: drive one agent as you normally do, and it brings
-in the other model as a coupled, resumable co-engineer — with a local web dashboard to watch both
-sides think in real time.
-
-**Status:** working, used daily on Windows (Node + the Claude Code and Codex CLIs). Personal /
-educational tool, no support guarantee. **Requirements:** Node 18+, the `claude` and/or `codex`
-CLIs installed and logged in.
+**Status:** working; used daily on Windows (Node + the Claude Code and Codex CLIs). A personal,
+educational tool with no support guarantee. **Requirements:** Node 18+ and the `claude` and/or
+`codex` CLIs, installed and logged in.
 
 ## See it work
 
@@ -20,11 +17,10 @@ tandem timeline of every delegation and verdict below:
 
 ![tandem watcher: Claude and Codex side by side](docs/assets/hero.png)
 
-**A tool, not a toy — the second model catches what one model can't see from its own vantage.**
-In a real renderer-performance session, Claude's source analysis *and* a fresh, independent Codex read
-both ranked the same fix first; an earlier Codex session that **measured the runtime** found the real
-dominant cost was something both source analyses had missed — and the workflow's fix correctly targets
-it. Measurement beat theory, and the holes-coverage gate held:
+**The second model catches what the first can't see from its own vantage.** In a real
+renderer-performance session, Claude's source analysis and an independent Codex read both ranked the
+same fix first — but a separate Codex session that actually *measured the runtime* found the dominant
+cost was something both source reads had missed. Measurement beat theory:
 
 ![Claude: two independent source analyses missed the real cost — only measurement caught it](docs/assets/why-second-brain.png)
 
@@ -32,44 +28,41 @@ it. Measurement beat theory, and the holes-coverage gate held:
 > and only the empirical measurement caught it … the exact lesson the tandem method is built on:
 > measurement beats source theory."
 
-And it produces measurable wins, not demos. The moving-ground perf fix the two models converged on
-shipped and benched — median **40 → 50 → 90 fps**, the cell-cross hitch cut from **74 ms to 13 ms** —
-after the agent reverted to clean `HEAD` and proved the change was coverage-safe (zero new holes):
+The fix the two models converged on shipped and benched: median **40 → 50 → 90 fps**, the frame
+hitch cut from **74 ms to 13 ms** — after the agent reverted to a clean baseline and proved the
+change introduced no regressions:
 
 ![Before/after fps table: median 40→50→90, p95 16→28→54, cell-cross hitch 74ms→13ms](docs/assets/real-result.png)
 
 > "This is a real milestone — and the tandem made the difference."
 
-**At its best, the two minds find _different_ bugs — independently.** Still the same VENPOD session,
-now chasing the last altitude-water artifact: Claude and Codex each found a *different* real bug on
-their own — a terrain-reshape residency latch that never arms when you start at altitude (Claude), and
-six water-fallback guards testing the *un-reshaped* height, misclassifying the new continent as
-below-sea (Codex). The two fixes are **complementary**: the guard fix can't even see the reshape at
-altitude without the latch fix, and neither model would likely have found both alone. That is the whole
-premise of tandem in a single moment:
+**At its best, the two models find _different_ bugs — independently.** Later in the same session,
+chasing one last rendering artifact, Claude and Codex each tracked down a *different* real bug on
+their own. The two fixes turned out to be **complementary** — one couldn't even be observed without
+the other — and neither model would likely have found both alone. That is the whole premise of
+tandem in a single moment:
 
 ![Claude's account of the tandem's best work — it and Codex independently found two different, complementary bugs; neither would have found both alone](docs/assets/complementary-bugs.png)
 
-The payoff is a real workflow, not a demo: the ground walk became a clean, believable solid continent —
-no water-ring, no fragments, coherent hazy horizon — and both fixes went into the tree together, building
-and crash-gated, ahead of the full stitched release verification across headings and altitudes.
+Both fixes landed together and held up in the running build, the artifact gone. That is the loop
+tandem is built for: two independent reads, a real disagreement, ground-truth settling it.
 
 <sub>Captures are from real sessions; local paths and identifiers are sanitized in the rendered images, not the work.</sub>
 
 ## Why
 
-One model reasons from its strengths and misses its weaknesses. Two models from different
-vantages **disagree where it matters**, and that disagreement is the signal. Proven on a real
-Black-Ops-2 (T6) renderer crash: the Claude side reasoned from source and theorized an
-out-of-bounds index; the Codex side, from the live debugger, proved a *valid* pointer with a
-null field — the **contradiction** exposed the true root cause, and the runtime ground-truth
-corrected the source theory. Neither found it alone.
+One model reasons from its strengths and misses its weaknesses. Two models, working from different
+vantages, **disagree where it matters** — and that disagreement is the signal. In a real crash deep
+in a large game engine, the Claude side reasoned from the source and theorized an out-of-bounds
+index; the Codex side, reading the live debugger, found a *valid* pointer with a null field. The
+**contradiction** is what exposed the true cause: the runtime evidence corrected the source theory,
+and neither side would have found it alone.
 
 ## What's here
 
-- **`bin/peer.mjs`** — the bridge. Delegate a turn to the partner and get back its verdict +
-  a digest of what it did (commands, files, tokens). Resumes one continuous partner session.
-  No more hand-rolled `node -e "...parse rollout jsonl..."`.
+- **`bin/peer.mjs`** — the bridge. Delegate a turn to the partner and get back its verdict plus
+  a digest of what it did (commands, files, tokens). It resumes one continuous partner session,
+  so you never hand-parse session logs.
 - **`SKILL.md`** — the invokable skill that flips a session into dual-driven mode and teaches
   the method (independent vantages → cross-check → ground-truth-wins → converge/diverge).
 - **`tandem.config.json`** — partner, binary path, working dir, posture.
@@ -117,7 +110,7 @@ session (`peer.mjs new`).
 ## Bidirectional — full, persistent, resumable sessions both ways
 
 Neither partner is an ephemeral subagent. Each is a **real session that persists and can be
-reopened anytime**, continuing the same conversation — exactly like Claude↔Codex in the T6 work.
+reopened anytime**, continuing the same conversation across turns, restarts, and reboots.
 
 | driver | partner | session | invoke |
 |---|---|---|---|

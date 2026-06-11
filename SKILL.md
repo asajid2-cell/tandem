@@ -10,11 +10,11 @@ model) as a true co-engineer. The partner is NOT a disposable subagent you hand 
 It is a peer that reasons alongside you, works in parallel, and exists to **catch the
 mistakes you can't see** — because it analyzes from a different vantage than you.
 
-This works because each model has different strengths. In practice (proven on a real T6
-renderer crash): the Claude side reasoned best from **source/architecture**, the Codex
-side from **runtime/empirical evidence** (debugger, builds, captures). Neither alone found
-the bug; the **contradiction between their two findings** is what exposed it, and Codex's
-runtime ground-truth corrected Claude's source theory. That is the entire point.
+This works because each model has different strengths. In a real game-engine renderer crash,
+the Claude side reasoned best from **source/architecture**, the Codex side from
+**runtime/empirical evidence** (debugger, builds, captures). Neither alone found the bug; the
+**contradiction between their two findings** is what exposed it, and Codex's runtime
+ground-truth corrected Claude's source theory. That is the entire point.
 
 ## The bridge
 

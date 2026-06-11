@@ -4,7 +4,7 @@ Codex doesn't read Claude Code skills, so to make a **Codex** session dual-drive
 these instructions (paste into the task, or add to your `AGENTS.md`). The partner is **Claude**,
 running as a **persistent, resumable session** on the **subscription** (never the API), in **bypass**
 mode (never stops). It is NOT an ephemeral subagent — it's a continuous session you keep open and
-can reopen anytime, exactly like Claude kept a Codex session open in the T6 work.
+can reopen anytime, continuing the same conversation across turns.
 
 ## Setup (once)
 - `tandem.config.json` → set `claudeBin` to your Claude Code binary.
