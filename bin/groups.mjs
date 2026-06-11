@@ -13,6 +13,25 @@ export function readGroups(file) {
   }
 }
 
+// "Detached" drivers: `peer.mjs new` stamps a driver id with the current time so the
+// partner lookup ignores any pairing recorded at/before that stamp. This forces a genuinely
+// fresh thread on the next turn (the old pairing stays in history), and once a fresh turn
+// records a NEW pair (lastTs > stamp) the lookup re-couples to it automatically.
+export function readDetached(file) {
+  if (!existsSync(file)) return {};
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return {};
+  }
+}
+export function markDetached(file, driverId) {
+  if (!driverId) return;
+  const d = readDetached(file);
+  d[driverId] = Date.now();
+  writeFileSync(file, JSON.stringify(d));
+}
+
 // Upsert a pair. Key is the (claude,codex) id pair, so the same pairing always maps
 // to the same group number across turns. Returns the group record.
 export function recordGroup(file, { claudeId, codexId, claudeRole, codexRole, direction, label }) {

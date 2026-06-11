@@ -21,12 +21,13 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { recordGroup, readGroups } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached, markDetached } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
 const STATE = join(ROOT, ".state");
 const SESSION_FILE = join(STATE, "peer.session");
+const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const LASTMSG = join(STATE, "last.txt");
 const TURNLOG = join(STATE, "turn.jsonl");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl"); // collaboration timeline for the watcher
@@ -131,8 +132,9 @@ function readSession() {
 function codexPartnerFor(driverId) {
   if (!driverId) return "";
   const g = readGroups(GROUPS);
+  const since = readDetached(DETACHED)[driverId] || 0; // ignore pairings reset by `new`
   const m = Object.values(g.groups || {})
-    .filter((r) => r.claudeId === driverId && r.codexId)
+    .filter((r) => r.claudeId === driverId && r.codexId && (r.lastTs || 0) > since)
     .sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
   return m[0]?.codexId || "";
 }
@@ -568,7 +570,18 @@ else if (cmd === "new") {
     }
   }
   for (const f of [SESSION_FILE, CLAUDE_SESSION, CLAUDE_VERDICT, JOB, JOB_TASK]) if (existsSync(f)) rmSync(f);
-  console.log("tandem: session forgotten + daemon closed; next ask starts a fresh session (new tandem group)");
+  // The coupling lives in groups.json (codexPartnerFor / claudePartnerFor), not just the
+  // files above — so detach this driver too, or the next ask re-resumes the same thread.
+  const driverId =
+    cfg.partner === "claude"
+      ? process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || ""
+      : process.env.CLAUDE_CODE_SESSION_ID || "";
+  markDetached(DETACHED, driverId);
+  console.log(
+    driverId
+      ? `tandem: forgotten + daemon closed; driver ${String(driverId).slice(0, 8)} detached — next ask starts a genuinely fresh thread`
+      : "tandem: session forgotten + daemon closed; next ask starts a fresh session (new tandem group)",
+  );
 } else {
   console.log(
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +

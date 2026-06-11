@@ -13,7 +13,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
-import { recordGroup, readGroups } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -27,6 +27,7 @@ const PID = join(STATE, "serve.pid");
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
 const GROUPS = join(STATE, "groups.json");
+const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const CODEX_DRIVER_ID =
   process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
 
@@ -60,8 +61,9 @@ const env = scrubbedClaudeEnv(process.env);
 function claudePartnerFor(codexId) {
   if (!codexId) return "";
   const g = readGroups(GROUPS);
+  const since = readDetached(DETACHED)[codexId] || 0; // ignore pairings reset by `new`
   const m = Object.values(g.groups || {})
-    .filter((r) => r.codexId === codexId && r.claudeId)
+    .filter((r) => r.codexId === codexId && r.claudeId && (r.lastTs || 0) > since)
     .sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
   return m[0]?.claudeId || "";
 }
