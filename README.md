@@ -40,15 +40,19 @@ after the agent reverted to clean `HEAD` and proved the change was coverage-safe
 
 > "This is a real milestone — and the tandem made the difference."
 
-**A co-engineer, not a rubber stamp** — the driver's own account of what the partner contributed:
+**At its best, the two minds find _different_ bugs — independently.** Still the same VENPOD session,
+now chasing the last altitude-water artifact: Claude and Codex each found a *different* real bug on
+their own — a terrain-reshape residency latch that never arms when you start at altitude (Claude), and
+six water-fallback guards testing the *un-reshaped* height, misclassifying the new continent as
+below-sea (Codex). The two fixes are **complementary**: the guard fix can't even see the reshape at
+altitude without the latch fix, and neither model would likely have found both alone. That is the whole
+premise of tandem in a single moment:
 
-> What Codex actually contributed: two independent source-only analyses — mine and a fresh read-only
-> Codex pass — both blamed the interest rebuild, and both were wrong. Only when Codex added timers and
-> *measured* did the real culprit surface: a single-threaded height-tile pump doing ~17,000
-> terrain-height calls per frame. The fix (parallelize it) follows directly from that measurement;
-> pure code-reading would never have found it. Codex also caught a genuine flaw in my plan — the
-> "just update the edge" shortcut I floated would have silently broken coverage. It's co-credited on
-> the commit, and the reasoning is preserved in `TANDEM.md`.
+![Claude's account of the tandem's best work — it and Codex independently found two different, complementary bugs; neither would have found both alone](docs/assets/complementary-bugs.png)
+
+The payoff is a real workflow, not a demo: the ground walk became a clean, believable solid continent —
+no water-ring, no fragments, coherent hazy horizon — and both fixes went into the tree together, building
+and crash-gated, ahead of the full stitched release verification across headings and altitudes.
 
 <sub>Captures are from real sessions; local paths and identifiers are sanitized in the rendered images, not the work.</sub>
 
