@@ -190,7 +190,7 @@ setInterval(() => {
   } catch {
     /* ignore */
   }
-  log({ type: "delegate", ts: Date.now(), driver: "codex", partner: "claude", task });
+  log({ type: "delegate", ts: Date.now(), driver: "codex", partner: "claude", driverId: CODEX_DRIVER_ID || "", partnerId: sessionId || "", task });
   if (sessionId) recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
   console.log(`  ▸ turn: ${task.replace(/\s+/g, " ").slice(0, 80)}`);
   claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: task }] } }) + "\n");

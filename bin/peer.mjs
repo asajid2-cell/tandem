@@ -189,14 +189,16 @@ async function ask(task, cfg) {
   }
   // Claude partner → persistent, resumable session via the daemon (logs its own events)
   if (cfg.partner === "claude") return askClaudeDaemon(task, cfg, false);
-  // Codex partner → durable, resumable `codex exec resume`, coupled to this driver
-  const driverId = pairCodexForDriver();
-  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", task });
-  // only record now if the codex partner is already known (resumed pair); for a FRESH
-  // pair the id doesn't exist yet — record after askCodex to avoid a null placeholder group
-  const knownCodex = readSession();
-  if (knownCodex) recordGroup(GROUPS, { claudeId: driverId, codexId: knownCodex, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
-  const res = await askCodex(task, cfg);
+  // Codex partner → durable, resumable `codex exec resume`, coupled to this driver.
+  // The resume target comes from the IMMUTABLE recorded pair (codexPartnerFor), never the
+  // shared global — so concurrent tandems can't cross-wire to each other's Codex.
+  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const resumeSid = codexPartnerFor(driverId);
+  pairCodexForDriver(); // keep the global peer.session current for the watcher's display only
+  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", driverId, partnerId: resumeSid, task });
+  // record now if the pair is already known (resumed); a fresh pair records after askCodex
+  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+  const res = await askCodex(task, cfg, resumeSid);
   if (res) {
     printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
     logEvent({
@@ -209,14 +211,9 @@ async function ask(task, cfg) {
       files: res.d?.files || [],
       tokens: res.d?.tokens || null,
     });
-    // register/refresh this Claude→Codex pair as a tandem group (codex id now known)
-    recordGroup(GROUPS, {
-      claudeId: driverId,
-      codexId: readSession(),
-      claudeRole: "driver",
-      codexRole: "partner",
-      direction: "claude->codex",
-    });
+    // register/refresh this exact pair — codexId is the ACTUAL codex this turn used/created
+    const cdx = res.codexId || resumeSid;
+    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
   }
 }
 
@@ -282,12 +279,19 @@ async function startJob(task, cfg) {
   ensureState();
   // Claude partner → relay into the persistent open session (daemon does the work)
   if (cfg.partner === "claude") return askClaudeDaemon(task, cfg, true);
-  // Codex partner → detached exec-resume worker (resumable session, survives shell timeouts)
-  pairCodexForDriver(); // couple: the worker resumes this driver's codex partner
+  // Codex partner → detached exec-resume worker (resumable session, survives shell timeouts).
+  // Pass the driver id + IMMUTABLE resume id (from the recorded pair) + task path by ARGV so
+  // concurrent bg tandems are fully isolated and can NEVER cross-wire via shared global files.
+  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const resumeSid = codexPartnerFor(driverId);
+  pairCodexForDriver(); // keep the global peer.session current for the watcher's display only
+  // record on delegate if the pair is already known (resumed) so it shows live DURING the turn
+  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
   for (const f of [TURNLOG, LASTMSG]) if (existsSync(f)) rmSync(f);
-  writeFileSync(JOB_TASK, task);
-  writeFileSync(JOB, JSON.stringify({ status: "running", partner: "codex", ts: Date.now() }));
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "__runjob"], {
+  const taskFile = join(STATE, "job-" + (driverId || "anon").replace(/[^a-zA-Z0-9-]/g, "") + ".task");
+  writeFileSync(taskFile, task);
+  writeFileSync(JOB, JSON.stringify({ status: "running", partner: "codex", driverId, ts: Date.now() }));
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "__runjob", driverId, resumeSid, taskFile], {
     detached: true,
     stdio: "ignore",
     env: process.env,
@@ -296,18 +300,22 @@ async function startJob(task, cfg) {
   console.log(`tandem: codex turn started in background (pid ${child.pid}). poll: peer.mjs status  ·  block: peer.mjs wait`);
 }
 
-async function runJob(cfg) {
+async function runJob(cfg, jobArgv) {
+  // self-contained from argv (race-free): [driverId, resumeSid, taskFile]
+  const driverId = jobArgv[0] || process.env.CLAUDE_CODE_SESSION_ID || "";
+  const resumeSid = jobArgv[1] || "";
+  const taskFile = jobArgv[2] || JOB_TASK;
   let task = "";
   try {
-    task = readFileSync(JOB_TASK, "utf8");
+    task = readFileSync(taskFile, "utf8");
   } catch {
     return;
   }
   // background worker is codex-only (claude bg goes through the persistent daemon)
-  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", task });
+  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", driverId, partnerId: resumeSid, task });
   let res = null;
   try {
-    res = await askCodex(task, cfg);
+    res = await askCodex(task, cfg, resumeSid);
   } catch (e) {
     writeFileSync(JOB, JSON.stringify({ status: "error", partner: "codex", error: String(e), ts: Date.now() }));
     return;
@@ -316,7 +324,17 @@ async function runJob(cfg) {
     ? { status: "done", partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null, ts: Date.now() }
     : { status: "error", partner: "codex", ts: Date.now() };
   writeFileSync(JOB, JSON.stringify(job));
-  if (res) logEvent({ type: "verdict", ts: Date.now(), partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null });
+  if (res) {
+    // Register the EXACT pair: the real driver ↔ the actual codex this turn used/created.
+    const cdx = res.codexId || resumeSid;
+    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+    logEvent({ type: "verdict", ts: Date.now(), partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null });
+  }
+  try {
+    if (taskFile !== JOB_TASK) rmSync(taskFile);
+  } catch {
+    /* ignore */
+  }
 }
 
 function jobState() {
@@ -346,8 +364,10 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function askCodex(task, cfg) {
-  const sid = readSession();
+async function askCodex(task, cfg, sidOverride) {
+  // resume id is passed in per-turn (immutable, from the recorded pair) so concurrent
+  // tandems can't cross-wire via the shared global; fall back to the global only if absent.
+  const sid = sidOverride !== undefined ? sidOverride : readSession();
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];
@@ -363,18 +383,22 @@ async function askCodex(task, cfg) {
 
   // capture the session id for continuity — only on a successful fresh run, and
   // only from THIS run (parse the stream first; fall back to a rollout created now)
+  let codexId = sid || "";
   if (!sid && code === 0) {
     let id = parseSessionId(out);
     if (!id) {
       const roll = newestRollout();
       if (roll && statSync(roll).mtimeMs >= t0 - 1000) id = idFromRolloutName(roll);
     }
-    if (id) writeFileSync(SESSION_FILE, id);
+    if (id) {
+      codexId = id;
+      writeFileSync(SESSION_FILE, id); // global, for the watcher's display only
+    }
   }
 
   const verdict = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
   const d = digest(out);
-  return { verdict, d, dur, raw: out };
+  return { verdict, d, dur, raw: out, codexId }; // codexId = the EXACT codex this turn used/created
 }
 
 function runCodex(bin, args, stdin) {
@@ -479,7 +503,7 @@ if (cmd === "ask") {
   if (bg) await startJob(task, cfg);
   else await ask(task, cfg);
 } else if (cmd === "__runjob") {
-  await runJob(cfg); // internal: the detached background worker (codex)
+  await runJob(cfg, argv); // internal: the detached background worker (codex) — argv = [driverId, resumeSid, taskFile]
 } else if (cmd === "serve") {
   // Open the persistent, resumable Claude session in the foreground (Ctrl+C to close).
   spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: process.env }).on("exit", (c) => process.exit(c || 0));
