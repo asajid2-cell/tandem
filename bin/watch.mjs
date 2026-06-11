@@ -7,7 +7,7 @@
 //   node bin/watch.mjs            # serves + opens browser (port 8799)
 //   node bin/watch.mjs 9000       # custom port
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync, utimesSync } from "node:fs";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -23,7 +23,7 @@ const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const PEER_SESSION = join(STATE, "peer.session"); // current codex partner (for live synthesis)
 const GROUPS = join(STATE, "groups.json");
-const LIVE_MS = 30 * 60 * 1000; // a tandem counts as "live/connected" if used within this window (or daemon held); older → history
+const LIVE_MS = 60 * 60 * 1000; // a tandem is "live/active" if either session was written within this window (or daemon held); older → history
 const SERVE_PID = join(STATE, "serve.pid");
 const META = join(STATE, "session_meta.json"); // local rename / star / archive per session
 const PORT = Number(process.argv[2]) || 8799;
@@ -68,14 +68,44 @@ function newId() {
   return "p" + Math.abs(Date.now() % 1e9).toString(36) + Math.floor(Math.random() * 1e6).toString(36);
 }
 
-// ---- bump up: resume an old session with a summary prompt → resurfaces it (mtime)
-// AND returns the context the agent still holds. claude = subscription (env-scrubbed,
-// bypass); codex = exec resume. ----
+// ---- bump up: bring an old chat back to the top + remind us of its context ----
+// Two parts, so it NEVER just fails: (1) RESURFACE by touching the session file's mtime —
+// works for any chat regardless of project, and surfaces it in the watcher AND the native
+// CLI resume list; (2) BEST-EFFORT summary by resuming it in ITS OWN cwd (claude --resume is
+// project-scoped, so resuming from the wrong folder is exactly what was erroring before).
 const BUMP_PROMPT =
   "Briefly (3-5 sentences) summarize what we were last working on in this session and where we left off, so I can pick it back up. Don't take any actions.";
+// derive a session's own working dir from its transcript so `--resume` can find it
+function sessionCwd(kind, file) {
+  const m = /"cwd"\s*:\s*"((?:[^"\\]|\\.)*)"/.exec(head(file, 16384));
+  if (!m) return "";
+  try {
+    return JSON.parse('"' + m[1] + '"');
+  } catch {
+    return m[1];
+  }
+}
 function bump(kind, id) {
+  let f = SESS_CACHE[kind][id];
+  if (!f) {
+    listSessions(kind);
+    f = SESS_CACHE[kind][id];
+  }
+  if (!f) return Promise.resolve({ ok: false, error: "session file not found" });
+  // (1) RESURFACE — guaranteed: touch mtime so it sorts to the very top everywhere.
+  let resurfaced = false;
+  try {
+    const now = new Date();
+    utimesSync(f, now, now);
+    resurfaced = true;
+  } catch {
+    /* ignore */
+  }
+  // (2) BEST-EFFORT summary — resume in the session's own cwd; if it errors/times out the
+  // bump still succeeded (already resurfaced).
   return new Promise((resolveP) => {
     const c = cfg();
+    const cwd = sessionCwd(kind, f) || c.cwd || process.cwd();
     let bin, args, env;
     if (kind === "claude") {
       bin = process.env.TANDEM_CLAUDE_BIN || c.claudeBin || "claude";
@@ -86,16 +116,28 @@ function bump(kind, id) {
       args = ["exec", "resume", id, "--json", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox", BUMP_PROMPT];
       env = process.env;
     }
+    const done = (summary) => resolveP({ ok: true, resurfaced, summary });
     let out = "";
     let child;
     try {
-      child = spawn(bin, args, { cwd: c.cwd || process.cwd(), env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+      child = spawn(bin, args, { cwd, env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
     } catch (e) {
-      return resolveP({ ok: false, error: String(e) });
+      return done("(resurfaced to the top — summary unavailable: " + (e.code || e.message) + ")");
     }
-    child.on("error", (e) => resolveP({ ok: false, error: String(e) }));
+    const killer = setTimeout(() => {
+      try {
+        child.kill();
+      } catch {
+        /* ignore */
+      }
+    }, 90000);
+    child.on("error", (e) => {
+      clearTimeout(killer);
+      done("(resurfaced to the top — summary unavailable: " + (e.code || e.message) + ")");
+    });
     child.stdout.on("data", (b) => (out += b.toString()));
     child.on("exit", () => {
+      clearTimeout(killer);
       let summary = "";
       try {
         if (kind === "claude") {
@@ -112,8 +154,8 @@ function bump(kind, id) {
       } catch {
         /* fall through */
       }
-      if (!summary) summary = out.split(/\r?\n/).filter(Boolean).slice(-1)[0]?.slice(0, 600) || "(no summary returned)";
-      resolveP({ ok: true, summary });
+      if (!summary) summary = out.split(/\r?\n/).filter(Boolean).slice(-1)[0]?.slice(0, 600) || "(resurfaced to the top — no summary returned; the session may be in another project)";
+      done(summary);
     });
   });
 }
@@ -296,6 +338,21 @@ function serveAlive() {
     return e.code === "EPERM";
   }
 }
+// mtime of a session's file = when it was last written = real "is it active" signal
+function sessionMtime(kind, id) {
+  if (!id) return 0;
+  let f = SESS_CACHE[kind][id];
+  if (!f) {
+    listSessions(kind);
+    f = SESS_CACHE[kind][id];
+  }
+  if (!f) return 0;
+  try {
+    return statSync(f).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
 function groupsList() {
   const g = readGroups(GROUPS);
   const claudeNow = read(CLAUDE_SESSION).trim();
@@ -303,7 +360,10 @@ function groupsList() {
   const alive = serveAlive();
   const now = Date.now();
   const out = Object.values(g.groups || {}).map((r) => {
-    const recent = now - (r.lastTs || 0) < LIVE_MS; // used within the live window
+    // LIVE = either of the pair's session files was written within the window (the
+    // sessions are actively working) OR a recent delegation OR the daemon holds it.
+    const activity = Math.max(r.lastTs || 0, r.firstTs || 0, sessionMtime("claude", r.claudeId), sessionMtime("codex", r.codexId));
+    const recent = now - activity < LIVE_MS;
     const daemonLive = alive && r.claudeId && r.claudeId === claudeNow;
     return {
       n: r.n,
@@ -311,7 +371,7 @@ function groupsList() {
       codexId: r.codexId || null,
       direction: r.direction || "",
       label: r.label || "",
-      lastTs: r.lastTs || r.firstTs || 0,
+      lastTs: activity, // real activity (session mtime or last delegation) → correct live/sort
       live: recent || daemonLive,
       claudeTitle: titleFor("claude", r.claudeId),
       codexTitle: titleFor("codex", r.codexId),
@@ -331,25 +391,38 @@ function groupsList() {
     }
   }
   if (lastDel && now - (lastDel.ts || 0) < LIVE_MS) {
-    const cId = lastDel.partner === "claude" ? claudeNow || null : null; // known partner; driver → auto
-    const xId = lastDel.partner === "codex" ? codexNow || null : null;
-    const match = out.find((r) => (cId && r.claudeId === cId) || (xId && r.codexId === xId));
-    if (match) {
-      match.live = true;
-      match.lastTs = Math.max(match.lastTs, lastDel.ts);
-    } else if (cId || xId) {
-      // only synthesize when we actually know one real partner id (no ghost entries)
-      out.push({
-        n: 0, // synthesized "forming" pair (not yet recorded)
-        claudeId: cId,
-        codexId: xId,
-        direction: (lastDel.driver || "?") + "->" + (lastDel.partner || "?"),
-        label: "forming…",
-        lastTs: lastDel.ts,
-        live: true,
-        claudeTitle: titleFor("claude", cId),
-        codexTitle: titleFor("codex", xId),
-      });
+    // Use the REAL ids the delegation recorded — NEVER "auto"/newest, which would glue the
+    // wrong Claude to the wrong Codex (the immutable-pair violation). Each delegate event
+    // carries driverId (the driving session) + partnerId (its coupled partner).
+    let cId = null;
+    let xId = null;
+    if (lastDel.partner === "codex") {
+      cId = lastDel.driverId || null; // the actual Claude driver
+      xId = lastDel.partnerId || codexNow || null;
+    } else if (lastDel.partner === "claude") {
+      cId = lastDel.partnerId || claudeNow || null;
+      xId = lastDel.driverId || null; // the actual Codex driver
+    }
+    // Only show a forming entry when we know BOTH halves of a real pair. If the delegate
+    // predates id-logging, skip — the recorded (immutable) group surfaces it via mtime instead.
+    if (cId && xId) {
+      const match = out.find((r) => r.claudeId === cId && r.codexId === xId); // exact immutable pair
+      if (match) {
+        match.live = true;
+        match.lastTs = Math.max(match.lastTs, lastDel.ts);
+      } else {
+        out.push({
+          n: 0, // synthesized "forming" pair (not yet recorded)
+          claudeId: cId,
+          codexId: xId,
+          direction: (lastDel.driver || "?") + "->" + (lastDel.partner || "?"),
+          label: "forming…",
+          lastTs: lastDel.ts,
+          live: true,
+          claudeTitle: titleFor("claude", cId),
+          codexTitle: titleFor("codex", xId),
+        });
+      }
     }
   }
   return out.sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.lastTs - a.lastTs);
@@ -504,6 +577,8 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>tandem · 
   .ddrow .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ddrow .nm.custom{font-style:italic;color:var(--rosesoft)}
   .ddrow .dt{color:var(--muted);font-size:11px;white-space:nowrap}
+  .ddrow .sid{color:var(--muted);font-size:10px;font-family:ui-monospace,monospace;opacity:.65;white-space:nowrap}
+  .ddmore{color:var(--muted);font-size:11px;text-align:center;padding:6px;font-style:italic}
   .ddrow .st{color:#4a4a52;font-size:16px;cursor:pointer;padding:0 2px;opacity:0}
   .ddrow:hover .st,.ddrow .st.on{opacity:1}
   .ddrow .st.on{color:var(--gold)}
@@ -548,7 +623,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>tandem · 
     <span class="picker"><button id="clink" title="copy deeplink to this chat">🔗</button><button id="cproj" title="add this chat to a project">📁</button><button id="cbump" title="bump up — resume + summarize to resurface an old chat">⤴</button><button id="cprev" title="previous session">◀</button>
       <div class="dd" id="dd-claude"><button class="ddbtn" id="ddbtn-claude">(auto · newest)</button>
         <div class="ddpop" id="ddpop-claude" hidden>
-          <div class="ddtools"><input class="ddsearch" id="ddsearch-claude" placeholder="filter…">
+          <div class="ddtools"><input class="ddsearch" id="ddsearch-claude" placeholder="filter by name or id…">
             <label class="cb"><input type="checkbox" id="ddstaronly-claude"> ★</label>
             <label class="cb"><input type="checkbox" id="ddarch-claude"> arch</label></div>
           <div class="ddlist" id="ddlist-claude"></div></div>
@@ -558,7 +633,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8"><title>tandem · 
     <span class="picker"><button id="xlink" title="copy deeplink to this chat">🔗</button><button id="xproj" title="add this chat to a project">📁</button><button id="xbump" title="bump up — resume + summarize to resurface an old chat">⤴</button><button id="xprev" title="previous session">◀</button>
       <div class="dd" id="dd-codex"><button class="ddbtn" id="ddbtn-codex">(auto · newest)</button>
         <div class="ddpop" id="ddpop-codex" hidden>
-          <div class="ddtools"><input class="ddsearch" id="ddsearch-codex" placeholder="filter…">
+          <div class="ddtools"><input class="ddsearch" id="ddsearch-codex" placeholder="filter by name or id…">
             <label class="cb"><input type="checkbox" id="ddstaronly-codex"> ★</label>
             <label class="cb"><input type="checkbox" id="ddarch-codex"> arch</label></div>
           <div class="ddlist" id="ddlist-codex"></div></div>
@@ -640,12 +715,14 @@ function selLabel(kind){const v=colSel[kind];if(v==="auto")return"(auto · newes
 function renderDropdown(kind){
   const btn=$("ddbtn-"+kind);btn.textContent=selLabel(kind);
   const cs=findS(kind,colSel[kind]);btn.style.fontStyle=(cs&&cs.name)?"italic":"normal";
-  const vis=visS(kind);
+  const vis=visS(kind);const CAP=1000;const shown=vis.slice(0,CAP);
   let html='<div class="ddrow'+(colSel[kind]==="auto"?" sel":"")+'" data-id="auto"><span class="nm">(auto · newest)</span></div>';
-  html+=vis.map(s=>'<div class="ddrow'+(s.id===colSel[kind]?" sel":"")+(s.archived?" arch":"")+'" data-id="'+s.id+'">'
+  html+=shown.map(s=>'<div class="ddrow'+(s.id===colSel[kind]?" sel":"")+(s.archived?" arch":"")+'" data-id="'+s.id+'" title="'+esc(s.id)+' — right-click to rename/star/archive/add-to-project/bump">'
     +'<span class="nm'+(s.name?" custom":"")+'">'+esc(s.name||s.title||"(session)")+'</span>'
+    +'<span class="sid">'+esc(s.id.slice(0,8))+'</span>'
     +'<span class="dt">'+fmtT(s.mtime)+'</span>'
-    +'<span class="st'+(s.starred?" on":"")+'" data-star="'+s.id+'">'+(s.starred?"★":"☆")+'</span></div>').join("");
+    +'<span class="st'+(s.starred?" on":"")+'" data-star="'+s.id+'" title="star">'+(s.starred?"★":"☆")+'</span></div>').join("");
+  if(vis.length>CAP)html+='<div class="ddmore">+'+(vis.length-CAP)+' more — type a name or id to filter</div>';
   $("ddlist-"+kind).innerHTML=html;
 }
 function openDD(kind,on){ddOpen[kind]=on;$("ddpop-"+kind).hidden=!on;if(on)renderDropdown(kind);}
@@ -726,9 +803,9 @@ const deeplink=(kind,id)=>location.origin+"/?"+kind+"="+id;
 const resumeCmd=(kind,id)=>kind==="claude"?("claude --resume "+id):("codex exec resume "+id);
 let toastT;function toast(msg){const el=$("toast");el.textContent=msg;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2400);}
 function copyText(t,msg){if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>toast(msg||"copied"),()=>toast("copy failed"));else toast(t);}
-async function doBump(kind,id){if(!id)return;toast("bumping "+kind+" "+id.slice(0,8)+"… (resume + summarize)");
+async function doBump(kind,id){if(!id)return;toast("bumping "+kind+" "+id.slice(0,8)+" to the top…");
   try{const r=await(await fetch("/bump?kind="+kind+"&id="+encodeURIComponent(id),{cache:"no-store"})).json();
-    if(r.ok){$("summaryhd").firstChild.textContent="⤴ Bumped "+kind+" "+id.slice(0,8)+" — context summary  ";$("summarytext").textContent=r.summary;$("summary").hidden=false;loadMeta();}
+    if(r.ok){toast("✓ resurfaced "+kind+" "+id.slice(0,8)+" to the top");$("summaryhd").firstChild.textContent="⤴ Bumped "+kind+" "+id.slice(0,8)+" — context summary  ";$("summarytext").textContent=r.summary;$("summary").hidden=false;loadMeta();}
     else toast("bump failed: "+(r.error||"?"));}catch(e){toast("bump failed");}}
 function projectMenu(kind,id,x,y){fetch("/projects",{cache:"no-store"}).then(r=>r.json()).then(p=>{const m=$("ctxmenu");
   const ent=Object.entries(p);
