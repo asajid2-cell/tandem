@@ -1,0 +1,20 @@
+{
+  "name": "tandem",
+  "version": "1.0.0",
+  "description": "Make any coding-agent session dual-driven — pair-program with the other model (Claude<->Codex) as a true co-engineer, with a live split-view dashboard.",
+  "type": "module",
+  "main": "bin/peer.mjs",
+  "scripts": {
+    "watch": "node bin/watch.mjs",
+    "status": "node bin/peer.mjs status"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
