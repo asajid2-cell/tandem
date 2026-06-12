@@ -652,15 +652,20 @@ function parseVerdict(text) {
 }
 
 function printVerdict(partner, verdict, d, dur, raw) {
+  // defensive: the claude-daemon job record carries no digest (commands/files/tokens), so
+  // never assume these exist — printing the verdict must not crash the driver's process.
+  d = d || {};
+  const commands = d.commands || [];
+  const files = d.files || [];
   console.log(`\n===== PARTNER VERDICT (${partner}, ${dur}s) =====\n`);
   console.log(verdict || "(no final message — see digest/log)");
   console.log(`\n----- what ${partner} did -----`);
-  if (d.commands.length) console.log("commands:\n  " + d.commands.join("\n  "));
-  if (d.files.length) console.log("files: " + d.files.join(", "));
+  if (commands.length) console.log("commands:\n  " + commands.join("\n  "));
+  if (files.length) console.log("files: " + files.join(", "));
   if (d.tokens) console.log(`tokens: in ${d.tokens.in} / out ${d.tokens.out}`);
-  if (!d.commands.length && !d.files.length) {
+  if (!commands.length && !files.length) {
     // fall back: show a hint of the raw stream if nothing parsed
-    const tailRaw = raw.split(/\r?\n/).slice(-3).join("\n").slice(0, 300);
+    const tailRaw = (raw || "").split(/\r?\n/).slice(-3).join("\n").slice(0, 300);
     if (tailRaw.trim()) console.log("(no parsed actions; raw tail: " + tailRaw.replace(/\s+/g, " ") + ")");
   }
   console.log("");
