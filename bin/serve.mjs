@@ -17,7 +17,7 @@ import { recordGroup, readGroups, readDetached, jobKey } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const STATE = join(ROOT, ".state");
+const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // override for isolated tests
 const INBOX = join(STATE, "inbox.txt");
 const STATUS = join(STATE, "status.txt");
 const TURNLOG = join(STATE, "turn.jsonl");

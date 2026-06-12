@@ -25,7 +25,7 @@ import { recordGroup, readGroups, readDetached, markDetached, jobKey } from "./g
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const STATE = join(ROOT, ".state");
+const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // override for isolated tests
 const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const USAGE = join(STATE, "usage.json"); // per-session context size (input tokens) → compaction trigger
@@ -119,16 +119,29 @@ function loadConfig() {
     // if true, the bridge compacts automatically (default summary) instead of just notifying.
     autoCompact: process.env.TANDEM_AUTO_COMPACT === "1" || false,
   };
+  let cfg = defaults;
   for (const p of [join(ROOT, "tandem.config.json"), join(process.cwd(), "tandem.config.json")]) {
     if (existsSync(p)) {
       try {
-        return { ...defaults, ...JSON.parse(readFileSync(p, "utf8")) };
+        cfg = { ...defaults, ...JSON.parse(readFileSync(p, "utf8")) };
+        break;
       } catch (e) {
         console.error(`tandem: bad config ${p}: ${e.message}`);
       }
     }
   }
-  return defaults;
+  // Explicit env overrides win over the config file (standard precedence; also lets tests
+  // point the partner bin at a fake without touching the file).
+  const envBin = process.env.CEERELAY_CODEX_BIN || process.env.TANDEM_CODEX_BIN;
+  if (envBin) cfg.codexBin = envBin;
+  const envClaude = process.env.CEERELAY_CLAUDE_BIN || process.env.TANDEM_CLAUDE_BIN;
+  if (envClaude) cfg.claudeBin = envClaude;
+  if (process.env.TANDEM_CWD) cfg.cwd = process.env.TANDEM_CWD;
+  if (process.env.TANDEM_PARTNER) cfg.partner = process.env.TANDEM_PARTNER;
+  if (process.env.TANDEM_POSTURE) cfg.posture = process.env.TANDEM_POSTURE;
+  if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
+  if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
+  return cfg;
 }
 
 function postureArgs(posture, fresh) {
@@ -563,6 +576,11 @@ async function compactCodex(task, cfg) {
 }
 
 function runCodex(bin, args, stdin) {
+  // a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
+  if (/\.[mc]?js$/i.test(bin)) {
+    args = [bin, ...args];
+    bin = process.execPath;
+  }
   return new Promise((resolveP) => {
     let stdout = "";
     let stderr = "";

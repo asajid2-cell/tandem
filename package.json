@@ -6,7 +6,8 @@
   "main": "bin/peer.mjs",
   "scripts": {
     "watch": "node bin/watch.mjs",
-    "status": "node bin/peer.mjs status"
+    "status": "node bin/peer.mjs status",
+    "test": "node --test test/*.test.mjs"
   },
   "keywords": [],
   "author": "",
