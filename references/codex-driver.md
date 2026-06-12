@@ -31,8 +31,14 @@ TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask --bg "<long task>"  
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs status   # running? last verdict
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs wait     # block until the bg turn is done
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs stop     # close (session id persists)
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs compact "<handoff prompt>"  # near-full → fresh
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs new      # ONLY to abandon it and start fresh
 ```
+
+**Compaction:** `ask`/`status` warn you when the Claude partner is running low on context. When you
+see that, run `compact "<what to preserve>"` — Claude summarizes with your prompt, then reopens a
+fresh session seeded with that summary (the pair re-couples automatically). Keeps the partner from
+breaking at its context limit without losing the thread.
 
 **Important — long turns:** a foreground `ask` can exceed your shell's command timeout. For
 anything non-trivial use `ask --bg` then poll `status` (instant) in a loop until done — don't try to

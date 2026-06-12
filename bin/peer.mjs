@@ -28,7 +28,48 @@ const ROOT = resolve(HERE, "..");
 const STATE = join(ROOT, ".state");
 const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
+const USAGE = join(STATE, "usage.json"); // per-session context size (input tokens) → compaction trigger
 const LASTMSG = join(STATE, "last.txt");
+
+// ---- compaction: hand a near-full session off to a fresh one so it never breaks ----
+const COMPACT_PROMPT =
+  "You are about to hand this work off to a FRESH session because this one is near its context limit. Write a complete HANDOFF SUMMARY so nothing is lost: the goal, key decisions and constraints, what's already done, the EXACT current task and state, open questions, and the important files/paths/identifiers. Output ONLY the summary.";
+const handoffSeed = (s) =>
+  "[Handoff from a previous session that reached its context limit — treat this as your background context, then continue.]\n\n" +
+  (s || "(no summary was available)") +
+  "\n\n---\nContinue from here.\n\n";
+function readUsage() {
+  try {
+    return JSON.parse(readFileSync(USAGE, "utf8"));
+  } catch {
+    return {};
+  }
+}
+function setUsage(sid, n) {
+  if (!sid) return;
+  const u = readUsage();
+  u[sid] = n;
+  try {
+    writeFileSync(USAGE, JSON.stringify(u));
+  } catch {
+    /* ignore */
+  }
+}
+function isContextError(text) {
+  return /context (length|limit|window)|maximum context|context.{0,12}exceed|too many tokens|token.{0,4}limit|prompt is too long|413 |payload too large/i.test(text || "");
+}
+// The driver-facing "passenger is running low" notice (null until the threshold is crossed).
+function lowContextNote(sid, limit) {
+  if (!sid || !limit) return null;
+  const used = readUsage()[sid] || 0;
+  if (used < limit) return null;
+  return (
+    `\n⚠ tandem: the partner (codex ${String(sid).slice(0, 8)}) is running low on context — ~${used} tokens used (limit ${limit}).\n` +
+    `   Hand off to a fresh thread, crafting what to preserve:\n` +
+    `     node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"\n` +
+    `   (or just \`peer.mjs compact\` for the default summary). The pair re-couples to the fresh thread automatically.`
+  );
+}
 const TURNLOG = join(STATE, "turn.jsonl");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl"); // collaboration timeline for the watcher
 
@@ -66,6 +107,13 @@ function loadConfig() {
     // claude partner: max seconds to wait for a turn, and quiet window to call it done
     claudeMaxSec: 900,
     claudeQuietSec: 6,
+    // compaction: when a partner session's context (input tokens) reaches this, the driver
+    // is NOTIFIED that the passenger is running low and should hand off to a fresh session
+    // (via `peer.mjs compact "<your handoff prompt>"`). Set near ~80% of the partner model's
+    // context window. 0 disables the notice.
+    compactAtTokens: Number(process.env.TANDEM_COMPACT_AT) || 300000,
+    // if true, the bridge compacts automatically (default summary) instead of just notifying.
+    autoCompact: process.env.TANDEM_AUTO_COMPACT === "1" || false,
   };
   for (const p of [join(ROOT, "tandem.config.json"), join(process.cwd(), "tandem.config.json")]) {
     if (existsSync(p)) {
@@ -216,6 +264,7 @@ async function ask(task, cfg) {
     // register/refresh this exact pair — codexId is the ACTUAL codex this turn used/created
     const cdx = res.codexId || resumeSid;
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+    if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
   }
 }
 
@@ -227,6 +276,7 @@ const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id �
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon
 const STATUS_FILE = join(STATE, "status.txt");
 const SERVE_PID = join(STATE, "serve.pid");
+const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
 
 function isAlive(pid) {
@@ -273,6 +323,34 @@ async function askClaudeDaemon(task, cfg, bg) {
     return;
   }
   await waitJob(cfg.claudeMaxSec || 1800);
+}
+
+// Driver-crafted compaction of the Claude partner: take a handoff summary from the open
+// session, close it, then reopen a FRESH session seeded with that summary (the daemon
+// prepends the seed on its first turn). Re-couples via the detached-stamp + recency.
+async function compactClaude(prompt, cfg) {
+  if (!(await ensureClaudeDaemon())) return;
+  writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
+  writeFileSync(INBOX, prompt && prompt.trim() ? prompt : COMPACT_PROMPT);
+  console.error("tandem: asking the Claude partner for a handoff summary…");
+  await waitJob(cfg.claudeMaxSec || 1800);
+  const summary = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
+  // close the session + detach the old pairing so the next start is genuinely fresh
+  const dpid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+  if (isAlive(dpid)) {
+    try {
+      process.kill(dpid);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
+  const codexDriver = process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
+  markDetached(DETACHED, codexDriver);
+  writeFileSync(CLAUDE_SEED, handoffSeed(summary));
+  logEvent({ type: "compact", ts: Date.now(), partner: "claude", reason: "manual" });
+  console.log("\ntandem: Claude partner compacted — closed and reseeded; the next ask opens a FRESH session with your handoff.");
+  console.log("\n----- handoff summary -----\n" + (summary || "(none returned)").slice(0, 2000));
 }
 
 // Launch a turn in a DETACHED child so long delegations don't block (or time out)
@@ -323,7 +401,7 @@ async function runJob(cfg, jobArgv) {
     return;
   }
   const job = res
-    ? { status: "done", partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null, ts: Date.now() }
+    ? { status: "done", partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null, lowContext: res.lowContext || null, ts: Date.now() }
     : { status: "error", partner: "codex", ts: Date.now() };
   writeFileSync(JOB, JSON.stringify(job));
   if (res) {
@@ -353,8 +431,10 @@ async function waitJob(maxSec) {
   while (Date.now() < deadline) {
     const j = jobState();
     if (j && j.status !== "running") {
-      if (j.status === "done") printVerdict(j.partner, j.verdict, { commands: j.commands, files: j.files, tokens: j.tokens }, j.durSec, "");
-      else console.error(`tandem: job ${j.status}${j.error ? " — " + j.error : ""}`);
+      if (j.status === "done") {
+        printVerdict(j.partner, j.verdict, { commands: j.commands, files: j.files, tokens: j.tokens }, j.durSec, "");
+        if (j.lowContext) console.log(j.lowContext);
+      } else console.error(`tandem: job ${j.status}${j.error ? " — " + j.error : ""}`);
       return;
     }
     await sleep(2000);
@@ -366,10 +446,9 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function askCodex(task, cfg, sidOverride) {
-  // resume id is passed in per-turn (immutable, from the recorded pair) so concurrent
-  // tandems can't cross-wire via the shared global; fall back to the global only if absent.
-  const sid = sidOverride !== undefined ? sidOverride : readSession();
+// Run ONE codex turn (fresh if sid is empty, else resume sid). Returns the verdict,
+// digest, duration, raw stream, exit code, and the EXACT codex id used/created.
+async function codexExec(sid, task, cfg) {
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];
@@ -400,7 +479,66 @@ async function askCodex(task, cfg, sidOverride) {
 
   const verdict = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
   const d = digest(out);
-  return { verdict, d, dur, raw: out, codexId }; // codexId = the EXACT codex this turn used/created
+  return { verdict, d, dur, raw: out, code, codexId };
+}
+
+// Delegate a turn. Compaction keeps the session from breaking at its context limit:
+//  - by default the driver is just NOTIFIED when the passenger runs low (so it can craft the
+//    handoff via `peer.mjs compact "<prompt>"`); set autoCompact to do it automatically.
+//  - REACTIVE net: if a turn still hits the wall, recover on a fresh session seeded with a summary.
+async function askCodex(task, cfg, sidOverride) {
+  let sid = sidOverride !== undefined ? sidOverride : readSession();
+  const limit = cfg.compactAtTokens || 0;
+
+  if (sid && limit && cfg.autoCompact && (readUsage()[sid] || 0) >= limit) {
+    const used = readUsage()[sid] || 0;
+    console.error(`tandem: codex ${sid.slice(0, 8)} near context limit (${used} tok) — auto-compacting`);
+    logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, tokens: used });
+    const s = await codexExec(sid, COMPACT_PROMPT, cfg); // old session still has room to summarize
+    task = handoffSeed(s.verdict) + task;
+    sid = "";
+  }
+
+  let r = await codexExec(sid, task, cfg);
+
+  if (r.code !== 0 && sid && isContextError(r.raw)) {
+    console.error(`tandem: codex ${sid.slice(0, 8)} hit its context limit — recovering on a fresh session`);
+    logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "reactive", from: sid });
+    let summary = "";
+    try {
+      summary = (await codexExec(sid, COMPACT_PROMPT, cfg)).verdict; // best-effort; may itself be over the wall
+    } catch {
+      /* ignore */
+    }
+    r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg);
+  }
+
+  if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
+  r.lowContext = lowContextNote(r.codexId, limit); // driver-facing "running low" notice (or null)
+  return r;
+}
+
+// Driver-crafted compaction: summarize the current codex partner with the driver's prompt,
+// then start a FRESH session seeded with that summary and re-couple to it.
+async function compactCodex(task, cfg) {
+  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  // Only ever compact THIS driver's own coupled codex. Never fall back to the shared global
+  // for a known driver — that could compact an unrelated tandem's session.
+  const sid = driverId ? codexPartnerFor(driverId) : readSession();
+  if (!sid) {
+    console.error("tandem: no codex session to compact for this driver (nothing coupled yet)");
+    return;
+  }
+  const prompt = task && task.trim() ? task : COMPACT_PROMPT;
+  console.error(`tandem: compacting codex ${sid.slice(0, 8)} → fresh session (driver-crafted handoff)`);
+  const s = await codexExec(sid, prompt, cfg);
+  const fresh = await codexExec("", handoffSeed(s.verdict) + "Reply in one line that you have this context and are ready to continue.", cfg);
+  if (driverId && fresh.codexId)
+    recordGroup(GROUPS, { claudeId: driverId, codexId: fresh.codexId, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+  if (fresh.codexId) setUsage(fresh.codexId, fresh.d?.tokens?.in || 0);
+  logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "manual", from: sid, to: fresh.codexId });
+  console.log(`\ntandem: compacted — fresh codex ${String(fresh.codexId).slice(0, 8)} seeded with your handoff; the next ask continues there.`);
+  console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
 function runCodex(bin, args, stdin) {
@@ -481,6 +619,11 @@ function status(cfg) {
   } else if (existsSync(LASTMSG)) {
     console.log(`\nlast verdict:\n${readFileSync(LASTMSG, "utf8").trim().slice(0, 1200)}`);
   }
+  if (cfg.partner === "codex") {
+    const cur = codexPartnerFor(process.env.CLAUDE_CODE_SESSION_ID || "") || readSession();
+    const note = lowContextNote(cur, cfg.compactAtTokens || 0);
+    if (note) console.log(note);
+  }
 }
 
 function tail(n) {
@@ -504,6 +647,12 @@ if (cmd === "ask") {
   if (task === "-" || !task) task = readFileSync(0, "utf8"); // stdin
   if (bg) await startJob(task, cfg);
   else await ask(task, cfg);
+} else if (cmd === "compact") {
+  // hand the near-full partner off to a fresh session, with a driver-crafted handoff prompt
+  let prompt = argv.join(" ");
+  if (prompt === "-") prompt = readFileSync(0, "utf8");
+  if (cfg.partner === "claude") await compactClaude(prompt, cfg);
+  else await compactCodex(prompt, cfg);
 } else if (cmd === "__runjob") {
   await runJob(cfg, argv); // internal: the detached background worker (codex) — argv = [driverId, resumeSid, taskFile]
 } else if (cmd === "serve") {
@@ -587,6 +736,8 @@ else if (cmd === "new") {
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +
       "  ask \"<task>\" [--bg]   delegate a turn (Claude partner = open session; --bg = background)\n" +
       "  ask -                 read task from stdin (long/multiline)\n" +
+      "  compact [\"<prompt>\"]  hand the near-full partner off to a FRESH thread, seeded with a\n" +
+      "                        handoff summary you craft (omit prompt for the default summary)\n" +
       "  serve | stop          open / close the persistent Claude session (id persists, resumable)\n" +
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
       "  wait [sec] | status | tail [n] | result [n] | new",

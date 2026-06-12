@@ -170,6 +170,24 @@ The dashboard's column pickers are custom dropdowns: **star** any chat (☆/★)
 `.state/session_meta.json` (local only). Long transcripts are paginated — it loads a window and
 fetches older messages on scroll-up, so even multi-thousand-message chats stay responsive.
 
+## Compaction — neither model breaks at max context
+
+A long pairing eventually fills the partner's context window. Instead of letting it break, tandem
+hands the work off to a fresh thread that carries a summary forward — and the driver stays in control:
+
+- **You're notified when the passenger runs low.** After any turn whose context passes
+  `compactAtTokens` (default 300k — set it near ~80% of the partner model's window), `ask` and
+  `status` print a notice.
+- **You craft the handoff.** Run `peer.mjs compact "Summarize X, Y, Z so a fresh session continues"`.
+  The partner summarizes with *your* prompt, a fresh session is seeded with that summary, and the pair
+  re-couples to it automatically. Omit the prompt for a sensible default.
+- **Safety net.** If a turn still hits the wall, the bridge recovers on a fresh session seeded with a
+  best-effort summary instead of failing.
+- Set `"autoCompact": true` to compact automatically (with the default summary) instead of being asked.
+
+It works both directions: the Codex partner hands off via a fresh `codex exec`; the Claude partner (the
+`serve` daemon) closes and reopens a fresh session seeded with the summary.
+
 ## Security
 
 The partner agent runs unattended with approvals disabled — see [SECURITY.md](SECURITY.md). Run

@@ -28,6 +28,9 @@ const CLAUDE_SESSION = join(STATE, "claude.session");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
 const GROUPS = join(STATE, "groups.json");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
+const USAGE = join(STATE, "usage.json"); // per-session context size → low-context notice
+const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on a fresh session's first turn
+const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
 const CODEX_DRIVER_ID =
   process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
 
@@ -48,6 +51,31 @@ function log(e) {
   } catch {
     /* ignore */
   }
+}
+
+function setUsage(sid, n) {
+  if (!sid) return;
+  let u = {};
+  try {
+    u = JSON.parse(readFileSync(USAGE, "utf8"));
+  } catch {
+    /* ignore */
+  }
+  u[sid] = n;
+  try {
+    writeFileSync(USAGE, JSON.stringify(u));
+  } catch {
+    /* ignore */
+  }
+}
+function lowNote(sid, used) {
+  if (!sid || !COMPACT_AT || used < COMPACT_AT) return null;
+  return (
+    `\n⚠ tandem: the partner (claude ${String(sid).slice(0, 8)}) is running low on context — ~${used} tokens used (limit ${COMPACT_AT}).\n` +
+    `   Hand off to a fresh thread, crafting what to preserve:\n` +
+    `     node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"\n` +
+    `   (or just \`peer.mjs compact\` for the default summary).`
+  );
 }
 
 const C = cfg();
@@ -116,13 +144,18 @@ claude.stdout.on("data", (b) => {
     if (o.type === "result") {
       const verdict = o.result || "";
       const dur = Math.round((Date.now() - turnStart) / 1000);
+      const u = o.usage || {};
+      const used = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+      if (used) setUsage(sessionId, used);
+      const low = lowNote(sessionId, used);
       try {
         writeFileSync(LASTMSG, verdict);
-        writeFileSync(JOB, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, ts: Date.now() }));
+        writeFileSync(JOB, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
       } catch {
         /* ignore */
       }
       log({ type: "verdict", ts: Date.now(), partner: "claude", durSec: dur, verdict });
+      if (low) console.log(low);
       // register this Codex→Claude pair as a tandem group (codex driver id best-effort)
       recordGroup(GROUPS, {
         claudeId: sessionId,
@@ -194,6 +227,15 @@ setInterval(() => {
   }
   log({ type: "delegate", ts: Date.now(), driver: "codex", partner: "claude", driverId: CODEX_DRIVER_ID || "", partnerId: sessionId || "", task });
   if (sessionId) recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
+  // a freshly-reseeded session prepends the handoff summary to its very first turn
+  if (existsSync(CLAUDE_SEED)) {
+    try {
+      task = readFileSync(CLAUDE_SEED, "utf8") + task;
+      rmSync(CLAUDE_SEED);
+    } catch {
+      /* ignore */
+    }
+  }
   console.log(`  ▸ turn: ${task.replace(/\s+/g, " ").slice(0, 80)}`);
   claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: task }] } }) + "\n");
 }, 300);

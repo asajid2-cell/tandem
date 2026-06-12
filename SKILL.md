@@ -30,8 +30,14 @@ node bin/peer.mjs ask "<scoped task>"
 printf '%s' "$TASK" | node bin/peer.mjs ask -
 node bin/peer.mjs status      # is the partner mid-turn? last verdict
 node bin/peer.mjs tail 60     # live progress of the in-flight turn
+node bin/peer.mjs compact "<handoff prompt>"   # hand a near-full partner to a fresh thread
 node bin/peer.mjs new         # forget the session (start fresh)
 ```
+
+**Compaction — don't let the partner break at its context limit.** `ask`/`status` warn you when
+the partner is running low. When you see that, run `peer.mjs compact "<what to preserve>"`: the
+partner summarizes with YOUR prompt, a fresh thread is seeded with it, and the pair re-couples
+automatically. You craft the handoff, so nothing that matters is lost.
 
 The bridge **resumes the same partner session** across calls, so the partner keeps full
 context — treat it as one continuous colleague, not stateless one-shots. Set the working
