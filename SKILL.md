@@ -16,6 +16,11 @@ the Claude side reasoned best from **source/architecture**, the Codex side from
 **contradiction between their two findings** is what exposed it, and Codex's runtime
 ground-truth corrected Claude's source theory. That is the entire point.
 
+> ⛔ **NEVER create or write a `TANDEM.md` file yourself** — not in the repo, the workspace root, or
+> WorkRepo. Don't `Write`/`Edit`/`echo >>` a `TANDEM.md`. The bridge owns the ledger:
+> `peer.mjs ledger "<entry>"` writes *this pair's own* `TANDEM.md` in its private `tandems/<label>/`
+> folder. Hand-writing one is the #1 way tandems collapse into a single shared, cross-contaminated file.
+
 ## The bridge
 
 Delegate a turn to the partner and get back its verdict + a digest of what it actually did
