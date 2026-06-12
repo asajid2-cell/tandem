@@ -38,12 +38,17 @@ const lines = [];
 if (!resume) lines.push(JSON.stringify({ session_id: sid })); // peer.mjs parseSessionId picks this up
 lines.push(JSON.stringify({ item: { type: "agent_message", text: verdict } }));
 lines.push(JSON.stringify({ usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 1000, output_tokens: 40 } }));
-process.stdout.write(lines.join("\n") + "\n");
-if (outFile) {
-  try {
-    writeFileSync(outFile, verdict);
-  } catch {
-    /* ignore */
+function emit() {
+  process.stdout.write(lines.join("\n") + "\n");
+  if (outFile) {
+    try {
+      writeFileSync(outFile, verdict);
+    } catch {
+      /* ignore */
+    }
   }
+  process.exit(0);
 }
-process.exit(0);
+const delay = Number(process.env.FAKE_DELAY) || 0; // let concurrent turns genuinely overlap in tests
+if (delay) setTimeout(emit, delay);
+else emit();

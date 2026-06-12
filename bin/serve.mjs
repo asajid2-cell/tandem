@@ -99,10 +99,15 @@ function claudePartnerFor(codexId) {
 }
 let sessionId =
   claudePartnerFor(CODEX_DRIVER_ID) || (existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "");
-const args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--dangerously-skip-permissions", "--verbose"];
+let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--dangerously-skip-permissions", "--verbose"];
 if (sessionId) args.push("--resume", sessionId);
-const bin = process.env.TANDEM_CLAUDE_BIN || C.claudeBin || "claude";
+let bin = process.env.TANDEM_CLAUDE_BIN || C.claudeBin || "claude";
 const cwd = process.env.TANDEM_CWD || C.cwd || process.cwd();
+// a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
+if (/\.[mc]?js$/i.test(bin)) {
+  args = [bin, ...args];
+  bin = process.execPath;
+}
 
 const claude = spawn(bin, args, { env, cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
 writeFileSync(PID, String(process.pid));

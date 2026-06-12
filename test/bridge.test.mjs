@@ -3,7 +3,7 @@
 // (TANDEM_CODEX_BIN) — no real sessions, no API, no cost, never touches your live .state.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, spawn } from "node:child_process";
 import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
@@ -13,7 +13,8 @@ import { jobKey, readGroups, recordGroup, readDetached, markDetached } from "../
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
 const PEER = join(ROOT, "bin", "peer.mjs");
-const FAKE = join(HERE, "fake-codex.mjs");
+const FAKE_CODEX = join(HERE, "fake-codex.mjs");
+const FAKE_CLAUDE = join(HERE, "fake-claude.mjs");
 
 function freshState(t) {
   const d = mkdtempSync(join(tmpdir(), "tandem-test-"));
@@ -27,22 +28,45 @@ function freshState(t) {
   return d;
 }
 
-// Run a peer.mjs command for a driver, in an isolated state dir, against the fake codex.
-function peer(args, { state, driver, env = {} } = {}) {
-  const clean = { ...process.env };
-  for (const k of ["CODEX_SESSION_ID", "CODEX_THREAD_ID", "CODEX_CONVERSATION_ID"]) delete clean[k];
-  const r = spawnSync(process.execPath, [PEER, ...args], {
-    encoding: "utf8",
-    env: {
-      ...clean,
-      TANDEM_STATE: state,
-      TANDEM_CODEX_BIN: FAKE,
-      TANDEM_PARTNER: "codex",
-      CLAUDE_CODE_SESSION_ID: driver,
-      ...env,
-    },
-  });
+// Build the child env for a driver. partner="codex" → this is a Claude driver pairing with the
+// fake codex; partner="claude" → this is a Codex driver pairing with the fake claude daemon.
+function buildEnv(state, driver, partner, env) {
+  const e = { ...process.env };
+  for (const k of ["CODEX_SESSION_ID", "CODEX_THREAD_ID", "CODEX_CONVERSATION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]) delete e[k];
+  e.TANDEM_STATE = state;
+  e.TANDEM_PARTNER = partner;
+  if (partner === "claude") {
+    e.CODEX_SESSION_ID = driver;
+    e.TANDEM_CLAUDE_BIN = FAKE_CLAUDE;
+  } else {
+    e.CLAUDE_CODE_SESSION_ID = driver;
+    e.TANDEM_CODEX_BIN = FAKE_CODEX;
+  }
+  return { ...e, ...env };
+}
+// Run a peer.mjs command synchronously in an isolated state dir against a fake partner.
+function peer(args, { state, driver, partner = "codex", env = {} } = {}) {
+  const r = spawnSync(process.execPath, [PEER, ...args], { encoding: "utf8", env: buildEnv(state, driver, partner, env) });
   return { stdout: r.stdout || "", out: (r.stdout || "") + (r.stderr || ""), code: r.status };
+}
+// Async variant for genuinely parallel (overlapping) runs.
+function peerAsync(args, { state, driver, partner = "codex", env = {} } = {}) {
+  return new Promise((resolve) => {
+    const c = spawn(process.execPath, [PEER, ...args], { env: buildEnv(state, driver, partner, env) });
+    let out = "";
+    c.stdout.on("data", (b) => (out += b));
+    c.stderr.on("data", (b) => (out += b));
+    c.on("exit", (code) => resolve({ out, stdout: out, code }));
+  });
+}
+// Kill a serve daemon started during a test (reads its pid from the isolated state).
+function stopDaemon(state) {
+  try {
+    const pid = Number(readFileSync(join(state, "serve.pid"), "utf8").trim());
+    if (pid) process.kill(pid);
+  } catch {
+    /* already gone */
+  }
 }
 const readLast = (state, driver) => {
   const f = join(state, `last-${jobKey(driver)}.txt`);
@@ -164,4 +188,38 @@ test("low-context notice fires for the driver when the passenger nears the limit
   const r = peer(["ask", "big turn"], { state: s, driver: "drvA", env: { TANDEM_COMPACT_AT: "500", FAKE_TOKENS: "900" } });
   assert.match(r.out, /running low on context/i);
   assert.match(r.out, /peer\.mjs compact/);
+});
+
+// ---------- Codex→Claude path (the persistent serve daemon) ----------
+test("codex→claude (daemon): the driver's verdict is captured from the result event", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  const r = peer(["ask", "CLAUDEUI build the lock panel"], { state: s, driver: "codexDrvA", partner: "claude" });
+  assert.equal(r.code, 0);
+  assert.match(r.stdout, /CLAUDEUI/); // verdict came back from the daemon, for this driver
+  assert.match(readLast(s, "codexDrvA"), /CLAUDEUI/);
+});
+
+test("codex→claude and claude→codex do NOT clobber each other (cross-direction — the field bug)", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  peer(["ask", "CLAUDEWORK alpha"], { state: s, driver: "cdxDrv", partner: "claude" }); // → claude daemon
+  peer(["ask", "CODEXWORK beta"], { state: s, driver: "cldDrv", partner: "codex" }); // → codex
+  assert.match(readLast(s, "cdxDrv"), /CLAUDEWORK/);
+  assert.match(readLast(s, "cldDrv"), /CODEXWORK/);
+  assert.doesNotMatch(readLast(s, "cdxDrv"), /CODEXWORK/); // the codex turn must not overwrite the claude verdict
+});
+
+// ---------- true parallelism (overlapping turns, not sequential) ----------
+test("genuinely concurrent codex tandems never clobber (parallel, overlapping)", async (t) => {
+  const s = freshState(t);
+  const drivers = ["pA", "pB", "pC"];
+  // FAKE_DELAY makes all three turns overlap in time, so a shared-file race would actually trigger
+  await Promise.all(drivers.map((d) => peerAsync(["ask", `PARALLEL-${d} work`], { state: s, driver: d, env: { FAKE_DELAY: "300" } })));
+  for (const d of drivers) {
+    assert.match(readLast(s, d), new RegExp(`PARALLEL-${d}`), `${d} kept its own verdict`);
+    for (const other of drivers) {
+      if (other !== d) assert.doesNotMatch(readLast(s, d), new RegExp(`PARALLEL-${other}`), `${d} not clobbered by ${other}`);
+    }
+  }
 });

@@ -18,7 +18,7 @@ import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const STATE = join(ROOT, ".state");
+const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // override for isolated tests
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const PEER_SESSION = join(STATE, "peer.session"); // current codex partner (for live synthesis)
@@ -953,16 +953,23 @@ server.on("error", (e) => {
   process.exit(1);
 });
 
-server.listen(PORT, () => {
-  const url = `http://localhost:${PORT}`;
-  console.log(`tandem watch → ${url}  (Ctrl+C to stop)`);
-  if (process.env.TANDEM_NO_OPEN) return;
-  const p = platform();
-  try {
-    if (p === "win32") spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" }).unref();
-    else if (p === "darwin") spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-    else spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
-  } catch {
-    /* user can open manually */
-  }
-});
+// Only stand up the server when run directly; importing this module (e.g. tests) just exposes
+// its pure functions like groupsList.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  server.listen(PORT, () => {
+    const url = `http://localhost:${PORT}`;
+    console.log(`tandem watch → ${url}  (Ctrl+C to stop)`);
+    if (process.env.TANDEM_NO_OPEN) return;
+    const p = platform();
+    try {
+      if (p === "win32") spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" }).unref();
+      else if (p === "darwin") spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
+      else spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
+    } catch {
+      /* user can open manually */
+    }
+  });
+}
+
+export { groupsList };
