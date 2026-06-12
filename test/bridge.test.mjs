@@ -210,6 +210,18 @@ test("codex→claude and claude→codex do NOT clobber each other (cross-directi
   assert.doesNotMatch(readLast(s, "cdxDrv"), /CODEXWORK/); // the codex turn must not overwrite the claude verdict
 });
 
+test("codex→claude: `new` yields a FRESH claude session (no re-glue to the old one)", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  const r1 = peer(["ask", "first ui task"], { state: s, driver: "cdxN", partner: "claude" });
+  const sid1 = sidOf(r1.stdout) || sidOf(readLast(s, "cdxN"));
+  peer(["new"], { state: s, driver: "cdxN", partner: "claude" }); // must reset the daemon + detach
+  const r2 = peer(["ask", "second ui task"], { state: s, driver: "cdxN", partner: "claude" });
+  const sid2 = sidOf(r2.stdout) || sidOf(readLast(s, "cdxN"));
+  assert.ok(sid1 && sid2, "both turns should report a claude sid");
+  assert.notEqual(sid2, sid1, "`new` must give a fresh claude session, not re-glue the old pairing");
+});
+
 // ---------- true parallelism (overlapping turns, not sequential) ----------
 test("genuinely concurrent codex tandems never clobber (parallel, overlapping)", async (t) => {
   const s = freshState(t);

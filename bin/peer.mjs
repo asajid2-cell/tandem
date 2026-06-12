@@ -16,7 +16,7 @@
 // Long turns: run this via your harness's background mechanism (it blocks until
 // the partner's turn completes), then read the printed verdict.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -303,6 +303,33 @@ function isAlive(pid) {
     return true;
   } catch (e) {
     return e.code === "EPERM";
+  }
+}
+
+// Definitively shut the serve daemon down and reset its state. On Windows process.kill
+// terminates without running the daemon's cleanup handler — leaving a stale serve.pid/STATUS
+// and an ORPHANED claude child that can re-process the next turn on the wrong session. So we
+// tree-kill (parent + child), force STATUS=DOWN, and remove the pid file ourselves. After this
+// the next ask is guaranteed to spawn a clean daemon (no reuse, no orphan, no re-glue).
+function killDaemon() {
+  const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+  if (pid && isAlive(pid)) {
+    try {
+      if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+      else process.kill(pid);
+    } catch {
+      /* already gone */
+    }
+  }
+  try {
+    writeFileSync(STATUS_FILE, "DOWN");
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(SERVE_PID)) rmSync(SERVE_PID);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -723,15 +750,9 @@ if (cmd === "ask") {
   // Open the persistent, resumable Claude session in the foreground (Ctrl+C to close).
   spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: process.env }).on("exit", (c) => process.exit(c || 0));
 } else if (cmd === "stop") {
-  const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
-  if (isAlive(pid)) {
-    try {
-      process.kill(pid);
-    } catch {
-      /* ignore */
-    }
-    console.log(`tandem: closed the persistent session (pid ${pid}). The session id persists — reopen anytime with the same context.`);
-  } else console.log("tandem: no persistent session running");
+  const wasAlive = existsSync(SERVE_PID) && isAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
+  killDaemon(); // tree-kill + reset state (Windows-safe), so a later ask spawns a clean daemon
+  console.log(wasAlive ? "tandem: closed the persistent session. The session id persists — reopen anytime with the same context." : "tandem: no persistent session running");
 } else if (cmd === "group") {
   // peer.mjs group <claudeSessionId> <codexSessionId> [label]  — pin a matched pair
   const rec = recordGroup(GROUPS, {
@@ -772,16 +793,9 @@ if (cmd === "ask") {
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
 else if (cmd === "result") result(Number(argv[0]) || 4);
 else if (cmd === "new") {
-  // close the persistent daemon too — otherwise the next ask reuses its in-memory
-  // session and no NEW tandem/group forms.
-  const dpid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
-  if (isAlive(dpid)) {
-    try {
-      process.kill(dpid);
-    } catch {
-      /* ignore */
-    }
-  }
+  // Tree-kill + reset the daemon (Windows-safe) so the next ask spawns a clean one — otherwise
+  // an orphaned/racing daemon re-processes the next turn on the old session and re-glues the pair.
+  killDaemon();
   for (const f of [SESSION_FILE, CLAUDE_SESSION, CLAUDE_VERDICT, JOB, JOB_TASK]) if (existsSync(f)) rmSync(f);
   // The coupling lives in groups.json (codexPartnerFor / claudePartnerFor), not just the
   // files above — so detach this driver too, or the next ask re-resumes the same thread.
