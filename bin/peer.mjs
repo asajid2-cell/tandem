@@ -30,6 +30,8 @@ const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const USAGE = join(STATE, "usage.json"); // per-session context size (input tokens) → compaction trigger
 const LASTMSG = join(STATE, "last.txt");
+const COMPACT_OUT = join(STATE, "compact.out"); // handoff-summary turns write HERE, not LASTMSG (keep the real verdict clean)
+const CODEX_SEED = join(STATE, "codex.seed"); // handoff summary the next fresh codex turn prepends
 
 // ---- compaction: hand a near-full session off to a fresh one so it never breaks ----
 const COMPACT_PROMPT =
@@ -448,16 +450,23 @@ function sleep(ms) {
 
 // Run ONE codex turn (fresh if sid is empty, else resume sid). Returns the verdict,
 // digest, duration, raw stream, exit code, and the EXACT codex id used/created.
-async function codexExec(sid, task, cfg) {
+// outFile = where codex writes its last message; handoff/summary turns pass COMPACT_OUT so
+// they never overwrite the real verdict in LASTMSG.
+async function codexExec(sid, task, cfg, outFile = LASTMSG) {
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];
   if (sid) args.push("resume");
-  args.push("--json", "--skip-git-repo-check", "-o", LASTMSG, ...postureArgs(cfg.posture, !sid));
+  args.push("--json", "--skip-git-repo-check", "-o", outFile, ...postureArgs(cfg.posture, !sid));
   if (!sid) args.push("-C", cfg.cwd);
   if (sid) args.push(sid);
   args.push("-");
 
+  try {
+    if (existsSync(outFile)) rmSync(outFile); // clear so a failed turn can't leak a stale verdict
+  } catch {
+    /* ignore */
+  }
   const t0 = Date.now();
   const { stdout: out, code } = await runCodex(cfg.codexBin, args, task);
   const dur = Math.round((Date.now() - t0) / 1000);
@@ -477,7 +486,8 @@ async function codexExec(sid, task, cfg) {
     }
   }
 
-  const verdict = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
+  // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
+  const verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
   const d = digest(out);
   return { verdict, d, dur, raw: out, code, codexId };
 }
@@ -494,9 +504,19 @@ async function askCodex(task, cfg, sidOverride) {
     const used = readUsage()[sid] || 0;
     console.error(`tandem: codex ${sid.slice(0, 8)} near context limit (${used} tok) — auto-compacting`);
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, tokens: used });
-    const s = await codexExec(sid, COMPACT_PROMPT, cfg); // old session still has room to summarize
+    const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT); // summary → temp file, not the verdict slot
     task = handoffSeed(s.verdict) + task;
     sid = "";
+  }
+
+  // a pending driver-crafted handoff (from `peer.mjs compact`) seeds the fresh session's first turn
+  if (!sid && existsSync(CODEX_SEED)) {
+    try {
+      task = readFileSync(CODEX_SEED, "utf8") + task;
+      rmSync(CODEX_SEED);
+    } catch {
+      /* ignore */
+    }
   }
 
   let r = await codexExec(sid, task, cfg);
@@ -506,7 +526,7 @@ async function askCodex(task, cfg, sidOverride) {
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "reactive", from: sid });
     let summary = "";
     try {
-      summary = (await codexExec(sid, COMPACT_PROMPT, cfg)).verdict; // best-effort; may itself be over the wall
+      summary = (await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT)).verdict; // best-effort; may itself be over the wall
     } catch {
       /* ignore */
     }
@@ -518,8 +538,9 @@ async function askCodex(task, cfg, sidOverride) {
   return r;
 }
 
-// Driver-crafted compaction: summarize the current codex partner with the driver's prompt,
-// then start a FRESH session seeded with that summary and re-couple to it.
+// Driver-crafted compaction: summarize the current codex partner with the driver's prompt, stash
+// the summary as a seed, and detach the old pairing. The NEXT ask starts a fresh session with the
+// seed prepended and re-couples to it — no wasted "ack" turn, and the real verdict slot stays clean.
 async function compactCodex(task, cfg) {
   const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
   // Only ever compact THIS driver's own coupled codex. Never fall back to the shared global
@@ -530,14 +551,12 @@ async function compactCodex(task, cfg) {
     return;
   }
   const prompt = task && task.trim() ? task : COMPACT_PROMPT;
-  console.error(`tandem: compacting codex ${sid.slice(0, 8)} → fresh session (driver-crafted handoff)`);
-  const s = await codexExec(sid, prompt, cfg);
-  const fresh = await codexExec("", handoffSeed(s.verdict) + "Reply in one line that you have this context and are ready to continue.", cfg);
-  if (driverId && fresh.codexId)
-    recordGroup(GROUPS, { claudeId: driverId, codexId: fresh.codexId, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
-  if (fresh.codexId) setUsage(fresh.codexId, fresh.d?.tokens?.in || 0);
-  logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "manual", from: sid, to: fresh.codexId });
-  console.log(`\ntandem: compacted — fresh codex ${String(fresh.codexId).slice(0, 8)} seeded with your handoff; the next ask continues there.`);
+  console.error(`tandem: compacting codex ${sid.slice(0, 8)} (driver-crafted handoff)…`);
+  const s = await codexExec(sid, prompt, cfg, COMPACT_OUT); // summary → temp file, never the verdict slot
+  writeFileSync(CODEX_SEED, handoffSeed(s.verdict));
+  if (driverId) markDetached(DETACHED, driverId); // next ask won't resume the old thread
+  logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "manual", from: sid });
+  console.log("\ntandem: compacted — the next ask starts a FRESH codex seeded with your handoff (re-couples automatically).");
   console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
@@ -590,6 +609,26 @@ function parseSessionId(text) {
     if (typeof cand === "string" && /^[0-9a-f-]{36}$/i.test(cand)) return cand;
   }
   return null;
+}
+
+// The partner's final message, taken straight from THIS turn's stream (reliable — the `-o`
+// file can go stale if a turn errors without rewriting it).
+function parseVerdict(text) {
+  let v = "";
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t.startsWith("{")) continue;
+    let o;
+    try {
+      o = JSON.parse(t);
+    } catch {
+      continue;
+    }
+    const it = o.item || o;
+    if ((it.type === "agent_message" || it.role === "assistant") && (it.text || it.message)) v = it.text || it.message;
+    if (typeof o.last_agent_message === "string" && o.last_agent_message) v = o.last_agent_message;
+  }
+  return v.trim();
 }
 
 function printVerdict(partner, verdict, d, dur, raw) {
