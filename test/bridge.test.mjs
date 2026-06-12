@@ -4,11 +4,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync, spawn } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { jobKey, readGroups, recordGroup, readDetached, markDetached } from "../bin/groups.mjs";
+import { jobKey, readGroups, recordGroup, readDetached, markDetached, stateDir, listStateDirs, setLabel } from "../bin/groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -59,11 +59,14 @@ function peerAsync(args, { state, driver, partner = "codex", env = {} } = {}) {
     c.on("exit", (code) => resolve({ out, stdout: out, code }));
   });
 }
-// Kill a serve daemon started during a test (reads its pid from the isolated state).
+// Kill a serve daemon started during a test (reads its pid from the isolated state). Tree-kill on
+// Windows so the fake-claude child doesn't linger between daemon tests.
 function stopDaemon(state) {
   try {
     const pid = Number(readFileSync(join(state, "serve.pid"), "utf8").trim());
-    if (pid) process.kill(pid);
+    if (!pid) return;
+    if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    else process.kill(pid);
   } catch {
     /* already gone */
   }
@@ -96,6 +99,61 @@ test("markDetached stamps a driver so old pairings can be ignored", (t) => {
   const f = join(freshState(t), "d.json");
   markDetached(f, "C1");
   assert.ok(readDetached(f)["C1"] > 0);
+});
+
+test("stateDir routes each driver to tandems/<label>, with id fallback + override", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "tandem-root-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  delete process.env.TANDEM_STATE;
+  delete process.env.TANDEM_LABEL;
+  // no label yet → session-id fallback under tandems/
+  assert.equal(stateDir(root, "drvA"), join(root, "tandems", jobKey("drvA")));
+  assert.notEqual(stateDir(root, "drvA"), stateDir(root, "drvB")); // unrelated tandems never share
+  assert.equal(stateDir(root, ""), join(root, ".state")); // no driver → legacy shared
+  // driver-set label → readable folder (sanitized)
+  setLabel(root, "drvA", "Watch Together / CDN engine!");
+  assert.equal(stateDir(root, "drvA"), join(root, "tandems", "Watch-Together-CDN-engine"));
+  // explicit override wins over everything
+  process.env.TANDEM_STATE = join(root, "ov");
+  assert.equal(stateDir(root, "drvA"), resolve(join(root, "ov")));
+  delete process.env.TANDEM_STATE;
+});
+
+test("setLabel migrates an already-used id folder to the named one (late naming keeps state)", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "tandem-root-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  delete process.env.TANDEM_STATE;
+  delete process.env.TANDEM_LABEL;
+  const idFolder = join(root, "tandems", jobKey("drvX"));
+  mkdirSync(idFolder, { recursive: true });
+  writeFileSync(join(idFolder, "groups.json"), '{"seq":1,"groups":{}}'); // pretend it already has state
+  setLabel(root, "drvX", "my-feature");
+  assert.ok(existsSync(join(root, "tandems", "my-feature", "groups.json")), "state migrated to the named folder");
+  assert.ok(!existsSync(idFolder), "old id folder gone");
+  assert.equal(stateDir(root, "drvX"), join(root, "tandems", "my-feature"));
+});
+
+test("listStateDirs finds legacy .state and every tandems/<label> (skips .labels.json)", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "tandem-root-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  delete process.env.TANDEM_STATE;
+  mkdirSync(join(root, ".state"), { recursive: true });
+  mkdirSync(join(root, "tandems", "alpha"), { recursive: true });
+  mkdirSync(join(root, "tandems", "beta"), { recursive: true });
+  writeFileSync(join(root, "tandems", ".labels.json"), "{}");
+  const dirs = listStateDirs(root);
+  assert.ok(dirs.includes(join(root, ".state")));
+  assert.ok(dirs.includes(join(root, "tandems", "alpha")));
+  assert.ok(dirs.includes(join(root, "tandems", "beta")));
+  assert.ok(!dirs.some((d) => d.endsWith(".labels.json")));
+});
+
+test("`ledger` writes to THIS pair's own TANDEM.md (never shared)", (t) => {
+  const s = freshState(t);
+  peer(["ledger", "DECISION: parallelize the height pump"], { state: s, driver: "drvL" });
+  assert.match(readFileSync(join(s, "TANDEM.md"), "utf8"), /DECISION: parallelize the height pump/);
+  const r = peer(["ledger"], { state: s, driver: "drvL" }); // no arg → print it
+  assert.match(r.stdout, /DECISION: parallelize the height pump/);
 });
 
 // ---------- integration: the real peer.mjs flow against a fake partner ----------

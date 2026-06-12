@@ -30,9 +30,16 @@ node bin/peer.mjs ask "<scoped task>"
 printf '%s' "$TASK" | node bin/peer.mjs ask -
 node bin/peer.mjs status      # is the partner mid-turn? last verdict
 node bin/peer.mjs tail 60     # live progress of the in-flight turn
+node bin/peer.mjs ledger "<entry>"             # record to THIS pair's own ledger (no arg = print it)
 node bin/peer.mjs compact "<handoff prompt>"   # hand a near-full partner to a fresh thread
 node bin/peer.mjs new         # forget the session (start fresh)
 ```
+
+**Each session is its own tandem — name it first.** Before your first `ask`, run
+`peer.mjs label "<short-name>"` (e.g. `watch-together-cdn-engine`). That gives this tandem its OWN
+private folder `tandems/<name>/` — its own registry, timeline, pointers, and ledger — so tandems run
+from different code sessions never cross-contaminate. If you skip it, the folder falls back to the
+opaque session id. Nothing else to point; just run `peer.mjs`.
 
 **Compaction — don't let the partner break at its context limit.** `ask`/`status` warn you when
 the partner is running low. When you see that, run `peer.mjs compact "<what to preserve>"`: the
@@ -77,9 +84,11 @@ never-ask config, don't work around it.
    read) beats either model's theory. When in doubt, have the partner *produce the evidence*
    and believe the evidence.
 5. **Converge → act → persist → PROPAGATE UP.** Record findings, decisions, and open contradictions
-   in a shared `TANDEM.md` ledger. And if someone is driving *you* (you're a subagent), surface the
-   result upward: lead your return with `TANDEM (partner: <model>) → converged/diverged: <finding>`.
-   A second-brain correction buried in a subagent transcript no one reads is a tandem loss.
+   with `peer.mjs ledger "<entry>"` — this writes to **this tandem pair's OWN ledger** (its private
+   `TANDEM.md`), never a shared one, so unrelated tandems don't bleed into each other. And if someone
+   is driving *you* (you're a subagent), surface the result upward: lead your return with
+   `TANDEM (partner: <model>) → converged/diverged: <finding>`. A second-brain correction buried in a
+   subagent transcript no one reads is a tandem loss.
 6. **Loop the human at forks** — real direction decisions are theirs.
 
 ## Framing a good delegation

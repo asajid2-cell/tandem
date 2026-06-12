@@ -21,17 +21,21 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { recordGroup, readGroups, readDetached, markDetached, jobKey } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir, setLabel } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // override for isolated tests
+// This driving session's id → its OWN state folder (tandems/<label-or-id>), so unrelated tandems
+// never share state, timeline, or ledger. Name it with `peer.mjs label`. TANDEM_STATE overrides
+// (tests); no-driver CLI uses .state.
+const DRIVER_ID = process.env.CLAUDE_CODE_SESSION_ID || process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
+const STATE = stateDir(ROOT, DRIVER_ID);
 const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const USAGE = join(STATE, "usage.json"); // per-session context size (input tokens) → compaction trigger
-// Per-driver state key, so CONCURRENT tandems don't clobber each other's verdict/status files.
-const SK = jobKey(process.env.CLAUDE_CODE_SESSION_ID || process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID);
+const SK = jobKey(DRIVER_ID); // per-driver suffix (still isolates within a shared TANDEM_STATE / .state)
 const LASTMSG = join(STATE, `last-${SK}.txt`);
+const LEDGER = join(STATE, "TANDEM.md"); // per-tandem ledger (never shared across pairs)
 const COMPACT_OUT = join(STATE, "compact.out"); // handoff-summary turns write HERE, not LASTMSG (keep the real verdict clean)
 const CODEX_SEED = join(STATE, "codex.seed"); // handoff summary the next fresh codex turn prepends
 
@@ -341,7 +345,7 @@ async function ensureClaudeDaemon() {
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
   if (isAlive(pid) && status !== "DOWN") return true;
   console.error("tandem: opening persistent Claude session (serve)…");
-  const child = spawn(process.execPath, [SERVE_SCRIPT], { detached: true, stdio: "ignore", env: process.env });
+  const child = spawn(process.execPath, [SERVE_SCRIPT], { detached: true, stdio: "ignore", env: { ...process.env, TANDEM_STATE: STATE } });
   child.unref();
   for (let i = 0; i < 70; i++) {
     await sleep(500);
@@ -729,6 +733,18 @@ function result(n) {
   void n;
 }
 
+// Per-tandem ledger (this pair's own TANDEM.md, in its state folder — never shared across pairs).
+function ledger(text) {
+  if (text && text.trim()) {
+    ensureState();
+    appendFileSync(LEDGER, `\n### ${new Date().toISOString()}\n${text.trim()}\n`);
+    console.log(`tandem: recorded to this tandem's ledger → ${LEDGER}`);
+  } else {
+    console.log(`ledger: ${LEDGER}`);
+    console.log(existsSync(LEDGER) ? "\n" + readFileSync(LEDGER, "utf8") : "(empty)");
+  }
+}
+
 const cfg = loadConfig();
 const cmd = process.argv[2];
 const argv = process.argv.slice(3);
@@ -748,7 +764,7 @@ if (cmd === "ask") {
   await runJob(cfg, argv); // internal: the detached background worker (codex) — argv = [driverId, resumeSid, taskFile]
 } else if (cmd === "serve") {
   // Open the persistent, resumable Claude session in the foreground (Ctrl+C to close).
-  spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: process.env }).on("exit", (c) => process.exit(c || 0));
+  spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: { ...process.env, TANDEM_STATE: STATE } }).on("exit", (c) => process.exit(c || 0));
 } else if (cmd === "stop") {
   const wasAlive = existsSync(SERVE_PID) && isAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
   killDaemon(); // tree-kill + reset state (Windows-safe), so a later ask spawns a clean daemon
@@ -792,6 +808,21 @@ if (cmd === "ask") {
 } else if (cmd === "status") status(cfg);
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
 else if (cmd === "result") result(Number(argv[0]) || 4);
+else if (cmd === "ledger") {
+  let t = argv.join(" ");
+  if (t === "-") t = readFileSync(0, "utf8");
+  ledger(t);
+} else if (cmd === "label") {
+  const name = argv.join(" ");
+  if (!name.trim()) {
+    console.log(`this tandem's folder: ${STATE}`);
+  } else if (!DRIVER_ID) {
+    console.error("tandem: can't label — no driving session id in the environment");
+  } else {
+    const clean = setLabel(ROOT, DRIVER_ID, name);
+    console.log(`tandem: named this session's tandem "${clean}" → tandems/${clean}/ (its state + ledger live here; run this BEFORE your first ask)`);
+  }
+}
 else if (cmd === "new") {
   // Tree-kill + reset the daemon (Windows-safe) so the next ask spawns a clean one — otherwise
   // an orphaned/racing daemon re-processes the next turn on the old session and re-glues the pair.
@@ -816,6 +847,8 @@ else if (cmd === "new") {
       "  ask -                 read task from stdin (long/multiline)\n" +
       "  compact [\"<prompt>\"]  hand the near-full partner off to a FRESH thread, seeded with a\n" +
       "                        handoff summary you craft (omit prompt for the default summary)\n" +
+      "  label \"<name>\"        name THIS session's tandem → tandems/<name>/ (run before the first ask)\n" +
+      "  ledger [\"<entry>\"]    append to / print THIS tandem's own ledger (per-pair TANDEM.md)\n" +
       "  serve | stop          open / close the persistent Claude session (id persists, resumable)\n" +
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
       "  wait [sec] | status | tail [n] | result [n] | new",

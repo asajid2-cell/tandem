@@ -22,6 +22,9 @@ Set `TANDEM_PARTNER=claude`. The first `ask` auto-opens the persistent session; 
 it (full context). Each `ask` prints Claude's verdict.
 
 ```bash
+# name THIS tandem first so its state + ledger get their own readable folder (tandems/<name>/):
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs label "watch-together-cdn-engine"
+
 # (optional) open it explicitly in a side terminal so you can watch it:
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs serve
 
@@ -32,6 +35,7 @@ TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs status   # running? last
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs wait     # block until the bg turn is done
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs stop     # close (session id persists)
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs compact "<handoff prompt>"  # near-full → fresh
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ledger "<entry>"  # this tandem's own ledger
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs new      # ONLY to abandon it and start fresh
 ```
 
@@ -56,6 +60,7 @@ You (Codex) are the **driver**, driven by the human. Claude is your **co-enginee
    (contradiction) → that's the **blind-spot alarm**; feed each side's evidence to the other and
    dig until it resolves.
 4. **Ground-truth wins** — an actual run/build/test beats either model's theory.
-5. **Persist + propagate up.** Record findings/decisions in a shared `TANDEM.md` ledger; loop the
+5. **Persist + propagate up.** Record findings/decisions with `peer.mjs ledger "<entry>"` (this pair's
+   OWN ledger, not a shared one); loop the
    human at forks. If you're a subagent, lead your return with
    `TANDEM (partner: claude) → converged/diverged: <finding>` so the result isn't buried.

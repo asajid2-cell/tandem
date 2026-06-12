@@ -27,7 +27,7 @@ const now = Date.now();
 test("synthesis pairs the REAL driver from the delegate, never auto/newest (the mispairing bug)", () => {
   writeGroups({ seq: 1, groups: {} }); // nothing recorded yet — only an in-flight delegation
   writeLog([{ type: "delegate", driver: "claude", partner: "codex", driverId: "realClaudeDrv", partnerId: "realCodex", ts: now }]);
-  const forming = groupsList().find((x) => x.n === 0);
+  const forming = groupsList().find((x) => x.label === "forming…");
   assert.ok(forming, "an in-flight pair should show as a forming entry");
   assert.equal(forming.claudeId, "realClaudeDrv", "must use the actual driver, not the newest session");
   assert.equal(forming.codexId, "realCodex");
@@ -36,7 +36,7 @@ test("synthesis pairs the REAL driver from the delegate, never auto/newest (the 
 test("synthesis refuses to guess when the delegate carries no ids (no auto mispairing)", () => {
   writeGroups({ seq: 1, groups: {} });
   writeLog([{ type: "delegate", driver: "claude", partner: "codex", ts: now }]); // old-style: no driverId/partnerId
-  assert.equal(groupsList().find((x) => x.n === 0), undefined, "must NOT invent an auto-paired forming entry");
+  assert.equal(groupsList().find((x) => x.label === "forming…"), undefined, "must NOT invent an auto-paired forming entry");
 });
 
 test("a recorded pair with recent activity is marked live", () => {

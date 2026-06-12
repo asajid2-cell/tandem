@@ -13,18 +13,13 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { homedir, platform } from "node:os";
-import { readGroups } from "./groups.mjs";
+import { readGroups, listStateDirs } from "./groups.mjs";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
-const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // override for isolated tests
-const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
-const CLAUDE_SESSION = join(STATE, "claude.session");
-const PEER_SESSION = join(STATE, "peer.session"); // current codex partner (for live synthesis)
-const GROUPS = join(STATE, "groups.json");
+const STATE = process.env.TANDEM_STATE ? resolve(process.env.TANDEM_STATE) : join(ROOT, ".state"); // watcher-global files (meta/projects); per-tandem state is read from listStateDirs()
 const LIVE_MS = 60 * 60 * 1000; // a tandem is "live/active" if either session was written within this window (or daemon held); older → history
-const SERVE_PID = join(STATE, "serve.pid");
 const META = join(STATE, "session_meta.json"); // local rename / star / archive per session
 const PORT = Number(process.argv[2]) || 8799;
 
@@ -328,9 +323,9 @@ function titleFor(kind, id) {
 // A tandem is LIVE while its bridge is connected: the Claude daemon is alive holding
 // this pair's session, OR there was activity in the last few minutes. When the bridge
 // closes, the group stays in the list (idle) and remains resumable by its pair.
-function serveAlive() {
+function serveAlive(dir) {
   try {
-    const pid = Number(read(SERVE_PID).trim());
+    const pid = Number(read(join(dir, "serve.pid")).trim());
     if (!pid) return false;
     process.kill(pid, 0);
     return true;
@@ -353,11 +348,12 @@ function sessionMtime(kind, id) {
     return 0;
   }
 }
-function groupsList() {
-  const g = readGroups(GROUPS);
-  const claudeNow = read(CLAUDE_SESSION).trim();
-  const codexNow = read(PEER_SESSION).trim();
-  const alive = serveAlive();
+// Build the group list for ONE state dir (one tandem pair's folder, or legacy .state).
+function groupsForDir(dir) {
+  const g = readGroups(join(dir, "groups.json"));
+  const claudeNow = read(join(dir, "claude.session")).trim();
+  const codexNow = read(join(dir, "peer.session")).trim();
+  const alive = serveAlive(dir);
   const now = Date.now();
   const out = Object.values(g.groups || {}).map((r) => {
     // LIVE = either of the pair's session files was written within the window (the
@@ -381,7 +377,7 @@ function groupsList() {
   // group is fully recorded (codex id only known after the first turn). Build it from the
   // last tandem.log delegate + the current .state session ids, and merge with recorded.
   let lastDel = null;
-  for (const l of read(TANDEM_LOG).split(/\r?\n/)) {
+  for (const l of read(join(dir, "tandem.log.jsonl")).split(/\r?\n/)) {
     if (!l.trim()) continue;
     try {
       const e = JSON.parse(l);
@@ -425,7 +421,33 @@ function groupsList() {
       }
     }
   }
-  return out.sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.lastTs - a.lastTs);
+  return out;
+}
+
+// Aggregate every tandem pair across ALL state dirs (each session has its own folder now),
+// plus the legacy shared .state. Dedup by pair, give each a stable unique display number.
+function groupsList() {
+  const all = [];
+  for (const dir of listStateDirs(ROOT)) all.push(...groupsForDir(dir));
+  const byPair = new Map();
+  for (const g of all) {
+    const k = (g.claudeId || "?") + "|" + (g.codexId || "?");
+    const ex = byPair.get(k);
+    if (!ex) byPair.set(k, g);
+    else {
+      ex.live = ex.live || g.live;
+      ex.lastTs = Math.max(ex.lastTs, g.lastTs);
+    }
+  }
+  const merged = [...byPair.values()];
+  // stable per-pair display number (sort by pair id, not activity, so n doesn't jump around)
+  merged
+    .slice()
+    .sort((a, b) => ((a.claudeId || "") + (a.codexId || "")).localeCompare((b.claudeId || "") + (b.codexId || "")))
+    .forEach((g, i) => {
+      g.n = i + 1;
+    });
+  return merged.sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0) || b.lastTs - a.lastTs);
 }
 
 // ---- Claude Code session transcript → messages ----
@@ -496,14 +518,17 @@ function parseCodexRollout(file, limit = 70) {
 
 function parseTimeline(limit = 40) {
   const out = [];
-  for (const line of read(TANDEM_LOG).split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    try {
-      out.push(JSON.parse(line));
-    } catch {
-      /* ignore */
+  for (const dir of listStateDirs(ROOT)) {
+    for (const line of read(join(dir, "tandem.log.jsonl")).split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      try {
+        out.push(JSON.parse(line));
+      } catch {
+        /* ignore */
+      }
     }
   }
+  out.sort((a, b) => (a.ts || 0) - (b.ts || 0)); // merge all tandems' events by time
   return out.slice(-limit);
 }
 
