@@ -4,6 +4,13 @@
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
+// Per-driver state-file key. Concurrent tandems must NOT share verdict/status files, or one
+// tandem's turn clobbers another's result. Both peer.mjs and serve.mjs derive the key from the
+// driver id with the SAME sanitizer so they agree on the path for a given tandem.
+export function jobKey(id) {
+  return (id || "default").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 40) || "default";
+}
+
 export function readGroups(file) {
   if (!existsSync(file)) return { seq: 1, groups: {} };
   try {

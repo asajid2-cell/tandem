@@ -21,7 +21,7 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { recordGroup, readGroups, readDetached, markDetached } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached, markDetached, jobKey } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -29,7 +29,9 @@ const STATE = join(ROOT, ".state");
 const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const USAGE = join(STATE, "usage.json"); // per-session context size (input tokens) → compaction trigger
-const LASTMSG = join(STATE, "last.txt");
+// Per-driver state key, so CONCURRENT tandems don't clobber each other's verdict/status files.
+const SK = jobKey(process.env.CLAUDE_CODE_SESSION_ID || process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID);
+const LASTMSG = join(STATE, `last-${SK}.txt`);
 const COMPACT_OUT = join(STATE, "compact.out"); // handoff-summary turns write HERE, not LASTMSG (keep the real verdict clean)
 const CODEX_SEED = join(STATE, "codex.seed"); // handoff summary the next fresh codex turn prepends
 
@@ -272,7 +274,7 @@ async function ask(task, cfg) {
 
 const CLAUDE_SESSION = join(STATE, "claude.session"); // dedicated partner session id
 const CLAUDE_VERDICT = join(STATE, "claude_verdict.txt");
-const JOB = join(STATE, "job.json"); // background turn state (for --bg + status/wait)
+const JOB = join(STATE, `job-${SK}.json`); // background turn state (for --bg + status/wait), per-driver
 const JOB_TASK = join(STATE, "job.task");
 const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id ↔ codex id)
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon

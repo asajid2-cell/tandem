@@ -13,7 +13,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
-import { recordGroup, readGroups, readDetached } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached, jobKey } from "./groups.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -21,8 +21,6 @@ const STATE = join(ROOT, ".state");
 const INBOX = join(STATE, "inbox.txt");
 const STATUS = join(STATE, "status.txt");
 const TURNLOG = join(STATE, "turn.jsonl");
-const LASTMSG = join(STATE, "last.txt");
-const JOB = join(STATE, "job.json");
 const PID = join(STATE, "serve.pid");
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
@@ -33,6 +31,10 @@ const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on
 const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
 const CODEX_DRIVER_ID =
   process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
+// Per-driver verdict/status files so concurrent tandems don't clobber each other (matches peer.mjs).
+const SK = jobKey(CODEX_DRIVER_ID);
+const LASTMSG = join(STATE, `last-${SK}.txt`);
+const JOB = join(STATE, `job-${SK}.json`);
 
 function cfg() {
   const p = join(ROOT, "tandem.config.json");
