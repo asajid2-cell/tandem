@@ -30,6 +30,8 @@ TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs serve
 
 # converse with the OPEN session, turn after turn:
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask "<scoped task for the Claude partner>"
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask - < task.txt   # long/multiline task via
+   # stdin — write it to a file first; NEVER a heredoc or inline multiline quotes (they mangle)
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask --bg "<long task>"   # background
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs status   # running? last verdict
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs wait     # block until the bg turn is done
@@ -47,6 +49,11 @@ breaking at its context limit without losing the thread.
 **Important — long turns:** a foreground `ask` can exceed your shell's command timeout. For
 anything non-trivial use `ask --bg` then poll `status` (instant) in a loop until done — don't try to
 background it with detached PowerShell (that broke before). The bridge owns the backgrounding.
+
+**Multiple concurrent tandems from one session (e.g. parallel workers): unique `TANDEM_LABEL` env
+each.** The `label` command keys off the driver session id, which parallel workers share — they'd all
+collapse into one folder. Set `TANDEM_LABEL=<unique-name>` on every `peer.mjs` call belonging to that
+tandem instead; it overrides the recorded label. One tandem = one label = one private folder.
 
 ## The method (same doctrine, roles swapped)
 
