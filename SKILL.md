@@ -54,6 +54,17 @@ env per tandem.** The `label` command keys off the driver session id, which para
 they'd all collapse into one folder. Set `TANDEM_LABEL=<unique-name>` on every `peer.mjs` call for
 that tandem instead (it overrides the recorded label). One tandem = one label = one folder.
 
+**Drive like a master planner — fan out lanes, never idle.** A partner turn running is when YOUR
+real job happens: you own the whole (plan, direction, correctness); each partner owns a slice.
+Never delegate one 30+ min task and doze until the verdict — that inverts the design and makes you
+your partner's subagent. When the problem decomposes into independent workstreams, run one tandem
+lane per workstream concurrently (unique `TANDEM_LABEL` + `ask --bg` each), then cycle: own work →
+poll `status` per lane → interpret arrivals (converge/diverge) → dispatch next. Size asks for
+steering, not batching — a mega-turn bundling five questions loses parallelism and early divergence
+signals; long turns are only for genuinely long work (builds, captures, deep debugs). Each lane is
+still a peer on its slice (independent vantage, no conclusion-feeding); 2–4 lanes is the honest
+ceiling before the driver stops genuinely interpreting.
+
 **Compaction — don't let the partner break at its context limit.** `ask`/`status` warn you when
 the partner is running low. When you see that, run `peer.mjs compact "<what to preserve>"`: the
 partner summarizes with YOUR prompt, a fresh thread is seeded with it, and the pair re-couples

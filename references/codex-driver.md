@@ -53,7 +53,14 @@ background it with detached PowerShell (that broke before). The bridge owns the 
 **Multiple concurrent tandems from one session (e.g. parallel workers): unique `TANDEM_LABEL` env
 each.** The `label` command keys off the driver session id, which parallel workers share — they'd all
 collapse into one folder. Set `TANDEM_LABEL=<unique-name>` on every `peer.mjs` call belonging to that
-tandem instead; it overrides the recorded label. One tandem = one label = one private folder.
+tandem instead; it overrides the recorded label. One tandem = one label = one private folder (and,
+for Claude partners, its own daemon — so lanes run truly concurrently).
+
+**Never idle on a partner turn — drive like a master planner.** Don't hand Claude one 30+ min task
+and sleep until the verdict; that makes you its subagent. While lanes run: advance your own track,
+interpret verdicts as they land (converge/diverge), update the plan, prep the next delegations.
+Independent workstreams → independent lanes (`TANDEM_LABEL` each, `ask --bg` each); size asks for
+steering, not batching; 2–4 lanes max or you stop genuinely interpreting.
 
 ## The method (same doctrine, roles swapped)
 
