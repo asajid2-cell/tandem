@@ -73,9 +73,10 @@ function lowContextNote(sid, limit) {
   const used = readUsage()[sid] || 0;
   if (used < limit) return null;
   return (
-    `\n⚠ tandem: codex ${String(sid).slice(0, 8)} has run ${used} turns (compaction threshold ${limit}).\n` +
-    `   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.\n` +
-    `   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"`
+    `\n⚠ tandem: the partner (codex ${String(sid).slice(0, 8)}) is running low on context — ~${used} tokens used (limit ${limit}).\n` +
+    `   Hand off to a fresh thread, crafting what to preserve:\n` +
+    `     node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"\n` +
+    `   (or just \`peer.mjs compact\` for the default summary). The pair re-couples to the fresh thread automatically.`
   );
 }
 const TURNLOG = join(STATE, "turn.jsonl");
@@ -119,21 +120,9 @@ function loadConfig() {
     // is NOTIFIED that the passenger is running low and should hand off to a fresh session
     // (via `peer.mjs compact "<your handoff prompt>"`). Set near ~80% of the partner model's
     // context window. 0 disables the notice.
-    compactAtTokens: Number(process.env.TANDEM_COMPACT_AT) || 300000, // legacy; not the trigger anymore
-    // PROACTIVE compaction trigger: after a partner session runs this many turns, hand off to a
-    // fresh session (continuity preserved via a handoff summary) BEFORE it degrades/spins near its
-    // context limit. Turn count is used, not codex's token metric — codex reports SUMMED per-turn
-    // tokens (millions) which is not a reliable current-context signal. 0 disables. The REACTIVE net
-    // (recover-on-context-error) is always on regardless of this.
-    maxTurnsBeforeCompact: Number(process.env.TANDEM_MAX_TURNS) || 12,
-    // if true (default), the bridge auto-compacts when the trigger is hit instead of just notifying.
-    autoCompact: process.env.TANDEM_AUTO_COMPACT !== "0",
-    // SAFETY BACKSTOP for runaway/stuck turns: kill + flag a partner turn exceeding this many
-    // seconds (a pathological spin). Generous so a long legit relink isn't clipped. 0 disables.
-    maxTurnSec: Number(process.env.TANDEM_MAX_TURN_SEC) || 2400,
-    // optional project-context preamble auto-prepended to a FRESH partner session's first task
-    // (e.g. repo root + key paths) so the partner doesn't burn a turn searching. "" = none.
-    taskPreamble: process.env.TANDEM_TASK_PREAMBLE || "",
+    compactAtTokens: Number(process.env.TANDEM_COMPACT_AT) || 300000,
+    // if true, the bridge compacts automatically (default summary) instead of just notifying.
+    autoCompact: process.env.TANDEM_AUTO_COMPACT === "1" || false,
   };
   let cfg = defaults;
   for (const p of [join(ROOT, "tandem.config.json"), join(process.cwd(), "tandem.config.json")]) {
@@ -156,33 +145,8 @@ function loadConfig() {
   if (process.env.TANDEM_PARTNER) cfg.partner = process.env.TANDEM_PARTNER;
   if (process.env.TANDEM_POSTURE) cfg.posture = process.env.TANDEM_POSTURE;
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
-  if (process.env.TANDEM_MAX_TURNS) cfg.maxTurnsBeforeCompact = Number(process.env.TANDEM_MAX_TURNS);
-  if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT !== "0";
-  if (process.env.TANDEM_MAX_TURN_SEC) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC);
-  if (process.env.TANDEM_TASK_PREAMBLE) cfg.taskPreamble = process.env.TANDEM_TASK_PREAMBLE;
-  // Self-heal pinned binary paths. codex/claude live under a VERSION-HASHED dir that gets superseded on
-  // every update — a hard-pinned absolute path in the config would then silently break the partner. If the
-  // configured exe no longer exists, pick the newest sibling build; else fall back to the bare PATH name.
-  cfg.codexBin = healBin(cfg.codexBin, (process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "OpenAI", "Codex", "bin") : null), "codex.exe", "codex");
-  const claudeParent = String(cfg.claudeBin || "").match(/^(.*claude-code)[\\/]/i);
-  cfg.claudeBin = healBin(cfg.claudeBin, claudeParent ? claudeParent[1] : null, "claude.exe", "claude");
+  if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   return cfg;
-}
-
-// Resolve a pinned exe path that may have been superseded by an update: if it's a bare name (on PATH) or
-// still exists, keep it; otherwise pick the newest `<parent>/<hashOrVer>/<exeName>`; else the PATH fallback.
-function healBin(p, parent, exeName, fallback) {
-  try {
-    if (!p || (!p.includes("\\") && !p.includes("/"))) return p;   // bare name -> resolved via PATH
-    if (existsSync(p)) return p;                                    // pinned path still valid
-    if (parent && existsSync(parent)) {
-      const dirs = readdirSync(parent).map((d) => join(parent, d))
-        .filter((d) => { try { return statSync(d).isDirectory() && existsSync(join(d, exeName)); } catch { return false; } })
-        .sort((a, b) => { try { return statSync(b).mtimeMs - statSync(a).mtimeMs; } catch { return 0; } });
-      if (dirs.length) return join(dirs[0], exeName);
-    }
-  } catch (e) {}
-  return fallback;
 }
 
 function postureArgs(posture, fresh) {
@@ -462,14 +426,6 @@ async function startJob(task, cfg) {
     env: process.env,
   });
   child.unref();
-  // Persist the runner pid so status/wait can detect a runner that died (codex OOM / crash /
-  // external kill) without ever writing a terminal status — otherwise the job is stuck
-  // "running" forever (the maxTurnSec backstop lives INSIDE this child, so it dies with it).
-  // jobState() reconciles a dead runner -> error.
-  try {
-    const j0 = JSON.parse(readFileSync(JOB, "utf8"));
-    if (j0 && j0.status === "running") writeFileSync(JOB, JSON.stringify({ ...j0, runnerPid: child.pid }));
-  } catch { /* best-effort; the staleness age-fallback in jobState() still covers it */ }
   console.log(`tandem: codex turn started in background (pid ${child.pid}). poll: peer.mjs status  ·  block: peer.mjs wait`);
 }
 
@@ -512,38 +468,11 @@ async function runJob(cfg, jobArgv) {
 
 function jobState() {
   if (!existsSync(JOB)) return null;
-  let j;
   try {
-    j = JSON.parse(readFileSync(JOB, "utf8"));
+    return JSON.parse(readFileSync(JOB, "utf8"));
   } catch {
     return null;
   }
-  if (!j || j.status !== "running") return j;
-  // STALENESS / DEAD-RUNNER DETECTION — the fix for "job stuck running forever".
-  // A background codex turn writes its terminal status (done/error) from inside the __runjob
-  // child. If that child dies first (codex OOM, a crash, or an external kill) it never writes
-  // one, and the maxTurnSec backstop — a setTimeout living in that same child — dies with it.
-  // Without this reconcile, status/wait trust the "running" field indefinitely. Two nets:
-  //   1) the recorded runner pid is gone (past a short spawn grace), or
-  //   2) the job outlived the safety backstop by a margin (covers a missing pid / the
-  //      claude-daemon path / jobs written before this fix).
-  const ageMs = Date.now() - (j.ts || 0);
-  const maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 2400;
-  const runnerDead = j.runnerPid && ageMs > 4000 && !isAlive(j.runnerPid);
-  const tooOld = ageMs > (maxTurnSec + 120) * 1000;
-  if (runnerDead || tooOld) {
-    j = {
-      status: "error",
-      partner: j.partner,
-      error: runnerDead
-        ? `runner process (pid ${j.runnerPid}) exited without writing a result (crash/OOM/kill)`
-        : `no terminal status after ${Math.round(ageMs / 1000)}s (backstop ${maxTurnSec}s) — runner presumed dead`,
-      stale: true,
-      ts: Date.now(),
-    };
-    try { writeFileSync(JOB, JSON.stringify(j)); } catch { /* ignore */ }
-  }
-  return j;
 }
 
 async function waitJob(maxSec) {
@@ -586,7 +515,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
     /* ignore */
   }
   const t0 = Date.now();
-  const { stdout: out, code, timedOut } = await runCodex(cfg.codexBin, args, task, cfg.maxTurnSec || 0);
+  const { stdout: out, code } = await runCodex(cfg.codexBin, args, task);
   const dur = Math.round((Date.now() - t0) / 1000);
 
   // capture the session id for continuity — only on a successful fresh run, and
@@ -607,7 +536,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
   // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
   const verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
   const d = digest(out);
-  return { verdict, d, dur, raw: out, code, codexId, timedOut };
+  return { verdict, d, dur, raw: out, code, codexId };
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
@@ -616,12 +545,12 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
 //  - REACTIVE net: if a turn still hits the wall, recover on a fresh session seeded with a summary.
 async function askCodex(task, cfg, sidOverride) {
   let sid = sidOverride !== undefined ? sidOverride : readSession();
-  const limit = cfg.maxTurnsBeforeCompact || 0;
+  const limit = cfg.compactAtTokens || 0;
 
   if (sid && limit && cfg.autoCompact && (readUsage()[sid] || 0) >= limit) {
     const used = readUsage()[sid] || 0;
-    console.error(`tandem: codex ${sid.slice(0, 8)} reached ${used} turns (limit ${limit}) — auto-compacting to a fresh session`);
-    logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, turns: used });
+    console.error(`tandem: codex ${sid.slice(0, 8)} near context limit (${used} tok) — auto-compacting`);
+    logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, tokens: used });
     const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT); // summary → temp file, not the verdict slot
     task = handoffSeed(s.verdict) + task;
     sid = "";
@@ -637,10 +566,6 @@ async function askCodex(task, cfg, sidOverride) {
     }
   }
 
-  // project-context preamble on a FRESH session so the partner doesn't burn a turn hunting for paths
-  // (resumed sessions already have it). Empty by default → no change unless taskPreamble is configured.
-  if (!sid && cfg.taskPreamble) task = cfg.taskPreamble + "\n\n" + task;
-
   let r = await codexExec(sid, task, cfg);
 
   if (r.code !== 0 && sid && isContextError(r.raw)) {
@@ -655,7 +580,7 @@ async function askCodex(task, cfg, sidOverride) {
     r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg);
   }
 
-  if (r.codexId) setUsage(r.codexId, (readUsage()[r.codexId] || 0) + 1); // turn count for this session (proactive-compaction signal)
+  if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
   r.lowContext = lowContextNote(r.codexId, limit); // driver-facing "running low" notice (or null)
   return r;
 }
@@ -682,37 +607,18 @@ async function compactCodex(task, cfg) {
   console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
-function runCodex(bin, args, stdin, maxSec = 0) {
+function runCodex(bin, args, stdin) {
   // a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
   if (/\.[mc]?js$/i.test(bin)) {
     args = [bin, ...args];
     bin = process.execPath;
   }
-  // Sanitize the partner's env: strip the DRIVER's OWN agent identity. The codex partner
-  // inherits this process's env; without this, a Claude driver's CLAUDE_CODE_*/CLAUDECODE
-  // leak into codex, so when codex later shells out to peer.mjs for ITS helper, detectPartner
-  // sees BOTH agents' vars and mis-routes the helper into the driver's tandem state (a nested
-  // codex resume that spins). Removing the driver's vars makes codex's env codex-only → its
-  // helper call correctly resolves driver=codex/partner=claude.
-  const childEnv = { ...process.env };
-  for (const k of Object.keys(childEnv)) {
-    if (k === "CLAUDECODE" || k.startsWith("CLAUDE_CODE")) delete childEnv[k];
-  }
   return new Promise((resolveP) => {
     let stdout = "";
     let stderr = "";
     let child;
-    let done = false;
-    let timedOut = false;
-    let watchdog = null;
-    const finish = (res) => {
-      if (done) return;
-      done = true;
-      if (watchdog) clearTimeout(watchdog);
-      resolveP(res);
-    };
     try {
-      child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: childEnv });
+      child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     } catch (e) {
       console.error(`tandem: cannot spawn ${bin}: ${e.message}`);
       process.exit(1);
@@ -721,26 +627,6 @@ function runCodex(bin, args, stdin, maxSec = 0) {
       console.error(`tandem: partner spawn error: ${e.message} (is codex installed + logged in?)`);
       process.exit(1);
     });
-    // SAFETY BACKSTOP: kill a runaway/stuck turn so it can't spin forever. Tree-kill (taskkill /T on
-    // Windows) so codex's child processes don't orphan and pile up. Generous maxSec keeps legit long
-    // turns (e.g. a multi-minute relink) safe; 0 disables.
-    if (maxSec > 0) {
-      watchdog = setTimeout(() => {
-        timedOut = true;
-        console.error(
-          `tandem: partner turn exceeded ${maxSec}s — killing it (likely runaway/stuck). ` +
-            `Relaunch with a fresh, tightly-scoped task, or raise maxTurnSec for genuinely long builds.`,
-        );
-        try {
-          if (process.platform === "win32") spawn("taskkill", ["/F", "/T", "/PID", String(child.pid)], { windowsHide: true });
-          else child.kill("SIGKILL");
-        } catch {
-          /* ignore */
-        }
-        // fallback resolve in case the kill doesn't deliver an 'exit' promptly
-        setTimeout(() => finish({ stdout, code: 124, timedOut: true }), 2000);
-      }, maxSec * 1000);
-    }
     child.stdout.on("data", (b) => {
       stdout += b.toString();
       try {
@@ -753,8 +639,8 @@ function runCodex(bin, args, stdin, maxSec = 0) {
     child.stdin.write(stdin);
     child.stdin.end();
     child.on("exit", (code) => {
-      if (!timedOut && code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
-      finish({ stdout, code: timedOut ? 124 : code ?? 0, timedOut });
+      if (code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
+      resolveP({ stdout, code: code ?? 0 });
     });
   });
 }

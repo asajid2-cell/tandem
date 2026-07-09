@@ -1,0 +1,22 @@
+ALARMONIZER pass-4 converge. Last pass you confirmed scene + the ring-state orphan CLOSED, and found 4 more (audio-clobber #1, scheduler pre-claim crash #2, restart-re-blares-stop-pending #3, maxDampening:0 #4). I fixed all 4. Verify each is genuinely closed in the real source + final new-hole sweep. Your OWN verdict; cite file:line.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 89 vitest pass. Live re-verified at <=10%: box STOP→reload, dismiss→no-phantom, restart→resume all 7/7; maxDampening:0 now saves (was snapping to 70).
+
+FIX #1 (audio-clobber of a NEW alarm) — server/fireEngine.js doStopRing + lmsClient.js restore:
+ - Added `if (superseded()) return true;` immediately AFTER `verifyStopState()` in the verify loop (before the loop's stopOnce).
+ - `stopOnce` now checks `if (superseded()) return;` at entry AND between the stop/loop/clearPlaylist writes.
+ - `lms.restore(playerId, snap, { shouldAbort })` now aborts between EVERY mutating command; doStopRing passes `shouldAbort: superseded`.
+ VERIFY: is there any remaining await in doStopRing/stopOnce/restore after which a box-write can hit a NEWER alarm's audio? Is the first stopOnce (pre-loop) covered by the earlier ownership-read guard (no await between)?
+
+FIX #2 (scheduler pre-claim crash → permanent skip) — server/alarmScheduler.js evaluate():
+ - On STARTUP only, a "firing" occurrence whose key != the active ring's occurrenceKey is treated as recoverable (orphanedFiring) → not skipped → re-fires within the catch-up window or is marked missed. Mid-run "firing" is still skipped.
+ VERIFY: (a) ordering — index.js runs fireEngine.reconcileStartup() BEFORE scheduler.reconcileStartup(), so a genuinely-resumed ring sets activeKey and its occurrence is NOT recovered; confirm that holds. (b) Can this DOUBLE-fire a live alarm, or re-fire one that should stay missed? (c) interplay with #3: a stop-pending ring that reconcile finishes marks its occurrence "dismissed" before the scheduler runs → not recovered — confirm.
+
+FIX #3 (restart re-blares a stop-pending ring) — server/fireEngine.js:
+ - doStopRing keeps the unconfirmed-stop ring with `stopPending:true` + `dismissRequestedAt`.
+ - reconcileStartup, on a `stopPending` ring, calls `doStopRing()` (full re-stop + re-arm enforcer if still unreachable) and marks the occurrence "dismissed" — NEVER enterBlaring. Returns null.
+ VERIFY: can a stopPending ring ever still reach enterBlaring? Does calling doStopRing() from reconcile (which itself reads getActiveRing + bumps token) behave correctly here? Any case it re-blares?
+
+FIX #4 (maxDampening:0 unsaveable) — server/settingsStore.js: replaced `Number(...) || DEFAULT` with a `normalizeDampening()` NaN-check that preserves 0. VERIFY 0 persists, NaN/undefined → 70, clamp 0..95 holds.
+
+BRING BACK per-fix "CLOSED / still-open: <file:line + sequence + fix>", PLUS any NEW hole pass-4 introduced. We've now done 4 passes; if the only remaining items are negligible/theoretical, say so explicitly. FINAL call: is it NOW "wakes him every morning, box can only dampen, never a phantom, never an orphan, never silently skipped"?

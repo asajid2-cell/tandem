@@ -1,0 +1,15 @@
+ALARMONIZER final converge. Your pass-10 found ONE specific reachable hole (MSG-13): `LmsClient.nowPlayingRef()` catches a failing `status ... tags:u` read and returns empty `tracks`, and stopOrphanedPlayback treated `mode=play, tracks=[]` as "confirmed non-alarm playback" → skipped the stop → stale alarm play left unstopped with activeRing=null. I FIXED it. Confirm + give the final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 100 vitest pass (added a regression test: dismiss during the play + nowPlayingRef returns mode=play with EMPTY tracks → the orphan IS stopped). Deployed + live 7/7 at <=10%.
+
+THE FIX (server/fireEngine.js stopOrphanedPlayback): the preserve-user-music branch now requires a POSITIVELY-identified current track:
+  `const confirmedNonAlarm = Boolean(cur) && !refs.some((r) => sameAudioRef(cur, r));`
+  `if (String(live.mode).toLowerCase() === "play" && confirmedNonAlarm) return;`
+So ONLY a real current track that is provably NOT the alarm is preserved. An empty/unknown track list (mode=play, tracks=[]) — your exact flaked-read case — is INCONCLUSIVE, no longer counts as "user music", and falls through to the stop. Orphan-death beats a maybe-clobber.
+
+VERIFY:
+1. Re-run your MSG-13 probe (confirm read throws after play; ownership/status read returns mode=play with empty tracks): is the stale alarm play now STOPPED (not left as an orphan with activeRing=null)?
+2. The legitimate preserve case (a REAL non-alarm current track URL present) still skips the stop (no clobber of the user's restored music)?
+3. Any OTHER reachable (non-theoretical) classification gap in stopOrphanedPlayback or the broader lifecycle?
+
+This is pass 11 of a long hardening effort; every finding since pass-7 has been a single sub-window in the start-sequence/cleanup, each fixed. The user's actual reliability problem (box pause kills the alarm + phantom ringing) is verified solved live across every pass. If this empty-tracks gap is closed and only theoretical/unreachable edges remain, SAY SO and give the final call. BRING BACK: "BULLETPROOF: yes" or a SPECIFIC real remaining hole (file:line + exact trigger). FINAL verdict.

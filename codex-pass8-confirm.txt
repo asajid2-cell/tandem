@@ -1,0 +1,12 @@
+ALARMONIZER final confirmation. Your pass-7 reproduced ONE real race: `startRing()` awaits snapshot/source before its first `persistRing()` without re-checking `runToken`, so a dismiss in that gap left an active `preflight` ring with no playback + no watchdog (a silent phantom reconcileStartup could later try to blare). I FIXED it. Confirm + give the final bulletproof call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 96 vitest pass (added a regression test: dismiss during startRing's snapshot await → no stale ring persisted). Deployed + live-healthy.
+
+THE FIX (server/fireEngine.js startRing): added `if (runToken !== token) return store.getActiveRing();` immediately before BOTH persistRing sites — the catch/fallback path (after the fallbackSound await) and the normal path (after snapshot+resolve) — so a dismiss/newer-alarm that bumped the token during those awaits causes startRing to YIELD (return the current ring/null) instead of persisting a stale preflight ring. This is the same token-recheck-before-persist pattern already applied to maintainBlare, enterBlaring, and the easy-wake ramps.
+
+VERIFY:
+1. Does the guard fully close the preflight-phantom race (re-run your repro: a dismiss bumping the token during startRing's snapshot await must now leave NO stale active ring)?
+2. Is there any OTHER persist-after-await in the engine that still lacks a token/stillOwner re-check (sweep: maintainBlare, enterBlaring, scheduleEasyWakeMusic/Tone woke + ramp persists, reconcileStartup, startRing both paths)?
+3. The no-player early `return false` branch you flagged as corrupt-store cleanup — confirm it's not reachable from a legitimate persisted ring (baseRing always sets playerId).
+
+This is the 8th and final pass. Findings have converged entirely to "re-check the token before a persist that follows an await" — all now guarded. If the ONLY remaining items are theoretical/unreachable, SAY SO explicitly and give the final call. BRING BACK: "BULLETPROOF: yes — box can only dampen, never a phantom, never an orphan, never silently skipped, never re-fires a dismissed alarm" OR a SPECIFIC real remaining hole (file:line + exact trigger). Final verdict.

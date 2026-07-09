@@ -1,0 +1,17 @@
+ALARMONIZER final converge. Your pass-6 call: the scene-dismiss + loop-timeout confirmed-stop hole CLOSED, but the DEFERRED (enforcer) and SUPERSEDED exits could still leave a "firing" occurrence with no matching active ring → orphan-recovery re-fire. I closed BOTH. Confirm + give the final bulletproof call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 95 vitest pass. Deployed + live 7/7 at <=10%.
+
+THE FIX (server/fireEngine.js): a single `dismissOccurrence(occurrenceKey)` helper (markOccurrence(key,"dismissed",{dismissedAt}) if it exists) is now called at EVERY terminal dismiss exit — there is no longer ANY exit that turns the alarm off without marking its occurrence:
+ - confirmed stop: the not-owned `return true` AND the final post-verify `return true`.
+ - SUPERSEDED (all 5 sites: after settle, after ownership read, both in-loop, before keep-ring): `dismissOccurrence(active.occurrenceKey)` then return true. (Note: `active` is captured at dismiss START, so active.occurrenceKey is ALWAYS the dismissing alarm's OWN occurrence — never the new alarm's — so unconditional marking is correct; I removed an earlier "ifNotCurrent" guard that was both unnecessary and timing-fragile because the superseding alarm bumps the token before persisting its ring.)
+ - DEFERRED: the stop-enforcer marks the occurrence dismissed when it finally quiets the box (state==="stopped") AND on give-up (maxAttempts) before clearing the ring.
+ - the stopPending reconcile path also marks it.
+
+VERIFY:
+1. Walk EVERY return/exit of doStopRing + the enforcer: is there ANY path that clears/keeps-then-clears the ring (turns the alarm off) WITHOUT marking the occurrence dismissed (other than the legitimate `return false` → enforcer-armed, which defers the marking to the enforcer)?
+2. Is unconditional `dismissOccurrence(active.occurrenceKey)` on the superseded paths genuinely safe (active.occurrenceKey is the OLD alarm's, captured pre-supersede — can it EVER be the new alarm's key)?
+3. The genuine #2 recovery (crashed BEFORE any ring persisted → no ring → scheduler orphan-recovers + re-fires) — still intact (NOT marked missed/dismissed, so it DOES re-fire)?
+4. Any OTHER remaining real (non-theoretical) path to: a phantom (ring/banner with no audio), an orphan (audio with no ring/watchdog), a silently-skipped alarm, a re-fired dismissed alarm, or the box stopping the alarm?
+
+This is the 7th pass; findings have narrowed to occurrence-bookkeeping edges. If the only remaining items are negligible/theoretical, SAY SO explicitly. BRING BACK: "occurrence-dismissal CLOSED — BULLETPROOF: yes" or a SPECIFIC real remaining hole (file:line + exact trigger sequence). This is the final call.

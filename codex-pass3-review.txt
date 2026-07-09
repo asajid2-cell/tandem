@@ -1,0 +1,14 @@
+ALARMONIZER pass-3 FINAL converge. Last pass you CLOSED findings 1,2,3,5,6 and found ONE blocker (#4) + one new false-success surface. I fixed both. Verify they're genuinely closed in the real source, and do a final new-hole sweep. Reach your OWN verdict; cite file:line.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 84 vitest pass. Live re-verified on the Boom at <=10%: box STOP→reload, dismiss→no phantom, mid-ring restart→resume — all green.
+
+FIX A — #4 (stop-enforcer / dismiss vs a NEW alarm orphan race): your repro was: A's dismiss bumps token, awaits the verify loop; B fires during that window (bumps token + sets its ring); A resumes, `store.setActiveRing(active)` overwrites B, then armStopEnforcer captures the now-B token and clears B's ring → B orphaned.
+   FIX in server/fireEngine.js doStopRing: capture `const dismissToken = token;` right after `token += 1`, and `const superseded = () => dismissToken !== token;`. Added `if (superseded()) return true;` at FOUR points: after the 800ms settle, after the ownership read (before the not-owned clear), at the TOP of each verify-loop iteration (before re-stopping B's audio), and before the keep-ring `store.setActiveRing(active)` + enforcer arm. armStopEnforcer now takes the dismissToken as a param (NOT `const enforceToken = token` read live) so it's bound to THIS dismiss; its tick still bails on `enforceToken !== token`.
+   VERIFY: (a) is there ANY remaining await in doStopRing after which a store-mutation/box-write happens without a superseded() recheck? (b) returning `true` on supersede — correct (A is gone, B owns it; route marks A's occurrence dismissed, B untouched)? any case it should be false? (c) can the enforcer, once armed on dismissToken, ever clear a ring whose token is newer? (d) does cancelScheduled in B's startRing also stand the enforcer down, and is that belt-and-suspenders or load-bearing?
+
+FIX B — scene-dismiss false success: server/sceneRunner.js dismiss branch returned `{stopped: await stopRing()}` but the wrapper always returned `ok:true` and app.js triggerTap always 200'd.
+   FIX: sceneRunner sets `stopConfirmed = await fireEngine.stopRing()` and returns `ok: stopConfirmed` (+ `reason:"stop_unconfirmed"` when false); app.js triggerTap returns 503 when `result.ok === false`. VERIFY the propagation is complete (no other caller assumes ok:true) and that a CONFIRMED dismiss-scene still 200s ok:true.
+
+ALSO sweep for any NEW hole these pass-3 edits introduced, and anything across the whole reliability surface you haven't yet checked (alarmScheduler occurrence state machine vs the new false dismiss; settingsStore maxDampening injection; reconcileStartup interplay with an armed enforcer across a restart).
+
+BRING BACK: "#4 CLOSED / scene CLOSED" or "still-open: <file:line + exact sequence + fix>", PLUS any new hole. FINAL call: is it NOW "wakes him every morning, box can only dampen, never a phantom, never an orphan"?

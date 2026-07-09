@@ -1,0 +1,15 @@
+ALARMONIZER final converge. Your pass-9 found TWO sub-windows in the enterBlaring/easy-wake start gap: (MSG-10) the orphan cleanup was gated on `woke`, but the confirm READ can throw AFTER a successful play → woke=false → orphan NOT cleaned; and (MSG-7) the cleanup could clobber the user's OWN music that the dismiss had restored. I fixed BOTH. Confirm + give the final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 99 vitest pass (added regression tests for BOTH: confirm-read-throws-after-play → orphan still stopped; confirmed-user-music → NOT clobbered). Deployed + live 7/7 at <=10%.
+
+THE FIXES (server/fireEngine.js):
+1. MSG-10 — cleanup now keys off `playAttempted` (set true right before wakeAndConfirm, which issues power+playLooping before any confirm), NOT off `woke`. So an orphan is cleaned even when the confirm read throws after a successful play. Applied to enterBlaring + both easy-wake starts. Also added a stillOwner re-check right after setVolume (and after the tone fallback resolve) so a dismiss BEFORE the play means we never issue one.
+2. MSG-7 — `stopOrphanedPlayback(playerId, alarmRef)` is now OWNERSHIP-AWARE: it only runs when getActiveRing() is null (a dismiss took over, not a newer alarm), and a best-effort `nowPlayingRef` read that POSITIVELY identifies the box playing NON-alarm audio (the user's restored music) leaves it untouched. A read that flakes OR confirms the alarm → stop (an orphan must die even when reads fail). Callers pass the alarm ref(s): enterBlaring→alarmTone, easy-wake music→playback.sources/easeUpRefs, easy-wake tone→easySource/ring.source.
+
+VERIFY:
+1. Re-run your MSG-10 probe (dismiss during wakeAndConfirm's power, stale playLooping, confirm read throws): is the orphan now stopped (playAttempted gate), activeRing null, no watchdog?
+2. Re-run your MSG-7 probe (dismiss restores user music, stale starter reaches cleanup): is the user's CONFIRMED non-alarm music now preserved (not clobbered)?
+3. The two together: when the read FLAKES (can't classify), does it still STOP (favouring orphan-death over a possible music-clobber — the correct priority for an alarm)?
+4. Any OTHER reachable path (non-theoretical) to a phantom ring, orphan audio, silently-skipped alarm, re-fired dismissed alarm, or the box stopping the alarm?
+
+This is the culmination of a long hardening effort. The user's actual reliability problem (box pause kills the alarm + phantom ringing) is verified solved live across every pass; the recent findings have been sub-second start-sequence races, all now guarded. If MSG-10 + MSG-7 are closed and only theoretical/unreachable edges remain, SAY SO and give the final call. BRING BACK: "BULLETPROOF: yes" (box can only dampen; never a phantom ring; never orphan audio; never clobbers the user's restored music; never silently skips or re-fires) OR a SPECIFIC real remaining hole (file:line + exact trigger). FINAL verdict.

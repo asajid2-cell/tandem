@@ -1,0 +1,15 @@
+ALARMONIZER final converge. Your pass-11 found a REAL reachable hole (MSG-9): on a NORMAL dismiss, `nowPlayingRef()` catches a failed `status tags:u` read and returns `mode:"play"` with EMPTY tracks, and doStopRing's OWNERSHIP check classified that as `owned=false` → cleared activeRing, issued NO stop/restore → the alarm kept BLARING (orphan) on a normal dismiss whenever the status read flaked. I FIXED it. Confirm + final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 101 vitest pass (added a regression test: a dismiss with nowPlayingRef returning mode=play, empty tracks → doStopRing now ISSUES a stop/restore, never the owned=false no-op). Deployed + live 7/7 at <=10%.
+
+THE FIX (server/fireEngine.js doStopRing ownership block): an INCONCLUSIVE read (mode reported but EMPTY tracks) now defaults to `owned=true` (stop + restore) — the user dismissed, and we cannot PROVE they own the box, so we never leave a possibly-blaring alarm untouched. Only a POSITIVELY-identified non-alarm current track (real track URL present, not the alarm) sets `owned=false` (preserve the user's own music). This mirrors the same principle in stopOrphanedPlayback (empty/unknown → act; only a positive non-alarm read frees the box).
+
+I deliberately did NOT change verifyStopState (it runs AFTER our own stopOnce — a flaked read there shouldn't make us doubt our own stop and enforce indefinitely; "playing" still means the ALARM track is identifiably back = a mid-flight resume to re-stop).
+
+VERIFY:
+1. Re-run your MSG-9 probe (normal dismiss, nowPlayingRef => {mode:"play", tracks:[]}): does doStopRing now STOP/restore (owned=true), not clear-and-leave?
+2. The legitimate preserve case (a REAL non-alarm current track URL present) still sets owned=false (no clobber of the user's own music)?
+3. Is leaving verifyStopState as-is correct (empty-tracks→"stopped" AFTER our own stopOnce is "our stop held"; only an identifiable alarm track → "playing" → retry)? Or is there a concrete orphan there?
+4. Any OTHER classification site (besides ownership + stopOrphanedPlayback, now both inconclusive-safe) that mishandles a flaked read?
+
+This is pass 12 of a long effort; the principle "a flaked/inconclusive read never frees the box on a dismiss" is now applied at both decision points that gate a stop. The user's actual reliability problem is verified solved live across every pass. If MSG-9 is closed and only theoretical/unreachable edges remain, SAY SO and give the final call. BRING BACK: "BULLETPROOF: yes" or a SPECIFIC real remaining hole (file:line + exact trigger). FINAL verdict.

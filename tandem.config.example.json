@@ -2,5 +2,9 @@
   "codexBin": "codex",
   "claudeBin": "claude",
   "cwd": ".",
-  "posture": "config"
+  "posture": "config",
+  "autoCompact": true,
+  "maxTurnsBeforeCompact": 12,
+  "maxTurnSec": 2400,
+  "taskPreamble": ""
 }

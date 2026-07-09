@@ -1,0 +1,1295 @@
+Audit these newly added Japanese kanji course entries for standard Joyo/JLPT N4 correctness. Focus on wrong onyomi/kunyomi, okurigana dot placement, meanings, example word readings/glosses, stroke counts, duplicate/inappropriate entries, and anything that should be changed before shipping. Return a concise verdict: OK or list corrections with glyph/order/id.
+
+[
+  {
+    "id": "ja-kanji-dou",
+    "glyph": "同",
+    "meanings": [
+      "same"
+    ],
+    "onyomi": [
+      "ドウ"
+    ],
+    "kunyomi": [
+      "おな.じ"
+    ],
+    "examples": [
+      {
+        "word": "同じ",
+        "reading": "おなじ",
+        "gloss": "same",
+        "audioId": "ja-kanji-dou-ex0"
+      },
+      {
+        "word": "同時",
+        "reading": "どうじ",
+        "gloss": "same time",
+        "audioId": "ja-kanji-dou-ex1"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "basics",
+    "order": 104,
+    "audioId": "ja-kanji-dou"
+  },
+  {
+    "id": "ja-kanji-koto",
+    "glyph": "事",
+    "meanings": [
+      "thing",
+      "matter"
+    ],
+    "onyomi": [
+      "ジ",
+      "ズ"
+    ],
+    "kunyomi": [
+      "こと"
+    ],
+    "examples": [
+      {
+        "word": "仕事",
+        "reading": "しごと",
+        "gloss": "work; job",
+        "audioId": "ja-kanji-koto-ex0"
+      },
+      {
+        "word": "事",
+        "reading": "こと",
+        "gloss": "thing; matter",
+        "audioId": "ja-kanji-koto-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 105,
+    "audioId": "ja-kanji-koto"
+  },
+  {
+    "id": "ja-kanji-ji-self",
+    "glyph": "自",
+    "meanings": [
+      "self"
+    ],
+    "onyomi": [
+      "ジ",
+      "シ"
+    ],
+    "kunyomi": [
+      "みずか.ら"
+    ],
+    "examples": [
+      {
+        "word": "自分",
+        "reading": "じぶん",
+        "gloss": "oneself",
+        "audioId": "ja-kanji-ji-self-ex0"
+      },
+      {
+        "word": "自転車",
+        "reading": "じてんしゃ",
+        "gloss": "bicycle",
+        "audioId": "ja-kanji-ji-self-ex1"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "people",
+    "order": 106,
+    "audioId": "ja-kanji-ji-self"
+  },
+  {
+    "id": "ja-kanji-hatsu",
+    "glyph": "発",
+    "meanings": [
+      "departure",
+      "emit",
+      "start"
+    ],
+    "onyomi": [
+      "ハツ",
+      "ホツ"
+    ],
+    "kunyomi": [
+      "た.つ"
+    ],
+    "examples": [
+      {
+        "word": "出発",
+        "reading": "しゅっぱつ",
+        "gloss": "departure",
+        "audioId": "ja-kanji-hatsu-ex0"
+      },
+      {
+        "word": "発音",
+        "reading": "はつおん",
+        "gloss": "pronunciation",
+        "audioId": "ja-kanji-hatsu-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 107,
+    "audioId": "ja-kanji-hatsu"
+  },
+  {
+    "id": "ja-kanji-sha",
+    "glyph": "者",
+    "meanings": [
+      "person"
+    ],
+    "onyomi": [
+      "シャ"
+    ],
+    "kunyomi": [
+      "もの"
+    ],
+    "examples": [
+      {
+        "word": "医者",
+        "reading": "いしゃ",
+        "gloss": "doctor",
+        "audioId": "ja-kanji-sha-ex0"
+      },
+      {
+        "word": "若者",
+        "reading": "わかもの",
+        "gloss": "young person",
+        "audioId": "ja-kanji-sha-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "people",
+    "order": 108,
+    "audioId": "ja-kanji-sha"
+  },
+  {
+    "id": "ja-kanji-chi",
+    "glyph": "地",
+    "meanings": [
+      "ground",
+      "earth",
+      "place"
+    ],
+    "onyomi": [
+      "チ",
+      "ジ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "地図",
+        "reading": "ちず",
+        "gloss": "map",
+        "audioId": "ja-kanji-chi-ex0"
+      },
+      {
+        "word": "地下",
+        "reading": "ちか",
+        "gloss": "underground",
+        "audioId": "ja-kanji-chi-ex1"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "places",
+    "order": 109,
+    "audioId": "ja-kanji-chi"
+  },
+  {
+    "id": "ja-kanji-hou",
+    "glyph": "方",
+    "meanings": [
+      "direction",
+      "person",
+      "method"
+    ],
+    "onyomi": [
+      "ホウ"
+    ],
+    "kunyomi": [
+      "かた"
+    ],
+    "examples": [
+      {
+        "word": "方向",
+        "reading": "ほうこう",
+        "gloss": "direction",
+        "audioId": "ja-kanji-hou-ex0"
+      },
+      {
+        "word": "夕方",
+        "reading": "ゆうがた",
+        "gloss": "evening",
+        "audioId": "ja-kanji-hou-ex1"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "directions",
+    "order": 110,
+    "audioId": "ja-kanji-hou"
+  },
+  {
+    "id": "ja-kanji-ba",
+    "glyph": "場",
+    "meanings": [
+      "place"
+    ],
+    "onyomi": [
+      "ジョウ"
+    ],
+    "kunyomi": [
+      "ば"
+    ],
+    "examples": [
+      {
+        "word": "場所",
+        "reading": "ばしょ",
+        "gloss": "place",
+        "audioId": "ja-kanji-ba-ex0"
+      },
+      {
+        "word": "工場",
+        "reading": "こうじょう",
+        "gloss": "factory",
+        "audioId": "ja-kanji-ba-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "places",
+    "order": 111,
+    "audioId": "ja-kanji-ba"
+  },
+  {
+    "id": "ja-kanji-in",
+    "glyph": "員",
+    "meanings": [
+      "member",
+      "staff"
+    ],
+    "onyomi": [
+      "イン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "店員",
+        "reading": "てんいん",
+        "gloss": "shop clerk",
+        "audioId": "ja-kanji-in-ex0"
+      },
+      {
+        "word": "会社員",
+        "reading": "かいしゃいん",
+        "gloss": "company employee",
+        "audioId": "ja-kanji-in-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "people-school",
+    "order": 112,
+    "audioId": "ja-kanji-in"
+  },
+  {
+    "id": "ja-kanji-kai-open",
+    "glyph": "開",
+    "meanings": [
+      "open"
+    ],
+    "onyomi": [
+      "カイ"
+    ],
+    "kunyomi": [
+      "ひら.く",
+      "ひら.ける",
+      "あ.く",
+      "あ.ける"
+    ],
+    "examples": [
+      {
+        "word": "開ける",
+        "reading": "あける",
+        "gloss": "to open",
+        "audioId": "ja-kanji-kai-open-ex0"
+      },
+      {
+        "word": "開く",
+        "reading": "ひらく",
+        "gloss": "to open",
+        "audioId": "ja-kanji-kai-open-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "verbs",
+    "order": 113,
+    "audioId": "ja-kanji-kai-open"
+  },
+  {
+    "id": "ja-kanji-shi-begin",
+    "glyph": "始",
+    "meanings": [
+      "begin",
+      "start"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "はじ.める",
+      "はじ.まる"
+    ],
+    "examples": [
+      {
+        "word": "始める",
+        "reading": "はじめる",
+        "gloss": "to begin",
+        "audioId": "ja-kanji-shi-begin-ex0"
+      },
+      {
+        "word": "始まる",
+        "reading": "はじまる",
+        "gloss": "to begin",
+        "audioId": "ja-kanji-shi-begin-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "verbs",
+    "order": 114,
+    "audioId": "ja-kanji-shi-begin"
+  },
+  {
+    "id": "ja-kanji-shuu",
+    "glyph": "終",
+    "meanings": [
+      "end",
+      "finish"
+    ],
+    "onyomi": [
+      "シュウ"
+    ],
+    "kunyomi": [
+      "お.わる",
+      "お.える"
+    ],
+    "examples": [
+      {
+        "word": "終わる",
+        "reading": "おわる",
+        "gloss": "to end",
+        "audioId": "ja-kanji-shuu-ex0"
+      },
+      {
+        "word": "終点",
+        "reading": "しゅうてん",
+        "gloss": "last stop",
+        "audioId": "ja-kanji-shuu-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "verbs",
+    "order": 115,
+    "audioId": "ja-kanji-shuu"
+  },
+  {
+    "id": "ja-kanji-motsu",
+    "glyph": "持",
+    "meanings": [
+      "hold",
+      "have"
+    ],
+    "onyomi": [
+      "ジ"
+    ],
+    "kunyomi": [
+      "も.つ"
+    ],
+    "examples": [
+      {
+        "word": "持つ",
+        "reading": "もつ",
+        "gloss": "to hold; have",
+        "audioId": "ja-kanji-motsu-ex0"
+      },
+      {
+        "word": "気持ち",
+        "reading": "きもち",
+        "gloss": "feeling",
+        "audioId": "ja-kanji-motsu-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 116,
+    "audioId": "ja-kanji-motsu"
+  },
+  {
+    "id": "ja-kanji-matsu",
+    "glyph": "待",
+    "meanings": [
+      "wait"
+    ],
+    "onyomi": [
+      "タイ"
+    ],
+    "kunyomi": [
+      "ま.つ"
+    ],
+    "examples": [
+      {
+        "word": "待つ",
+        "reading": "まつ",
+        "gloss": "to wait",
+        "audioId": "ja-kanji-matsu-ex0"
+      },
+      {
+        "word": "待合室",
+        "reading": "まちあいしつ",
+        "gloss": "waiting room",
+        "audioId": "ja-kanji-matsu-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 117,
+    "audioId": "ja-kanji-matsu"
+  },
+  {
+    "id": "ja-kanji-bu",
+    "glyph": "部",
+    "meanings": [
+      "part",
+      "section",
+      "department"
+    ],
+    "onyomi": [
+      "ブ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "部屋",
+        "reading": "へや",
+        "gloss": "room",
+        "audioId": "ja-kanji-bu-ex0"
+      },
+      {
+        "word": "部分",
+        "reading": "ぶぶん",
+        "gloss": "part",
+        "audioId": "ja-kanji-bu-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "places",
+    "order": 118,
+    "audioId": "ja-kanji-bu"
+  },
+  {
+    "id": "ja-kanji-ya",
+    "glyph": "屋",
+    "meanings": [
+      "roof",
+      "shop",
+      "room"
+    ],
+    "onyomi": [
+      "オク"
+    ],
+    "kunyomi": [
+      "や"
+    ],
+    "examples": [
+      {
+        "word": "部屋",
+        "reading": "へや",
+        "gloss": "room",
+        "audioId": "ja-kanji-ya-ex0"
+      },
+      {
+        "word": "本屋",
+        "reading": "ほんや",
+        "gloss": "bookstore",
+        "audioId": "ja-kanji-ya-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "places",
+    "order": 119,
+    "audioId": "ja-kanji-ya"
+  },
+  {
+    "id": "ja-kanji-dou-move",
+    "glyph": "動",
+    "meanings": [
+      "move"
+    ],
+    "onyomi": [
+      "ドウ"
+    ],
+    "kunyomi": [
+      "うご.く",
+      "うご.かす"
+    ],
+    "examples": [
+      {
+        "word": "動く",
+        "reading": "うごく",
+        "gloss": "to move",
+        "audioId": "ja-kanji-dou-move-ex0"
+      },
+      {
+        "word": "動物",
+        "reading": "どうぶつ",
+        "gloss": "animal",
+        "audioId": "ja-kanji-dou-move-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "verbs",
+    "order": 120,
+    "audioId": "ja-kanji-dou-move"
+  },
+  {
+    "id": "ja-kanji-hataraku",
+    "glyph": "働",
+    "meanings": [
+      "work"
+    ],
+    "onyomi": [
+      "ドウ"
+    ],
+    "kunyomi": [
+      "はたら.く"
+    ],
+    "examples": [
+      {
+        "word": "働く",
+        "reading": "はたらく",
+        "gloss": "to work",
+        "audioId": "ja-kanji-hataraku-ex0"
+      },
+      {
+        "word": "労働",
+        "reading": "ろうどう",
+        "gloss": "labor",
+        "audioId": "ja-kanji-hataraku-ex1"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "verbs",
+    "order": 121,
+    "audioId": "ja-kanji-hataraku"
+  },
+  {
+    "id": "ja-kanji-shi-serve",
+    "glyph": "仕",
+    "meanings": [
+      "serve",
+      "do"
+    ],
+    "onyomi": [
+      "シ",
+      "ジ"
+    ],
+    "kunyomi": [
+      "つか.える"
+    ],
+    "examples": [
+      {
+        "word": "仕事",
+        "reading": "しごと",
+        "gloss": "work; job",
+        "audioId": "ja-kanji-shi-serve-ex0"
+      },
+      {
+        "word": "仕方",
+        "reading": "しかた",
+        "gloss": "way; method",
+        "audioId": "ja-kanji-shi-serve-ex1"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "verbs",
+    "order": 122,
+    "audioId": "ja-kanji-shi-serve"
+  },
+  {
+    "id": "ja-kanji-kai-world",
+    "glyph": "界",
+    "meanings": [
+      "world",
+      "boundary"
+    ],
+    "onyomi": [
+      "カイ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "世界",
+        "reading": "せかい",
+        "gloss": "world",
+        "audioId": "ja-kanji-kai-world-ex0"
+      },
+      {
+        "word": "限界",
+        "reading": "げんかい",
+        "gloss": "limit",
+        "audioId": "ja-kanji-kai-world-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "places",
+    "order": 123,
+    "audioId": "ja-kanji-kai-world"
+  },
+  {
+    "id": "ja-kanji-yo",
+    "glyph": "世",
+    "meanings": [
+      "world",
+      "generation"
+    ],
+    "onyomi": [
+      "セイ",
+      "セ"
+    ],
+    "kunyomi": [
+      "よ"
+    ],
+    "examples": [
+      {
+        "word": "世界",
+        "reading": "せかい",
+        "gloss": "world",
+        "audioId": "ja-kanji-yo-ex0"
+      },
+      {
+        "word": "世話",
+        "reading": "せわ",
+        "gloss": "care; assistance",
+        "audioId": "ja-kanji-yo-ex1"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "people",
+    "order": 124,
+    "audioId": "ja-kanji-yo"
+  },
+  {
+    "id": "ja-kanji-kyou",
+    "glyph": "教",
+    "meanings": [
+      "teach",
+      "religion"
+    ],
+    "onyomi": [
+      "キョウ"
+    ],
+    "kunyomi": [
+      "おし.える",
+      "おそ.わる"
+    ],
+    "examples": [
+      {
+        "word": "教える",
+        "reading": "おしえる",
+        "gloss": "to teach",
+        "audioId": "ja-kanji-kyou-ex0"
+      },
+      {
+        "word": "教室",
+        "reading": "きょうしつ",
+        "gloss": "classroom",
+        "audioId": "ja-kanji-kyou-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "people-school",
+    "order": 125,
+    "audioId": "ja-kanji-kyou"
+  },
+  {
+    "id": "ja-kanji-shitsu",
+    "glyph": "室",
+    "meanings": [
+      "room"
+    ],
+    "onyomi": [
+      "シツ"
+    ],
+    "kunyomi": [
+      "むろ"
+    ],
+    "examples": [
+      {
+        "word": "教室",
+        "reading": "きょうしつ",
+        "gloss": "classroom",
+        "audioId": "ja-kanji-shitsu-ex0"
+      },
+      {
+        "word": "部室",
+        "reading": "ぶしつ",
+        "gloss": "clubroom",
+        "audioId": "ja-kanji-shitsu-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "places",
+    "order": 126,
+    "audioId": "ja-kanji-shitsu"
+  },
+  {
+    "id": "ja-kanji-gyou",
+    "glyph": "業",
+    "meanings": [
+      "business",
+      "work",
+      "study"
+    ],
+    "onyomi": [
+      "ギョウ",
+      "ゴウ"
+    ],
+    "kunyomi": [
+      "わざ"
+    ],
+    "examples": [
+      {
+        "word": "授業",
+        "reading": "じゅぎょう",
+        "gloss": "class; lesson",
+        "audioId": "ja-kanji-gyou-ex0"
+      },
+      {
+        "word": "卒業",
+        "reading": "そつぎょう",
+        "gloss": "graduation",
+        "audioId": "ja-kanji-gyou-ex1"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "people-school",
+    "order": 127,
+    "audioId": "ja-kanji-gyou"
+  },
+  {
+    "id": "ja-kanji-i",
+    "glyph": "意",
+    "meanings": [
+      "idea",
+      "meaning",
+      "mind"
+    ],
+    "onyomi": [
+      "イ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "意味",
+        "reading": "いみ",
+        "gloss": "meaning",
+        "audioId": "ja-kanji-i-ex0"
+      },
+      {
+        "word": "注意",
+        "reading": "ちゅうい",
+        "gloss": "caution; attention",
+        "audioId": "ja-kanji-i-ex1"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "basics",
+    "order": 128,
+    "audioId": "ja-kanji-i"
+  },
+  {
+    "id": "ja-kanji-aji",
+    "glyph": "味",
+    "meanings": [
+      "taste",
+      "meaning"
+    ],
+    "onyomi": [
+      "ミ"
+    ],
+    "kunyomi": [
+      "あじ",
+      "あじ.わう"
+    ],
+    "examples": [
+      {
+        "word": "味",
+        "reading": "あじ",
+        "gloss": "taste",
+        "audioId": "ja-kanji-aji-ex0"
+      },
+      {
+        "word": "意味",
+        "reading": "いみ",
+        "gloss": "meaning",
+        "audioId": "ja-kanji-aji-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 129,
+    "audioId": "ja-kanji-aji"
+  },
+  {
+    "id": "ja-kanji-chuu",
+    "glyph": "注",
+    "meanings": [
+      "pour",
+      "note",
+      "attention"
+    ],
+    "onyomi": [
+      "チュウ"
+    ],
+    "kunyomi": [
+      "そそ.ぐ"
+    ],
+    "examples": [
+      {
+        "word": "注意",
+        "reading": "ちゅうい",
+        "gloss": "caution; attention",
+        "audioId": "ja-kanji-chuu-ex0"
+      },
+      {
+        "word": "注文",
+        "reading": "ちゅうもん",
+        "gloss": "order",
+        "audioId": "ja-kanji-chuu-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 130,
+    "audioId": "ja-kanji-chuu"
+  },
+  {
+    "id": "ja-kanji-ben",
+    "glyph": "勉",
+    "meanings": [
+      "exertion",
+      "study"
+    ],
+    "onyomi": [
+      "ベン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "勉強",
+        "reading": "べんきょう",
+        "gloss": "study",
+        "audioId": "ja-kanji-ben-ex0"
+      },
+      {
+        "word": "勤勉",
+        "reading": "きんべん",
+        "gloss": "diligence",
+        "audioId": "ja-kanji-ben-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "people-school",
+    "order": 131,
+    "audioId": "ja-kanji-ben"
+  },
+  {
+    "id": "ja-kanji-kyou-strong",
+    "glyph": "強",
+    "meanings": [
+      "strong"
+    ],
+    "onyomi": [
+      "キョウ",
+      "ゴウ"
+    ],
+    "kunyomi": [
+      "つよ.い",
+      "つよ.まる",
+      "つよ.める",
+      "し.いる"
+    ],
+    "examples": [
+      {
+        "word": "強い",
+        "reading": "つよい",
+        "gloss": "strong",
+        "audioId": "ja-kanji-kyou-strong-ex0"
+      },
+      {
+        "word": "勉強",
+        "reading": "べんきょう",
+        "gloss": "study",
+        "audioId": "ja-kanji-kyou-strong-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "adjectives",
+    "order": 132,
+    "audioId": "ja-kanji-kyou-strong"
+  },
+  {
+    "id": "ja-kanji-un",
+    "glyph": "運",
+    "meanings": [
+      "carry",
+      "luck",
+      "move"
+    ],
+    "onyomi": [
+      "ウン"
+    ],
+    "kunyomi": [
+      "はこ.ぶ"
+    ],
+    "examples": [
+      {
+        "word": "運ぶ",
+        "reading": "はこぶ",
+        "gloss": "to carry",
+        "audioId": "ja-kanji-un-ex0"
+      },
+      {
+        "word": "運転",
+        "reading": "うんてん",
+        "gloss": "driving",
+        "audioId": "ja-kanji-un-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "verbs",
+    "order": 133,
+    "audioId": "ja-kanji-un"
+  },
+  {
+    "id": "ja-kanji-ten",
+    "glyph": "転",
+    "meanings": [
+      "turn",
+      "roll"
+    ],
+    "onyomi": [
+      "テン"
+    ],
+    "kunyomi": [
+      "ころ.がる",
+      "ころ.げる",
+      "ころ.がす",
+      "ころ.ぶ"
+    ],
+    "examples": [
+      {
+        "word": "自転車",
+        "reading": "じてんしゃ",
+        "gloss": "bicycle",
+        "audioId": "ja-kanji-ten-ex0"
+      },
+      {
+        "word": "運転",
+        "reading": "うんてん",
+        "gloss": "driving",
+        "audioId": "ja-kanji-ten-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "verbs",
+    "order": 134,
+    "audioId": "ja-kanji-ten"
+  },
+  {
+    "id": "ja-kanji-kei",
+    "glyph": "計",
+    "meanings": [
+      "measure",
+      "plan"
+    ],
+    "onyomi": [
+      "ケイ"
+    ],
+    "kunyomi": [
+      "はか.る",
+      "はか.らう"
+    ],
+    "examples": [
+      {
+        "word": "時計",
+        "reading": "とけい",
+        "gloss": "clock; watch",
+        "audioId": "ja-kanji-kei-ex0"
+      },
+      {
+        "word": "計画",
+        "reading": "けいかく",
+        "gloss": "plan",
+        "audioId": "ja-kanji-kei-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 135,
+    "audioId": "ja-kanji-kei"
+  },
+  {
+    "id": "ja-kanji-zoku",
+    "glyph": "族",
+    "meanings": [
+      "family",
+      "tribe"
+    ],
+    "onyomi": [
+      "ゾク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "家族",
+        "reading": "かぞく",
+        "gloss": "family",
+        "audioId": "ja-kanji-zoku-ex0"
+      },
+      {
+        "word": "水族館",
+        "reading": "すいぞくかん",
+        "gloss": "aquarium",
+        "audioId": "ja-kanji-zoku-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "people",
+    "order": 136,
+    "audioId": "ja-kanji-zoku"
+  },
+  {
+    "id": "ja-kanji-oya",
+    "glyph": "親",
+    "meanings": [
+      "parent",
+      "intimacy"
+    ],
+    "onyomi": [
+      "シン"
+    ],
+    "kunyomi": [
+      "おや",
+      "した.しい",
+      "した.しむ"
+    ],
+    "examples": [
+      {
+        "word": "親",
+        "reading": "おや",
+        "gloss": "parent",
+        "audioId": "ja-kanji-oya-ex0"
+      },
+      {
+        "word": "親切",
+        "reading": "しんせつ",
+        "gloss": "kind",
+        "audioId": "ja-kanji-oya-ex1"
+      }
+    ],
+    "strokeCount": 16,
+    "group": "people",
+    "order": 137,
+    "audioId": "ja-kanji-oya"
+  },
+  {
+    "id": "ja-kanji-kiru",
+    "glyph": "切",
+    "meanings": [
+      "cut",
+      "urgent"
+    ],
+    "onyomi": [
+      "セツ",
+      "サイ"
+    ],
+    "kunyomi": [
+      "き.る",
+      "き.れる"
+    ],
+    "examples": [
+      {
+        "word": "切る",
+        "reading": "きる",
+        "gloss": "to cut",
+        "audioId": "ja-kanji-kiru-ex0"
+      },
+      {
+        "word": "親切",
+        "reading": "しんせつ",
+        "gloss": "kind",
+        "audioId": "ja-kanji-kiru-ex1"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "verbs",
+    "order": 138,
+    "audioId": "ja-kanji-kiru"
+  },
+  {
+    "id": "ja-kanji-shi-test",
+    "glyph": "試",
+    "meanings": [
+      "test",
+      "try"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "こころ.みる",
+      "ため.す"
+    ],
+    "examples": [
+      {
+        "word": "試験",
+        "reading": "しけん",
+        "gloss": "exam",
+        "audioId": "ja-kanji-shi-test-ex0"
+      },
+      {
+        "word": "試す",
+        "reading": "ためす",
+        "gloss": "to try",
+        "audioId": "ja-kanji-shi-test-ex1"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "people-school",
+    "order": 139,
+    "audioId": "ja-kanji-shi-test"
+  },
+  {
+    "id": "ja-kanji-ken",
+    "glyph": "験",
+    "meanings": [
+      "test",
+      "effect"
+    ],
+    "onyomi": [
+      "ケン",
+      "ゲン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "試験",
+        "reading": "しけん",
+        "gloss": "exam",
+        "audioId": "ja-kanji-ken-ex0"
+      },
+      {
+        "word": "経験",
+        "reading": "けいけん",
+        "gloss": "experience",
+        "audioId": "ja-kanji-ken-ex1"
+      }
+    ],
+    "strokeCount": 18,
+    "group": "people-school",
+    "order": 140,
+    "audioId": "ja-kanji-ken"
+  },
+  {
+    "id": "ja-kanji-mon",
+    "glyph": "問",
+    "meanings": [
+      "question",
+      "ask"
+    ],
+    "onyomi": [
+      "モン"
+    ],
+    "kunyomi": [
+      "と.う",
+      "と.い"
+    ],
+    "examples": [
+      {
+        "word": "問題",
+        "reading": "もんだい",
+        "gloss": "problem; question",
+        "audioId": "ja-kanji-mon-ex0"
+      },
+      {
+        "word": "質問",
+        "reading": "しつもん",
+        "gloss": "question",
+        "audioId": "ja-kanji-mon-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "people-school",
+    "order": 141,
+    "audioId": "ja-kanji-mon"
+  },
+  {
+    "id": "ja-kanji-dai",
+    "glyph": "題",
+    "meanings": [
+      "topic",
+      "title"
+    ],
+    "onyomi": [
+      "ダイ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "問題",
+        "reading": "もんだい",
+        "gloss": "problem",
+        "audioId": "ja-kanji-dai-ex0"
+      },
+      {
+        "word": "宿題",
+        "reading": "しゅくだい",
+        "gloss": "homework",
+        "audioId": "ja-kanji-dai-ex1"
+      }
+    ],
+    "strokeCount": 18,
+    "group": "people-school",
+    "order": 142,
+    "audioId": "ja-kanji-dai"
+  },
+  {
+    "id": "ja-kanji-kotaeru",
+    "glyph": "答",
+    "meanings": [
+      "answer"
+    ],
+    "onyomi": [
+      "トウ"
+    ],
+    "kunyomi": [
+      "こた.える",
+      "こた.え"
+    ],
+    "examples": [
+      {
+        "word": "答える",
+        "reading": "こたえる",
+        "gloss": "to answer",
+        "audioId": "ja-kanji-kotaeru-ex0"
+      },
+      {
+        "word": "答え",
+        "reading": "こたえ",
+        "gloss": "answer",
+        "audioId": "ja-kanji-kotaeru-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "people-school",
+    "order": 143,
+    "audioId": "ja-kanji-kotaeru"
+  }
+]

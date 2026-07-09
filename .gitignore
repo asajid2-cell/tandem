@@ -3,6 +3,7 @@ node_modules/
 
 # local runtime state — PRIVATE (session ids, transcripts, verdicts, daemon pid)
 .state/
+tmp/
 
 # local machine config (copy tandem.config.example.json → tandem.config.json)
 tandem.config.json

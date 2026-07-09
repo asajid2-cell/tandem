@@ -1,0 +1,15 @@
+﻿You are the independent Claude helper for Foothold Iteration 13. Please cold-audit the final Hiragana course work in this repo.
+
+Files/areas to inspect:
+- Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\hiragana.ts
+- Z:\328\CMPUT328-A2\codexworks\301\language\src\App.tsx (HiraganaCourseView, HiraganaReference, KanaRows, KanaCell, HiraganaLearnFlow)
+- Z:\328\CMPUT328-A2\codexworks\301\language\src\store\progress.ts
+- Screenshot folder: Z:\328\CMPUT328-A2\codexworks\301\language\.uicraft-shots\iter13-final
+
+Audit questions:
+1. Is the hiragana inventory complete and correct? Counts should be 46 base, 20 dakuten, 5 handakuten, 33 yoon. Hepburn romanization expected: shi/chi/tsu/fu, を=o, ん=n, じ/ぢ=ji, づ=zu, yoon like きょ=kyo.
+2. Are IDs/audioIds collision-safe and reasonable for repeated romanizations like お/を, じ/ぢ, ず/づ?
+3. Does the UI expose a real Hiragana track: reference grid in sensible gojuon rows, recognition flow, SRS/progress integration, hidden-by-default romanization, light/dark consistency?
+4. Any correctness blocker, AI-slop layout tell, or UX issue that should stop shipment?
+
+Please give a concise verdict: SHIP / FIX FIRST, with concrete issues if any.

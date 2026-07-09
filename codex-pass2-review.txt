@@ -1,0 +1,23 @@
+ALARMONIZER pass-2 RE-REVIEW. You found 6 holes last pass (below). I fixed all 6. Verify each is genuinely CLOSED in the real source, and hunt for any NEW hole the fixes introduced. Be a skeptic; cite file:line. Reach your OWN verdict.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer (server/fireEngine.js, server/lmsClient.js, server/app.js). 81 vitest pass. Live re-verified on the Boom at <=10%: box STOP → reload recovers; dismiss → no phantom + box stays stopped; mid-ring container restart → ring resumes + audible + dismiss clean.
+
+YOUR PASS-1 FINDINGS + MY FIX (verify each):
+
+1. NEW CRITICAL — enterBlaring phantom: checked token once at entry, then awaited setVolume+wakeAndConfirm, persisted "blaring" with no final guard → dismiss during confirm resurrected the ring.
+   FIX: added `stillOwner(runToken)` = `runToken === token && Boolean(store.getActiveRing())`; enterBlaring now does `if (!stillOwner(runToken)) return store.getActiveRing();` immediately before the woke/failed persists (one guard covers both, no await between it and the synchronous persist). Verify the guard truly precedes BOTH persists and there's no await gap.
+
+2. RISK-A easy-wake phantom: ramp steps + woke persists had no abort/final guard after awaits.
+   FIX: scheduleEasyWakeMusic + scheduleEasyWakeTone both got `if (!stillOwner(runToken)) return store.getActiveRing();` before the woke/failed persist, AND each ramp step re-fetches `const cur = store.getActiveRing(); if (!stillOwner(runToken) || cur.phase !== PHASE_EASY_WAKE) return;` before its persist. Verify the `||` short-circuits before `cur.phase` when cur is null (no throw).
+
+3. HOLE-2 narrow (alternating fail/pause never reaches reload threshold): definitive pause/stop reads reset blareUnconfirmed.
+   FIX: now `if (mode === "play") unconfirmed = 0; else unconfirmed += 1;` (pause, stop, AND dead-read all count). reload = `mode === "stop" || unconfirmed >= blareReloadAfterUnconfirmed(4)`. Verify a stuck pause/silent box that resume can't revive now reloads after N, and a HEALTHY box (reads "play") never needlessly reloads.
+
+4. MSG-7 (stopRing returned true when verify unreachable; on false no watchdog re-armed):
+   FIX: verifyStopState is TRI-STATE — "stopped"/"playing"/"unknown"; a thrown nowPlayingRef is "unknown" (NOT stopped). The 6x inline loop breaks only on "stopped". If still not "stopped" after the loop → keep the ring + `armStopEnforcer(...)` + return false. The enforcer (bound to the bumped token, decoupled) re-stops + re-verifies every stopEnforceIntervalMs(3000) until "stopped" (then clears the ring) or stopEnforceMaxAttempts(40) (then clears, assuming box off/silent). app.js dismiss returns 503 {dismissed:false} on a false stopRing. Verify: (a) unknown can never be reported as dismissed; (b) the enforcer can't fight a NEW alarm or the user's own music (it stands down on token change, and "playing" means the ALARM track specifically); (c) no permanent phantom banner.
+
+5. RISK-C (hung reload tick ~11s): FIX: the two watchdog reads now run via Promise.all (parallel). Writes still short-timeout (maintainWriteTimeoutMs 1500); ticks re-arm only after completion (no overlap). Verify the worst-case tick is now acceptable and can't starve the interval into a silent gap.
+
+6. RISK-B nit: FIX: reconcileStartup now clears when `lastAliveMs <= 0 || now - lastAliveMs > maxResumeAgeMs` (a corrupt/old-schema record with no parseable timestamp clears, not resumes). Verify a live ring (fresh updatedAt) still resumes and a stale/corrupt one clears.
+
+BRING BACK: for each of the 6 — "CLOSED" or "still-open: <file:line + exact triggering sequence + fix>". PLUS any NEW hole the pass-2 changes introduced (especially: can the stop-enforcer ever clobber legit playback? can stillOwner mis-fire and DROP a legit ring that should persist? does parallelizing reads change the turn-down/knob logic?). Final call: is this now "wakes him every morning, box can only dampen, never a phantom"?

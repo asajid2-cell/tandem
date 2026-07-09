@@ -1,0 +1,1337 @@
+Audit these newly added Japanese kanji course entries for standard Joyo/JLPT N4 correctness. Focus on wrong onyomi/kunyomi, okurigana dot placement, meanings, example word readings/glosses, stroke counts, duplicate/inappropriate entries, and anything that should be changed before shipping. Return a concise verdict: OK or list corrections with glyph/order/id.
+
+[
+  {
+    "id": "ja-kanji-kariru",
+    "glyph": "借",
+    "meanings": [
+      "borrow",
+      "rent"
+    ],
+    "onyomi": [
+      "シャク"
+    ],
+    "kunyomi": [
+      "か.りる"
+    ],
+    "examples": [
+      {
+        "word": "借りる",
+        "reading": "かりる",
+        "gloss": "to borrow; rent",
+        "audioId": "ja-kanji-kariru-ex0"
+      },
+      {
+        "word": "借金",
+        "reading": "しゃっきん",
+        "gloss": "debt",
+        "audioId": "ja-kanji-kariru-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "verbs",
+    "order": 144,
+    "audioId": "ja-kanji-kariru"
+  },
+  {
+    "id": "ja-kanji-kasu",
+    "glyph": "貸",
+    "meanings": [
+      "lend"
+    ],
+    "onyomi": [
+      "タイ"
+    ],
+    "kunyomi": [
+      "か.す"
+    ],
+    "examples": [
+      {
+        "word": "貸す",
+        "reading": "かす",
+        "gloss": "to lend",
+        "audioId": "ja-kanji-kasu-ex0"
+      },
+      {
+        "word": "貸出",
+        "reading": "かしだし",
+        "gloss": "lending; checkout",
+        "audioId": "ja-kanji-kasu-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "verbs",
+    "order": 145,
+    "audioId": "ja-kanji-kasu"
+  },
+  {
+    "id": "ja-kanji-kaesu",
+    "glyph": "返",
+    "meanings": [
+      "return"
+    ],
+    "onyomi": [
+      "ヘン"
+    ],
+    "kunyomi": [
+      "かえ.す",
+      "かえ.る"
+    ],
+    "examples": [
+      {
+        "word": "返す",
+        "reading": "かえす",
+        "gloss": "to return something",
+        "audioId": "ja-kanji-kaesu-ex0"
+      },
+      {
+        "word": "返事",
+        "reading": "へんじ",
+        "gloss": "reply",
+        "audioId": "ja-kanji-kaesu-ex1"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "verbs",
+    "order": 146,
+    "audioId": "ja-kanji-kaesu"
+  },
+  {
+    "id": "ja-kanji-okuru",
+    "glyph": "送",
+    "meanings": [
+      "send"
+    ],
+    "onyomi": [
+      "ソウ"
+    ],
+    "kunyomi": [
+      "おく.る"
+    ],
+    "examples": [
+      {
+        "word": "送る",
+        "reading": "おくる",
+        "gloss": "to send",
+        "audioId": "ja-kanji-okuru-ex0"
+      },
+      {
+        "word": "放送",
+        "reading": "ほうそう",
+        "gloss": "broadcast",
+        "audioId": "ja-kanji-okuru-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 147,
+    "audioId": "ja-kanji-okuru"
+  },
+  {
+    "id": "ja-kanji-ukeru",
+    "glyph": "受",
+    "meanings": [
+      "receive",
+      "accept"
+    ],
+    "onyomi": [
+      "ジュ"
+    ],
+    "kunyomi": [
+      "う.ける",
+      "う.かる"
+    ],
+    "examples": [
+      {
+        "word": "受ける",
+        "reading": "うける",
+        "gloss": "to receive; take",
+        "audioId": "ja-kanji-ukeru-ex0"
+      },
+      {
+        "word": "受付",
+        "reading": "うけつけ",
+        "gloss": "reception",
+        "audioId": "ja-kanji-ukeru-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "verbs",
+    "order": 148,
+    "audioId": "ja-kanji-ukeru"
+  },
+  {
+    "id": "ja-kanji-tabi",
+    "glyph": "旅",
+    "meanings": [
+      "travel",
+      "trip"
+    ],
+    "onyomi": [
+      "リョ"
+    ],
+    "kunyomi": [
+      "たび"
+    ],
+    "examples": [
+      {
+        "word": "旅行",
+        "reading": "りょこう",
+        "gloss": "travel",
+        "audioId": "ja-kanji-tabi-ex0"
+      },
+      {
+        "word": "旅",
+        "reading": "たび",
+        "gloss": "trip",
+        "audioId": "ja-kanji-tabi-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "places",
+    "order": 149,
+    "audioId": "ja-kanji-tabi"
+  },
+  {
+    "id": "ja-kanji-tateru",
+    "glyph": "建",
+    "meanings": [
+      "build"
+    ],
+    "onyomi": [
+      "ケン",
+      "コン"
+    ],
+    "kunyomi": [
+      "た.てる",
+      "た.つ"
+    ],
+    "examples": [
+      {
+        "word": "建物",
+        "reading": "たてもの",
+        "gloss": "building",
+        "audioId": "ja-kanji-tateru-ex0"
+      },
+      {
+        "word": "建てる",
+        "reading": "たてる",
+        "gloss": "to build",
+        "audioId": "ja-kanji-tateru-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "places",
+    "order": 150,
+    "audioId": "ja-kanji-tateru"
+  },
+  {
+    "id": "ja-kanji-mono",
+    "glyph": "物",
+    "meanings": [
+      "thing",
+      "object"
+    ],
+    "onyomi": [
+      "ブツ",
+      "モツ"
+    ],
+    "kunyomi": [
+      "もの"
+    ],
+    "examples": [
+      {
+        "word": "食べ物",
+        "reading": "たべもの",
+        "gloss": "food",
+        "audioId": "ja-kanji-mono-ex0"
+      },
+      {
+        "word": "建物",
+        "reading": "たてもの",
+        "gloss": "building",
+        "audioId": "ja-kanji-mono-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 151,
+    "audioId": "ja-kanji-mono"
+  },
+  {
+    "id": "ja-kanji-ryou",
+    "glyph": "料",
+    "meanings": [
+      "fee",
+      "materials"
+    ],
+    "onyomi": [
+      "リョウ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "料理",
+        "reading": "りょうり",
+        "gloss": "cooking; cuisine",
+        "audioId": "ja-kanji-ryou-ex0"
+      },
+      {
+        "word": "材料",
+        "reading": "ざいりょう",
+        "gloss": "ingredients; materials",
+        "audioId": "ja-kanji-ryou-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "basics",
+    "order": 152,
+    "audioId": "ja-kanji-ryou"
+  },
+  {
+    "id": "ja-kanji-ri",
+    "glyph": "理",
+    "meanings": [
+      "reason",
+      "logic"
+    ],
+    "onyomi": [
+      "リ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "料理",
+        "reading": "りょうり",
+        "gloss": "cooking; cuisine",
+        "audioId": "ja-kanji-ri-ex0"
+      },
+      {
+        "word": "理由",
+        "reading": "りゆう",
+        "gloss": "reason",
+        "audioId": "ja-kanji-ri-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "basics",
+    "order": 153,
+    "audioId": "ja-kanji-ri"
+  },
+  {
+    "id": "ja-kanji-fu",
+    "glyph": "不",
+    "meanings": [
+      "not",
+      "non-"
+    ],
+    "onyomi": [
+      "フ",
+      "ブ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "不便",
+        "reading": "ふべん",
+        "gloss": "inconvenient",
+        "audioId": "ja-kanji-fu-ex0"
+      },
+      {
+        "word": "不安",
+        "reading": "ふあん",
+        "gloss": "anxiety; unease",
+        "audioId": "ja-kanji-fu-ex1"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "basics",
+    "order": 154,
+    "audioId": "ja-kanji-fu"
+  },
+  {
+    "id": "ja-kanji-ben-convenient",
+    "glyph": "便",
+    "meanings": [
+      "convenience",
+      "mail"
+    ],
+    "onyomi": [
+      "ベン",
+      "ビン"
+    ],
+    "kunyomi": [
+      "たよ.り"
+    ],
+    "examples": [
+      {
+        "word": "便利",
+        "reading": "べんり",
+        "gloss": "convenient",
+        "audioId": "ja-kanji-ben-convenient-ex0"
+      },
+      {
+        "word": "郵便",
+        "reading": "ゆうびん",
+        "gloss": "mail",
+        "audioId": "ja-kanji-ben-convenient-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 155,
+    "audioId": "ja-kanji-ben-convenient"
+  },
+  {
+    "id": "ja-kanji-ri-profit",
+    "glyph": "利",
+    "meanings": [
+      "profit",
+      "advantage"
+    ],
+    "onyomi": [
+      "リ"
+    ],
+    "kunyomi": [
+      "き.く"
+    ],
+    "examples": [
+      {
+        "word": "便利",
+        "reading": "べんり",
+        "gloss": "convenient",
+        "audioId": "ja-kanji-ri-profit-ex0"
+      },
+      {
+        "word": "利用",
+        "reading": "りよう",
+        "gloss": "use",
+        "audioId": "ja-kanji-ri-profit-ex1"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "basics",
+    "order": 156,
+    "audioId": "ja-kanji-ri-profit"
+  },
+  {
+    "id": "ja-kanji-wakareru",
+    "glyph": "別",
+    "meanings": [
+      "separate",
+      "different"
+    ],
+    "onyomi": [
+      "ベツ"
+    ],
+    "kunyomi": [
+      "わか.れる"
+    ],
+    "examples": [
+      {
+        "word": "別れる",
+        "reading": "わかれる",
+        "gloss": "to separate",
+        "audioId": "ja-kanji-wakareru-ex0"
+      },
+      {
+        "word": "特別",
+        "reading": "とくべつ",
+        "gloss": "special",
+        "audioId": "ja-kanji-wakareru-ex1"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "basics",
+    "order": 157,
+    "audioId": "ja-kanji-wakareru"
+  },
+  {
+    "id": "ja-kanji-toku",
+    "glyph": "特",
+    "meanings": [
+      "special"
+    ],
+    "onyomi": [
+      "トク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "特別",
+        "reading": "とくべつ",
+        "gloss": "special",
+        "audioId": "ja-kanji-toku-ex0"
+      },
+      {
+        "word": "特に",
+        "reading": "とくに",
+        "gloss": "especially",
+        "audioId": "ja-kanji-toku-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "basics",
+    "order": 158,
+    "audioId": "ja-kanji-toku"
+  },
+  {
+    "id": "ja-kanji-shina",
+    "glyph": "品",
+    "meanings": [
+      "goods",
+      "article"
+    ],
+    "onyomi": [
+      "ヒン"
+    ],
+    "kunyomi": [
+      "しな"
+    ],
+    "examples": [
+      {
+        "word": "品物",
+        "reading": "しなもの",
+        "gloss": "goods; item",
+        "audioId": "ja-kanji-shina-ex0"
+      },
+      {
+        "word": "食品",
+        "reading": "しょくひん",
+        "gloss": "food product",
+        "audioId": "ja-kanji-shina-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 159,
+    "audioId": "ja-kanji-shina"
+  },
+  {
+    "id": "ja-kanji-gin",
+    "glyph": "銀",
+    "meanings": [
+      "silver"
+    ],
+    "onyomi": [
+      "ギン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "銀行",
+        "reading": "ぎんこう",
+        "gloss": "bank",
+        "audioId": "ja-kanji-gin-ex0"
+      },
+      {
+        "word": "銀",
+        "reading": "ぎん",
+        "gloss": "silver",
+        "audioId": "ja-kanji-gin-ex1"
+      }
+    ],
+    "strokeCount": 14,
+    "group": "places",
+    "order": 160,
+    "audioId": "ja-kanji-gin"
+  },
+  {
+    "id": "ja-kanji-byou",
+    "glyph": "病",
+    "meanings": [
+      "illness",
+      "sick"
+    ],
+    "onyomi": [
+      "ビョウ",
+      "ヘイ"
+    ],
+    "kunyomi": [
+      "や.む",
+      "やまい"
+    ],
+    "examples": [
+      {
+        "word": "病院",
+        "reading": "びょういん",
+        "gloss": "hospital",
+        "audioId": "ja-kanji-byou-ex0"
+      },
+      {
+        "word": "病気",
+        "reading": "びょうき",
+        "gloss": "illness",
+        "audioId": "ja-kanji-byou-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "people",
+    "order": 161,
+    "audioId": "ja-kanji-byou"
+  },
+  {
+    "id": "ja-kanji-in-institution",
+    "glyph": "院",
+    "meanings": [
+      "institution"
+    ],
+    "onyomi": [
+      "イン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "病院",
+        "reading": "びょういん",
+        "gloss": "hospital",
+        "audioId": "ja-kanji-in-institution-ex0"
+      },
+      {
+        "word": "大学院",
+        "reading": "だいがくいん",
+        "gloss": "graduate school",
+        "audioId": "ja-kanji-in-institution-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "places",
+    "order": 162,
+    "audioId": "ja-kanji-in-institution"
+  },
+  {
+    "id": "ja-kanji-tori",
+    "glyph": "鳥",
+    "meanings": [
+      "bird"
+    ],
+    "onyomi": [
+      "チョウ"
+    ],
+    "kunyomi": [
+      "とり"
+    ],
+    "examples": [
+      {
+        "word": "鳥",
+        "reading": "とり",
+        "gloss": "bird",
+        "audioId": "ja-kanji-tori-ex0"
+      },
+      {
+        "word": "小鳥",
+        "reading": "ことり",
+        "gloss": "small bird",
+        "audioId": "ja-kanji-tori-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "nature",
+    "order": 163,
+    "audioId": "ja-kanji-tori"
+  },
+  {
+    "id": "ja-kanji-ushi",
+    "glyph": "牛",
+    "meanings": [
+      "cow",
+      "cattle"
+    ],
+    "onyomi": [
+      "ギュウ"
+    ],
+    "kunyomi": [
+      "うし"
+    ],
+    "examples": [
+      {
+        "word": "牛",
+        "reading": "うし",
+        "gloss": "cow",
+        "audioId": "ja-kanji-ushi-ex0"
+      },
+      {
+        "word": "牛肉",
+        "reading": "ぎゅうにく",
+        "gloss": "beef",
+        "audioId": "ja-kanji-ushi-ex1"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "nature",
+    "order": 164,
+    "audioId": "ja-kanji-ushi"
+  },
+  {
+    "id": "ja-kanji-uma",
+    "glyph": "馬",
+    "meanings": [
+      "horse"
+    ],
+    "onyomi": [
+      "バ"
+    ],
+    "kunyomi": [
+      "うま",
+      "ま"
+    ],
+    "examples": [
+      {
+        "word": "馬",
+        "reading": "うま",
+        "gloss": "horse",
+        "audioId": "ja-kanji-uma-ex0"
+      },
+      {
+        "word": "乗馬",
+        "reading": "じょうば",
+        "gloss": "horseback riding",
+        "audioId": "ja-kanji-uma-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "nature",
+    "order": 165,
+    "audioId": "ja-kanji-uma"
+  },
+  {
+    "id": "ja-kanji-yoru",
+    "glyph": "夜",
+    "meanings": [
+      "night"
+    ],
+    "onyomi": [
+      "ヤ"
+    ],
+    "kunyomi": [
+      "よ",
+      "よる"
+    ],
+    "examples": [
+      {
+        "word": "夜",
+        "reading": "よる",
+        "gloss": "night",
+        "audioId": "ja-kanji-yoru-ex0"
+      },
+      {
+        "word": "今夜",
+        "reading": "こんや",
+        "gloss": "tonight",
+        "audioId": "ja-kanji-yoru-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "time",
+    "order": 166,
+    "audioId": "ja-kanji-yoru"
+  },
+  {
+    "id": "ja-kanji-asa",
+    "glyph": "朝",
+    "meanings": [
+      "morning"
+    ],
+    "onyomi": [
+      "チョウ"
+    ],
+    "kunyomi": [
+      "あさ"
+    ],
+    "examples": [
+      {
+        "word": "朝",
+        "reading": "あさ",
+        "gloss": "morning",
+        "audioId": "ja-kanji-asa-ex0"
+      },
+      {
+        "word": "朝食",
+        "reading": "ちょうしょく",
+        "gloss": "breakfast",
+        "audioId": "ja-kanji-asa-ex1"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "time",
+    "order": 167,
+    "audioId": "ja-kanji-asa"
+  },
+  {
+    "id": "ja-kanji-hiru",
+    "glyph": "昼",
+    "meanings": [
+      "daytime",
+      "noon"
+    ],
+    "onyomi": [
+      "チュウ"
+    ],
+    "kunyomi": [
+      "ひる"
+    ],
+    "examples": [
+      {
+        "word": "昼",
+        "reading": "ひる",
+        "gloss": "noon; daytime",
+        "audioId": "ja-kanji-hiru-ex0"
+      },
+      {
+        "word": "昼休み",
+        "reading": "ひるやすみ",
+        "gloss": "lunch break",
+        "audioId": "ja-kanji-hiru-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "time",
+    "order": 168,
+    "audioId": "ja-kanji-hiru"
+  },
+  {
+    "id": "ja-kanji-yuu",
+    "glyph": "夕",
+    "meanings": [
+      "evening"
+    ],
+    "onyomi": [
+      "セキ"
+    ],
+    "kunyomi": [
+      "ゆう"
+    ],
+    "examples": [
+      {
+        "word": "夕方",
+        "reading": "ゆうがた",
+        "gloss": "evening",
+        "audioId": "ja-kanji-yuu-ex0"
+      },
+      {
+        "word": "夕食",
+        "reading": "ゆうしょく",
+        "gloss": "dinner",
+        "audioId": "ja-kanji-yuu-ex1"
+      }
+    ],
+    "strokeCount": 3,
+    "group": "time",
+    "order": 169,
+    "audioId": "ja-kanji-yuu"
+  },
+  {
+    "id": "ja-kanji-umi",
+    "glyph": "海",
+    "meanings": [
+      "sea"
+    ],
+    "onyomi": [
+      "カイ"
+    ],
+    "kunyomi": [
+      "うみ"
+    ],
+    "examples": [
+      {
+        "word": "海",
+        "reading": "うみ",
+        "gloss": "sea",
+        "audioId": "ja-kanji-umi-ex0"
+      },
+      {
+        "word": "海外",
+        "reading": "かいがい",
+        "gloss": "overseas",
+        "audioId": "ja-kanji-umi-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "nature",
+    "order": 170,
+    "audioId": "ja-kanji-umi"
+  },
+  {
+    "id": "ja-kanji-kami-paper",
+    "glyph": "紙",
+    "meanings": [
+      "paper"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "かみ"
+    ],
+    "examples": [
+      {
+        "word": "紙",
+        "reading": "かみ",
+        "gloss": "paper",
+        "audioId": "ja-kanji-kami-paper-ex0"
+      },
+      {
+        "word": "手紙",
+        "reading": "てがみ",
+        "gloss": "letter",
+        "audioId": "ja-kanji-kami-paper-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "basics",
+    "order": 171,
+    "audioId": "ja-kanji-kami-paper"
+  },
+  {
+    "id": "ja-kanji-cha",
+    "glyph": "茶",
+    "meanings": [
+      "tea"
+    ],
+    "onyomi": [
+      "チャ",
+      "サ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "お茶",
+        "reading": "おちゃ",
+        "gloss": "tea",
+        "audioId": "ja-kanji-cha-ex0"
+      },
+      {
+        "word": "茶色",
+        "reading": "ちゃいろ",
+        "gloss": "brown",
+        "audioId": "ja-kanji-cha-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "nature",
+    "order": 172,
+    "audioId": "ja-kanji-cha"
+  },
+  {
+    "id": "ja-kanji-niku",
+    "glyph": "肉",
+    "meanings": [
+      "meat"
+    ],
+    "onyomi": [
+      "ニク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "肉",
+        "reading": "にく",
+        "gloss": "meat",
+        "audioId": "ja-kanji-niku-ex0"
+      },
+      {
+        "word": "牛肉",
+        "reading": "ぎゅうにく",
+        "gloss": "beef",
+        "audioId": "ja-kanji-niku-ex1"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "basics",
+    "order": 173,
+    "audioId": "ja-kanji-niku"
+  },
+  {
+    "id": "ja-kanji-iro",
+    "glyph": "色",
+    "meanings": [
+      "color"
+    ],
+    "onyomi": [
+      "ショク",
+      "シキ"
+    ],
+    "kunyomi": [
+      "いろ"
+    ],
+    "examples": [
+      {
+        "word": "色",
+        "reading": "いろ",
+        "gloss": "color",
+        "audioId": "ja-kanji-iro-ex0"
+      },
+      {
+        "word": "景色",
+        "reading": "けしき",
+        "gloss": "scenery",
+        "audioId": "ja-kanji-iro-ex1"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "adjectives",
+    "order": 174,
+    "audioId": "ja-kanji-iro"
+  },
+  {
+    "id": "ja-kanji-fuku",
+    "glyph": "服",
+    "meanings": [
+      "clothes"
+    ],
+    "onyomi": [
+      "フク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "服",
+        "reading": "ふく",
+        "gloss": "clothes",
+        "audioId": "ja-kanji-fuku-ex0"
+      },
+      {
+        "word": "洋服",
+        "reading": "ようふく",
+        "gloss": "Western clothes",
+        "audioId": "ja-kanji-fuku-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 175,
+    "audioId": "ja-kanji-fuku"
+  },
+  {
+    "id": "ja-kanji-ei",
+    "glyph": "映",
+    "meanings": [
+      "reflect",
+      "project"
+    ],
+    "onyomi": [
+      "エイ"
+    ],
+    "kunyomi": [
+      "うつ.る",
+      "うつ.す",
+      "は.える"
+    ],
+    "examples": [
+      {
+        "word": "映画",
+        "reading": "えいが",
+        "gloss": "movie",
+        "audioId": "ja-kanji-ei-ex0"
+      },
+      {
+        "word": "映る",
+        "reading": "うつる",
+        "gloss": "to be reflected; appear",
+        "audioId": "ja-kanji-ei-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 176,
+    "audioId": "ja-kanji-ei"
+  },
+  {
+    "id": "ja-kanji-ga",
+    "glyph": "画",
+    "meanings": [
+      "picture",
+      "stroke"
+    ],
+    "onyomi": [
+      "ガ",
+      "カク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "映画",
+        "reading": "えいが",
+        "gloss": "movie",
+        "audioId": "ja-kanji-ga-ex0"
+      },
+      {
+        "word": "計画",
+        "reading": "けいかく",
+        "gloss": "plan",
+        "audioId": "ja-kanji-ga-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "basics",
+    "order": 177,
+    "audioId": "ja-kanji-ga"
+  },
+  {
+    "id": "ja-kanji-utsusu",
+    "glyph": "写",
+    "meanings": [
+      "copy",
+      "photograph"
+    ],
+    "onyomi": [
+      "シャ"
+    ],
+    "kunyomi": [
+      "うつ.す",
+      "うつ.る"
+    ],
+    "examples": [
+      {
+        "word": "写真",
+        "reading": "しゃしん",
+        "gloss": "photograph",
+        "audioId": "ja-kanji-utsusu-ex0"
+      },
+      {
+        "word": "写す",
+        "reading": "うつす",
+        "gloss": "to copy; photograph",
+        "audioId": "ja-kanji-utsusu-ex1"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "basics",
+    "order": 178,
+    "audioId": "ja-kanji-utsusu"
+  },
+  {
+    "id": "ja-kanji-shin-true",
+    "glyph": "真",
+    "meanings": [
+      "true",
+      "real"
+    ],
+    "onyomi": [
+      "シン"
+    ],
+    "kunyomi": [
+      "ま"
+    ],
+    "examples": [
+      {
+        "word": "写真",
+        "reading": "しゃしん",
+        "gloss": "photograph",
+        "audioId": "ja-kanji-shin-true-ex0"
+      },
+      {
+        "word": "真ん中",
+        "reading": "まんなか",
+        "gloss": "middle",
+        "audioId": "ja-kanji-shin-true-ex1"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "basics",
+    "order": 179,
+    "audioId": "ja-kanji-shin-true"
+  },
+  {
+    "id": "ja-kanji-oto",
+    "glyph": "音",
+    "meanings": [
+      "sound"
+    ],
+    "onyomi": [
+      "オン",
+      "イン"
+    ],
+    "kunyomi": [
+      "おと",
+      "ね"
+    ],
+    "examples": [
+      {
+        "word": "音",
+        "reading": "おと",
+        "gloss": "sound",
+        "audioId": "ja-kanji-oto-ex0"
+      },
+      {
+        "word": "音楽",
+        "reading": "おんがく",
+        "gloss": "music",
+        "audioId": "ja-kanji-oto-ex1"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 180,
+    "audioId": "ja-kanji-oto"
+  },
+  {
+    "id": "ja-kanji-tanoshii",
+    "glyph": "楽",
+    "meanings": [
+      "music",
+      "comfort",
+      "enjoyment"
+    ],
+    "onyomi": [
+      "ガク",
+      "ラク"
+    ],
+    "kunyomi": [
+      "たの.しい",
+      "たの.しむ"
+    ],
+    "examples": [
+      {
+        "word": "音楽",
+        "reading": "おんがく",
+        "gloss": "music",
+        "audioId": "ja-kanji-tanoshii-ex0"
+      },
+      {
+        "word": "楽しい",
+        "reading": "たのしい",
+        "gloss": "fun",
+        "audioId": "ja-kanji-tanoshii-ex1"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "adjectives",
+    "order": 181,
+    "audioId": "ja-kanji-tanoshii"
+  },
+  {
+    "id": "ja-kanji-uta",
+    "glyph": "歌",
+    "meanings": [
+      "song",
+      "sing"
+    ],
+    "onyomi": [
+      "カ"
+    ],
+    "kunyomi": [
+      "うた",
+      "うた.う"
+    ],
+    "examples": [
+      {
+        "word": "歌",
+        "reading": "うた",
+        "gloss": "song",
+        "audioId": "ja-kanji-uta-ex0"
+      },
+      {
+        "word": "歌う",
+        "reading": "うたう",
+        "gloss": "to sing",
+        "audioId": "ja-kanji-uta-ex1"
+      }
+    ],
+    "strokeCount": 14,
+    "group": "basics",
+    "order": 182,
+    "audioId": "ja-kanji-uta"
+  },
+  {
+    "id": "ja-kanji-aka",
+    "glyph": "赤",
+    "meanings": [
+      "red"
+    ],
+    "onyomi": [
+      "セキ",
+      "シャク"
+    ],
+    "kunyomi": [
+      "あか",
+      "あか.い",
+      "あか.らむ",
+      "あか.らめる"
+    ],
+    "examples": [
+      {
+        "word": "赤",
+        "reading": "あか",
+        "gloss": "red",
+        "audioId": "ja-kanji-aka-ex0"
+      },
+      {
+        "word": "赤い",
+        "reading": "あかい",
+        "gloss": "red",
+        "audioId": "ja-kanji-aka-ex1"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "adjectives",
+    "order": 183,
+    "audioId": "ja-kanji-aka"
+  },
+  {
+    "id": "ja-kanji-ao",
+    "glyph": "青",
+    "meanings": [
+      "blue",
+      "green"
+    ],
+    "onyomi": [
+      "セイ",
+      "ショウ"
+    ],
+    "kunyomi": [
+      "あお",
+      "あお.い"
+    ],
+    "examples": [
+      {
+        "word": "青",
+        "reading": "あお",
+        "gloss": "blue",
+        "audioId": "ja-kanji-ao-ex0"
+      },
+      {
+        "word": "青い",
+        "reading": "あおい",
+        "gloss": "blue",
+        "audioId": "ja-kanji-ao-ex1"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "adjectives",
+    "order": 184,
+    "audioId": "ja-kanji-ao"
+  },
+  {
+    "id": "ja-kanji-kuro",
+    "glyph": "黒",
+    "meanings": [
+      "black"
+    ],
+    "onyomi": [
+      "コク"
+    ],
+    "kunyomi": [
+      "くろ",
+      "くろ.い"
+    ],
+    "examples": [
+      {
+        "word": "黒",
+        "reading": "くろ",
+        "gloss": "black",
+        "audioId": "ja-kanji-kuro-ex0"
+      },
+      {
+        "word": "黒い",
+        "reading": "くろい",
+        "gloss": "black",
+        "audioId": "ja-kanji-kuro-ex1"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "adjectives",
+    "order": 185,
+    "audioId": "ja-kanji-kuro"
+  }
+]

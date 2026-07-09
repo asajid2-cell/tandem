@@ -1,0 +1,1040 @@
+Audit these 40 newly added Japanese kanji entries for standard Joyo/JLPT N4 correctness. Check onyomi, kunyomi with okurigana dots, meanings, example word readings/glosses, stroke counts, and duplicate/inappropriate entries. Return concise verdict OK or corrections by glyph/order/id.
+
+[
+  {
+    "id": "ja-kanji-nushi",
+    "glyph": "主",
+    "meanings": [
+      "main",
+      "master"
+    ],
+    "onyomi": [
+      "シュ",
+      "ス"
+    ],
+    "kunyomi": [
+      "ぬし",
+      "おも"
+    ],
+    "examples": [
+      {
+        "word": "主人",
+        "reading": "しゅじん",
+        "gloss": "husband; master",
+        "audioId": "ja-kanji-nushi-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "people",
+    "order": 186,
+    "audioId": "ja-kanji-nushi"
+  },
+  {
+    "id": "ja-kanji-kawaru",
+    "glyph": "代",
+    "meanings": [
+      "substitute",
+      "generation",
+      "fee"
+    ],
+    "onyomi": [
+      "ダイ",
+      "タイ"
+    ],
+    "kunyomi": [
+      "か.わる",
+      "か.える",
+      "よ",
+      "しろ"
+    ],
+    "examples": [
+      {
+        "word": "時代",
+        "reading": "じだい",
+        "gloss": "era",
+        "audioId": "ja-kanji-kawaru-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "basics",
+    "order": 187,
+    "audioId": "ja-kanji-kawaru"
+  },
+  {
+    "id": "ja-kanji-sumu",
+    "glyph": "住",
+    "meanings": [
+      "live",
+      "dwell"
+    ],
+    "onyomi": [
+      "ジュウ"
+    ],
+    "kunyomi": [
+      "す.む",
+      "す.まう"
+    ],
+    "examples": [
+      {
+        "word": "住む",
+        "reading": "すむ",
+        "gloss": "to live",
+        "audioId": "ja-kanji-sumu-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "places",
+    "order": 188,
+    "audioId": "ja-kanji-sumu"
+  },
+  {
+    "id": "ja-kanji-karada",
+    "glyph": "体",
+    "meanings": [
+      "body"
+    ],
+    "onyomi": [
+      "タイ",
+      "テイ"
+    ],
+    "kunyomi": [
+      "からだ"
+    ],
+    "examples": [
+      {
+        "word": "体",
+        "reading": "からだ",
+        "gloss": "body",
+        "audioId": "ja-kanji-karada-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "people",
+    "order": 189,
+    "audioId": "ja-kanji-karada"
+  },
+  {
+    "id": "ja-kanji-tsukuru",
+    "glyph": "作",
+    "meanings": [
+      "make",
+      "create"
+    ],
+    "onyomi": [
+      "サク",
+      "サ"
+    ],
+    "kunyomi": [
+      "つく.る"
+    ],
+    "examples": [
+      {
+        "word": "作る",
+        "reading": "つくる",
+        "gloss": "to make",
+        "audioId": "ja-kanji-tsukuru-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "verbs",
+    "order": 190,
+    "audioId": "ja-kanji-tsukuru"
+  },
+  {
+    "id": "ja-kanji-tsukau",
+    "glyph": "使",
+    "meanings": [
+      "use"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "つか.う"
+    ],
+    "examples": [
+      {
+        "word": "使う",
+        "reading": "つかう",
+        "gloss": "to use",
+        "audioId": "ja-kanji-tsukau-ex0"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "verbs",
+    "order": 191,
+    "audioId": "ja-kanji-tsukau"
+  },
+  {
+    "id": "ja-kanji-shin-trust",
+    "glyph": "信",
+    "meanings": [
+      "trust",
+      "message"
+    ],
+    "onyomi": [
+      "シン"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "信号",
+        "reading": "しんごう",
+        "gloss": "traffic light; signal",
+        "audioId": "ja-kanji-shin-trust-ex0"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "basics",
+    "order": 192,
+    "audioId": "ja-kanji-shin-trust"
+  },
+  {
+    "id": "ja-kanji-moto",
+    "glyph": "元",
+    "meanings": [
+      "origin",
+      "former"
+    ],
+    "onyomi": [
+      "ゲン",
+      "ガン"
+    ],
+    "kunyomi": [
+      "もと"
+    ],
+    "examples": [
+      {
+        "word": "元気",
+        "reading": "げんき",
+        "gloss": "healthy; energetic",
+        "audioId": "ja-kanji-moto-ex0"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "basics",
+    "order": 193,
+    "audioId": "ja-kanji-moto"
+  },
+  {
+    "id": "ja-kanji-ani",
+    "glyph": "兄",
+    "meanings": [
+      "older brother"
+    ],
+    "onyomi": [
+      "ケイ",
+      "キョウ"
+    ],
+    "kunyomi": [
+      "あに"
+    ],
+    "examples": [
+      {
+        "word": "兄",
+        "reading": "あに",
+        "gloss": "older brother",
+        "audioId": "ja-kanji-ani-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "people",
+    "order": 194,
+    "audioId": "ja-kanji-ani"
+  },
+  {
+    "id": "ja-kanji-hikari",
+    "glyph": "光",
+    "meanings": [
+      "light"
+    ],
+    "onyomi": [
+      "コウ"
+    ],
+    "kunyomi": [
+      "ひか.る",
+      "ひかり"
+    ],
+    "examples": [
+      {
+        "word": "光",
+        "reading": "ひかり",
+        "gloss": "light",
+        "audioId": "ja-kanji-hikari-ex0"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "nature",
+    "order": 195,
+    "audioId": "ja-kanji-hikari"
+  },
+  {
+    "id": "ja-kanji-uchi",
+    "glyph": "内",
+    "meanings": [
+      "inside",
+      "within"
+    ],
+    "onyomi": [
+      "ナイ",
+      "ダイ"
+    ],
+    "kunyomi": [
+      "うち"
+    ],
+    "examples": [
+      {
+        "word": "案内",
+        "reading": "あんない",
+        "gloss": "guidance; directions",
+        "audioId": "ja-kanji-uchi-ex0"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "directions",
+    "order": 196,
+    "audioId": "ja-kanji-uchi"
+  },
+  {
+    "id": "ja-kanji-kou-public",
+    "glyph": "公",
+    "meanings": [
+      "public"
+    ],
+    "onyomi": [
+      "コウ"
+    ],
+    "kunyomi": [
+      "おおやけ"
+    ],
+    "examples": [
+      {
+        "word": "公園",
+        "reading": "こうえん",
+        "gloss": "park",
+        "audioId": "ja-kanji-kou-public-ex0"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "places",
+    "order": 197,
+    "audioId": "ja-kanji-kou-public"
+  },
+  {
+    "id": "ja-kanji-fuyu",
+    "glyph": "冬",
+    "meanings": [
+      "winter"
+    ],
+    "onyomi": [
+      "トウ"
+    ],
+    "kunyomi": [
+      "ふゆ"
+    ],
+    "examples": [
+      {
+        "word": "冬",
+        "reading": "ふゆ",
+        "gloss": "winter",
+        "audioId": "ja-kanji-fuyu-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "time",
+    "order": 198,
+    "audioId": "ja-kanji-fuyu"
+  },
+  {
+    "id": "ja-kanji-i-medicine",
+    "glyph": "医",
+    "meanings": [
+      "doctor",
+      "medicine"
+    ],
+    "onyomi": [
+      "イ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "医者",
+        "reading": "いしゃ",
+        "gloss": "doctor",
+        "audioId": "ja-kanji-i-medicine-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "people",
+    "order": 199,
+    "audioId": "ja-kanji-i-medicine"
+  },
+  {
+    "id": "ja-kanji-saru",
+    "glyph": "去",
+    "meanings": [
+      "leave",
+      "past"
+    ],
+    "onyomi": [
+      "キョ",
+      "コ"
+    ],
+    "kunyomi": [
+      "さ.る"
+    ],
+    "examples": [
+      {
+        "word": "去年",
+        "reading": "きょねん",
+        "gloss": "last year",
+        "audioId": "ja-kanji-saru-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "time",
+    "order": 200,
+    "audioId": "ja-kanji-saru"
+  },
+  {
+    "id": "ja-kanji-dai-platform",
+    "glyph": "台",
+    "meanings": [
+      "platform",
+      "stand",
+      "counter for machines"
+    ],
+    "onyomi": [
+      "ダイ",
+      "タイ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "台所",
+        "reading": "だいどころ",
+        "gloss": "kitchen",
+        "audioId": "ja-kanji-dai-platform-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "basics",
+    "order": 201,
+    "audioId": "ja-kanji-dai-platform"
+  },
+  {
+    "id": "ja-kanji-shi-history",
+    "glyph": "史",
+    "meanings": [
+      "history"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "歴史",
+        "reading": "れきし",
+        "gloss": "history",
+        "audioId": "ja-kanji-shi-history-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "basics",
+    "order": 202,
+    "audioId": "ja-kanji-shi-history"
+  },
+  {
+    "id": "ja-kanji-hakaru-diagram",
+    "glyph": "図",
+    "meanings": [
+      "map",
+      "diagram"
+    ],
+    "onyomi": [
+      "ズ",
+      "ト"
+    ],
+    "kunyomi": [
+      "はか.る"
+    ],
+    "examples": [
+      {
+        "word": "地図",
+        "reading": "ちず",
+        "gloss": "map",
+        "audioId": "ja-kanji-hakaru-diagram-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "places",
+    "order": 203,
+    "audioId": "ja-kanji-hakaru-diagram"
+  },
+  {
+    "id": "ja-kanji-dou-hall",
+    "glyph": "堂",
+    "meanings": [
+      "hall"
+    ],
+    "onyomi": [
+      "ドウ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "食堂",
+        "reading": "しょくどう",
+        "gloss": "dining hall",
+        "audioId": "ja-kanji-dou-hall-ex0"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "places",
+    "order": 204,
+    "audioId": "ja-kanji-dou-hall"
+  },
+  {
+    "id": "ja-kanji-koe",
+    "glyph": "声",
+    "meanings": [
+      "voice"
+    ],
+    "onyomi": [
+      "セイ",
+      "ショウ"
+    ],
+    "kunyomi": [
+      "こえ"
+    ],
+    "examples": [
+      {
+        "word": "声",
+        "reading": "こえ",
+        "gloss": "voice",
+        "audioId": "ja-kanji-koe-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "people",
+    "order": 205,
+    "audioId": "ja-kanji-koe"
+  },
+  {
+    "id": "ja-kanji-uru",
+    "glyph": "売",
+    "meanings": [
+      "sell"
+    ],
+    "onyomi": [
+      "バイ"
+    ],
+    "kunyomi": [
+      "う.る",
+      "う.れる"
+    ],
+    "examples": [
+      {
+        "word": "売る",
+        "reading": "うる",
+        "gloss": "to sell",
+        "audioId": "ja-kanji-uru-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "verbs",
+    "order": 206,
+    "audioId": "ja-kanji-uru"
+  },
+  {
+    "id": "ja-kanji-natsu",
+    "glyph": "夏",
+    "meanings": [
+      "summer"
+    ],
+    "onyomi": [
+      "カ",
+      "ゲ"
+    ],
+    "kunyomi": [
+      "なつ"
+    ],
+    "examples": [
+      {
+        "word": "夏",
+        "reading": "なつ",
+        "gloss": "summer",
+        "audioId": "ja-kanji-natsu-ex0"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "time",
+    "order": 207,
+    "audioId": "ja-kanji-natsu"
+  },
+  {
+    "id": "ja-kanji-imouto",
+    "glyph": "妹",
+    "meanings": [
+      "younger sister"
+    ],
+    "onyomi": [
+      "マイ"
+    ],
+    "kunyomi": [
+      "いもうと"
+    ],
+    "examples": [
+      {
+        "word": "妹",
+        "reading": "いもうと",
+        "gloss": "younger sister",
+        "audioId": "ja-kanji-imouto-ex0"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "people",
+    "order": 208,
+    "audioId": "ja-kanji-imouto"
+  },
+  {
+    "id": "ja-kanji-ane",
+    "glyph": "姉",
+    "meanings": [
+      "older sister"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "あね"
+    ],
+    "examples": [
+      {
+        "word": "姉",
+        "reading": "あね",
+        "gloss": "older sister",
+        "audioId": "ja-kanji-ane-ex0"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "people",
+    "order": 209,
+    "audioId": "ja-kanji-ane"
+  },
+  {
+    "id": "ja-kanji-ji-character",
+    "glyph": "字",
+    "meanings": [
+      "character",
+      "letter"
+    ],
+    "onyomi": [
+      "ジ"
+    ],
+    "kunyomi": [
+      "あざ"
+    ],
+    "examples": [
+      {
+        "word": "漢字",
+        "reading": "かんじ",
+        "gloss": "kanji character",
+        "audioId": "ja-kanji-ji-character-ex0"
+      }
+    ],
+    "strokeCount": 6,
+    "group": "people-school",
+    "order": 210,
+    "audioId": "ja-kanji-ji-character"
+  },
+  {
+    "id": "ja-kanji-ie",
+    "glyph": "家",
+    "meanings": [
+      "house",
+      "family"
+    ],
+    "onyomi": [
+      "カ",
+      "ケ"
+    ],
+    "kunyomi": [
+      "いえ",
+      "や"
+    ],
+    "examples": [
+      {
+        "word": "家",
+        "reading": "いえ",
+        "gloss": "house; home",
+        "audioId": "ja-kanji-ie-ex0"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "people",
+    "order": 211,
+    "audioId": "ja-kanji-ie"
+  },
+  {
+    "id": "ja-kanji-samui",
+    "glyph": "寒",
+    "meanings": [
+      "cold"
+    ],
+    "onyomi": [
+      "カン"
+    ],
+    "kunyomi": [
+      "さむ.い"
+    ],
+    "examples": [
+      {
+        "word": "寒い",
+        "reading": "さむい",
+        "gloss": "cold",
+        "audioId": "ja-kanji-samui-ex0"
+      }
+    ],
+    "strokeCount": 12,
+    "group": "adjectives",
+    "order": 212,
+    "audioId": "ja-kanji-samui"
+  },
+  {
+    "id": "ja-kanji-kou-craft",
+    "glyph": "工",
+    "meanings": [
+      "craft",
+      "construction"
+    ],
+    "onyomi": [
+      "コウ",
+      "ク"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "工場",
+        "reading": "こうじょう",
+        "gloss": "factory",
+        "audioId": "ja-kanji-kou-craft-ex0"
+      }
+    ],
+    "strokeCount": 3,
+    "group": "places",
+    "order": 213,
+    "audioId": "ja-kanji-kou-craft"
+  },
+  {
+    "id": "ja-kanji-ichi-market",
+    "glyph": "市",
+    "meanings": [
+      "city",
+      "market"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "いち"
+    ],
+    "examples": [
+      {
+        "word": "市",
+        "reading": "し",
+        "gloss": "city",
+        "audioId": "ja-kanji-ichi-market-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "places",
+    "order": 214,
+    "audioId": "ja-kanji-ichi-market"
+  },
+  {
+    "id": "ja-kanji-kaeru-return",
+    "glyph": "帰",
+    "meanings": [
+      "return home"
+    ],
+    "onyomi": [
+      "キ"
+    ],
+    "kunyomi": [
+      "かえ.る",
+      "かえ.す"
+    ],
+    "examples": [
+      {
+        "word": "帰る",
+        "reading": "かえる",
+        "gloss": "to return home",
+        "audioId": "ja-kanji-kaeru-return-ex0"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "verbs",
+    "order": 215,
+    "audioId": "ja-kanji-kaeru-return"
+  },
+  {
+    "id": "ja-kanji-hiku",
+    "glyph": "引",
+    "meanings": [
+      "pull"
+    ],
+    "onyomi": [
+      "イン"
+    ],
+    "kunyomi": [
+      "ひ.く",
+      "ひ.ける"
+    ],
+    "examples": [
+      {
+        "word": "引く",
+        "reading": "ひく",
+        "gloss": "to pull",
+        "audioId": "ja-kanji-hiku-ex0"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "verbs",
+    "order": 216,
+    "audioId": "ja-kanji-hiku"
+  },
+  {
+    "id": "ja-kanji-otouto",
+    "glyph": "弟",
+    "meanings": [
+      "younger brother"
+    ],
+    "onyomi": [
+      "テイ",
+      "ダイ",
+      "デ"
+    ],
+    "kunyomi": [
+      "おとうと"
+    ],
+    "examples": [
+      {
+        "word": "弟",
+        "reading": "おとうと",
+        "gloss": "younger brother",
+        "audioId": "ja-kanji-otouto-ex0"
+      }
+    ],
+    "strokeCount": 7,
+    "group": "people",
+    "order": 217,
+    "audioId": "ja-kanji-otouto"
+  },
+  {
+    "id": "ja-kanji-yowai",
+    "glyph": "弱",
+    "meanings": [
+      "weak"
+    ],
+    "onyomi": [
+      "ジャク"
+    ],
+    "kunyomi": [
+      "よわ.い",
+      "よわ.る",
+      "よわ.まる",
+      "よわ.める"
+    ],
+    "examples": [
+      {
+        "word": "弱い",
+        "reading": "よわい",
+        "gloss": "weak",
+        "audioId": "ja-kanji-yowai-ex0"
+      }
+    ],
+    "strokeCount": 10,
+    "group": "adjectives",
+    "order": 218,
+    "audioId": "ja-kanji-yowai"
+  },
+  {
+    "id": "ja-kanji-kokoro",
+    "glyph": "心",
+    "meanings": [
+      "heart",
+      "mind"
+    ],
+    "onyomi": [
+      "シン"
+    ],
+    "kunyomi": [
+      "こころ"
+    ],
+    "examples": [
+      {
+        "word": "心",
+        "reading": "こころ",
+        "gloss": "heart; mind",
+        "audioId": "ja-kanji-kokoro-ex0"
+      }
+    ],
+    "strokeCount": 4,
+    "group": "people",
+    "order": 219,
+    "audioId": "ja-kanji-kokoro"
+  },
+  {
+    "id": "ja-kanji-omou",
+    "glyph": "思",
+    "meanings": [
+      "think"
+    ],
+    "onyomi": [
+      "シ"
+    ],
+    "kunyomi": [
+      "おも.う"
+    ],
+    "examples": [
+      {
+        "word": "思う",
+        "reading": "おもう",
+        "gloss": "to think",
+        "audioId": "ja-kanji-omou-ex0"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 220,
+    "audioId": "ja-kanji-omou"
+  },
+  {
+    "id": "ja-kanji-isogu",
+    "glyph": "急",
+    "meanings": [
+      "hurry",
+      "urgent"
+    ],
+    "onyomi": [
+      "キュウ"
+    ],
+    "kunyomi": [
+      "いそ.ぐ"
+    ],
+    "examples": [
+      {
+        "word": "急ぐ",
+        "reading": "いそぐ",
+        "gloss": "to hurry",
+        "audioId": "ja-kanji-isogu-ex0"
+      }
+    ],
+    "strokeCount": 9,
+    "group": "verbs",
+    "order": 221,
+    "audioId": "ja-kanji-isogu"
+  },
+  {
+    "id": "ja-kanji-warui",
+    "glyph": "悪",
+    "meanings": [
+      "bad",
+      "evil"
+    ],
+    "onyomi": [
+      "アク",
+      "オ"
+    ],
+    "kunyomi": [
+      "わる.い"
+    ],
+    "examples": [
+      {
+        "word": "悪い",
+        "reading": "わるい",
+        "gloss": "bad",
+        "audioId": "ja-kanji-warui-ex0"
+      }
+    ],
+    "strokeCount": 11,
+    "group": "adjectives",
+    "order": 222,
+    "audioId": "ja-kanji-warui"
+  },
+  {
+    "id": "ja-kanji-kurai",
+    "glyph": "暗",
+    "meanings": [
+      "dark"
+    ],
+    "onyomi": [
+      "アン"
+    ],
+    "kunyomi": [
+      "くら.い"
+    ],
+    "examples": [
+      {
+        "word": "暗い",
+        "reading": "くらい",
+        "gloss": "dark",
+        "audioId": "ja-kanji-kurai-ex0"
+      }
+    ],
+    "strokeCount": 13,
+    "group": "adjectives",
+    "order": 223,
+    "audioId": "ja-kanji-kurai"
+  },
+  {
+    "id": "ja-kanji-i-means",
+    "glyph": "以",
+    "meanings": [
+      "by means of",
+      "from"
+    ],
+    "onyomi": [
+      "イ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "以上",
+        "reading": "いじょう",
+        "gloss": "more than; above",
+        "audioId": "ja-kanji-i-means-ex0"
+      }
+    ],
+    "strokeCount": 5,
+    "group": "basics",
+    "order": 224,
+    "audioId": "ja-kanji-i-means"
+  },
+  {
+    "id": "ja-kanji-kyou-capital",
+    "glyph": "京",
+    "meanings": [
+      "capital"
+    ],
+    "onyomi": [
+      "キョウ",
+      "ケイ"
+    ],
+    "kunyomi": [],
+    "examples": [
+      {
+        "word": "東京",
+        "reading": "とうきょう",
+        "gloss": "Tokyo",
+        "audioId": "ja-kanji-kyou-capital-ex0"
+      }
+    ],
+    "strokeCount": 8,
+    "group": "places",
+    "order": 225,
+    "audioId": "ja-kanji-kyou-capital"
+  }
+]

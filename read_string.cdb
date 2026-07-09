@@ -1,0 +1,4 @@
+.effmach x86
+.sympath srv*C:\symcache*https://msdl.microsoft.com/download/symbols
+!address -f:MEM_COMMIT -c:"s -a %1 L?%2 \"maps/mp/zm_cosmodrome.d3dbsp\""
+q

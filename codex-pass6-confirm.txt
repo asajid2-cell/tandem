@@ -1,0 +1,13 @@
+ALARMONIZER final confirmation. Your pass-5 verdict: #1 (restore write-gaps) + #2 (stale-ring composition) CLOSED — and the one remaining blocker was "occurrence dismissal is not centralized" (an NFC dismiss-scene tap, and a loop-timeout auto-stop, stop the ring but don't mark the occurrence dismissed → the startup orphan-recovery you and I added can then re-fire it). I just CENTRALIZED it. Verify it closes that gap and give the final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 93 vitest pass. Deployed + live-healthy.
+
+THE FIX (server/fireEngine.js doStopRing): added `markOccurrenceDismissed()` = if `active.occurrenceKey` exists, `store.markOccurrence(key, "dismissed", {dismissedAt})`. It is called at BOTH confirmed-stop exits: the not-owned path (`if (!owned) { clearActiveRing(); markOccurrenceDismissed(); return true; }`) and the final confirmed-stop `return true` (after the verify loop confirms "stopped"). It is NOT called on the `return false` (unconfirmed → enforcer) path, NOR on the superseded `return true` paths (a newer alarm owns everything — we touch nothing, including occurrences). Because EVERY dismiss surface funnels through doStopRing — the website route (app.js still also marks, idempotent), the NFC dismiss-scene tap (sceneRunner → fireEngine.stopRing()), the loop-timeout auto-stop (scheduleLoopTimeout → doStopRing), and the stopPending reconcile (which also marks) — occurrence dismissal is now centralized at the one chokepoint.
+
+VERIFY:
+1. Does this CLOSE the scene-dismiss + loop-timeout orphan-recovery re-fire path? Trace: scene tap → stopRing() confirmed → occurrence "dismissed" → scheduler startup sees "dismissed" not "firing" → not recovered. Correct?
+2. Is NOT marking on the superseded paths correct (B owns it; marking A's occurrence could be wrong if same key as a re-fire), or does it leave a real orphan? Is that residual narrower than the pre-fix hole?
+3. Any dismiss surface that DOESN'T go through doStopRing and could still leave a firing occurrence?
+4. The intentional enforcer give-up (clears the ring after stopEnforceMaxAttempts≈2min assuming an unreachable box is off/silent) — acceptable design tradeoff, or a real phantom-audio risk on a reachable-but-stuck box?
+
+This is pass 6 across a long hardening effort. If the only remaining items are negligible/theoretical, SAY SO explicitly and give the bulletproof call. BRING BACK: "occurrence-dismissal CLOSED — bulletproof: yes/no" + any SPECIFIC real (not theoretical) remaining hole with file:line + trigger.

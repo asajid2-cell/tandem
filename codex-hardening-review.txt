@@ -1,0 +1,36 @@
+ALARMONIZER hardening pass 2 — ADVERSARIAL review of the fixes just landed. Try to BREAK them. Read the real source.
+
+Context: your pass-1 review (+ my own) found holes in the box-can't-stop alarm watchdog. I just hardened them. Verify each fix actually closes the hole AND introduces no regression / new race. Reach your OWN verdict; cite file:line.
+
+THE FIXES (all in z:/328/CMPUT328-A2/codexworks/301/alarmonizer):
+
+1. HOLE-1 (dismiss vs watchdog race → phantom recreation + audio-after-dismiss) — server/fireEngine.js maintainBlare:
+   - Added `aborted()` = `runToken !== token || store.getActiveRing()?.phase !== PHASE_BLARING`, checked before EVERY LMS write (power/resume/playLooping/setVolume).
+   - FINAL guard before persistRing: re-fetch `const current = store.getActiveRing(); if (runToken !== token || !current || current.phase !== PHASE_BLARING) return;` then persist onto `current` (not the stale tick-start `active`).
+   - doStopRing still bumps token + clears the ring synchronously + has its own re-stop retry loop (6×500ms) as the in-flight-write backstop.
+   QUESTION: can a dismiss STILL be out-raced into a phantom or audio-after-dismiss? Consider a dismiss landing between the last `aborted()` and `persistRing` (synchronous gap — is it truly gap-free?), and a dismiss landing during the awaited write itself (does doStopRing's retry loop reliably catch a resume/setVolume that completes just after stop?). Any interleaving where the ring is recreated OR audio is re-asserted after a confirmed dismiss?
+
+2. HOLE-2 (genuine STOP not recovered when reads time out) — same function:
+   - `pause 0` (resume) only un-pauses; a true `stop` needs playLooping reload.
+   - New: track `blareUnconfirmed` (persisted in ring). mode==="play" → reset 0; mode==="" (read failed) → +1; definitive pause/stop → 0. Reload (playLooping) when mode==="stop" OR (mode==="" AND unconfirmed >= blareReloadAfterUnconfirmed=4). Reset on reload.
+   QUESTION: is there a state sequence where a stopped box is NEVER reloaded (stays silent)? E.g. reads alternate fail/pause/fail so unconfirmed keeps resetting below 4? Is 4 ticks (~10s) acceptable worst-case silence? Does the reset-on-definitive-pause ever mask a real stop? Could the reload restart a HEALTHY playing box (false positive) under any realistic read pattern?
+
+3. RISK-C (writes used the default ~3.5s timeout) — server/lmsClient.js + maintainBlare:
+   - power/resume/setVolume/playLooping now accept a timeoutMs; maintainBlare passes maintainWriteTimeoutMs=1500. Reads stay at 1200ms.
+   QUESTION: can a tick still take long enough to starve the 2500ms interval / overlap with the next tick? (ticks re-arm only after completion — confirm no overlap, but also confirm a fully-hung box can't wedge a tick for many seconds.)
+
+4. RISK-B (reconcileStartup cleared an ACTIVE ring on a restart >2min into the ring) — fireEngine.js reconcileStartup:
+   - Cutoff now uses lastAlive = max(updatedAt, resumedAt, startedAt) instead of startedAt alone. persistRing stamps updatedAt every tick, so a live ring has a ~2.5s-old updatedAt and resumes; a truly orphaned ring's updatedAt is old → cleared.
+   QUESTION: any case where this WRONGLY resurrects a stale ring (loud blast hours later — the exact bug we must never reintroduce)? Could a non-blaring leftover ring carry a fresh updatedAt it shouldn't? Is maxResumeAgeMs=2min still the right bound now that it's measured from last-alive?
+
+5. Codex MSG-7 (dismiss marked occurrence dismissed even if stop failed) — server/app.js /api/alarm/dismiss:
+   - Now consumes stopRing()'s return: if false → 503 {ok:false,dismissed:false,reason:"stop_unconfirmed"}, occurrence NOT marked, NFC not recorded, ring kept active. Only mark dismissed + return success when stop confirmed.
+   QUESTION: does this create a new failure mode (a box that's genuinely off / unreachable but the user WANTS dismissed can now never clear the ring → permanent banner)? Is the kept-active ring still maintained by a watchdog after a false stop, or is it orphaned (token was bumped, watchdog dead)? Is that acceptable, or does it need a re-armed stop-retry?
+
+6. RISK-A (easy-wake ramp unprotected) — fireEngine.js scheduleEasyWakeMusic + scheduleEasyWakeTone:
+   - Each ramp step now does power(true)+resume() before setVolume so the box can't pause the ease-up. (Blaring already has the full watchdog.)
+   QUESTION: any regression to the gentle ramp (e.g. resume restarting a playlist track, or fighting a user who legitimately paused during ease-up)?
+
+74 vitest pass (7 new for these fixes). Live LMS on the VPS (ssh harmonizer@192.168.1.142, Boom 00:04:20:1f:2c:56, keep audio <=10%) — but it was flaky/hung during your pass-1; source reasoning is fine if live is down.
+
+BRING BACK: for each of the 6, "closed" or "still-open: <file:line + exact triggering sequence + fix>", plus any NEW hole the hardening introduced. Be a skeptic — the bar is "wakes him every morning, the box can only dampen, never a phantom."

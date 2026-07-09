@@ -241,11 +241,32 @@ test("each driver couples to its OWN codex, never the other's (no wrong-side rou
   assert.equal(sidOf(b2.stdout), b1, "B must resume B's codex");
 });
 
-test("low-context notice fires for the driver when the passenger nears the limit", (t) => {
+test("compaction notice fires for the driver after the turn threshold", (t) => {
   const s = freshState(t);
-  const r = peer(["ask", "big turn"], { state: s, driver: "drvA", env: { TANDEM_COMPACT_AT: "500", FAKE_TOKENS: "900" } });
-  assert.match(r.out, /running low on context/i);
+  // turn count is the trigger now (codex's token metric is summed-per-turn, not a context-size signal)
+  const r = peer(["ask", "big turn"], { state: s, driver: "drvA", env: { TANDEM_MAX_TURNS: "1", TANDEM_AUTO_COMPACT: "0" } });
+  assert.match(r.out, /has run \d+ turns|compaction threshold/i);
   assert.match(r.out, /peer\.mjs compact/);
+});
+
+test("autoCompact hands off to a FRESH session after maxTurnsBeforeCompact", (t) => {
+  const s = freshState(t);
+  const env = { TANDEM_MAX_TURNS: "2" }; // autoCompact is on by default
+  const sid1 = sidOf(peer(["ask", "t1"], { state: s, driver: "drvAC", env }).stdout);
+  const sid2 = sidOf(peer(["ask", "t2"], { state: s, driver: "drvAC", env }).stdout); // turn count → 2
+  const r3 = peer(["ask", "t3"], { state: s, driver: "drvAC", env }); // count 2 >= 2 → auto-compact → fresh
+  const sid3 = sidOf(r3.stdout);
+  assert.ok(sid1 && sid2 && sid3, "every turn reports a sid");
+  assert.equal(sid2, sid1, "before the threshold, turns resume the same session");
+  assert.notEqual(sid3, sid2, "at the threshold the bridge auto-compacts to a FRESH session");
+  assert.match(r3.out, /auto-compact/i);
+});
+
+test("a runaway/stuck turn is killed by the duration backstop (maxTurnSec)", (t) => {
+  const s = freshState(t);
+  // fake delays 8s; watchdog fires at 1s and kills it so a spin can't run forever
+  const r = peer(["ask", "spin"], { state: s, driver: "drvW", env: { TANDEM_MAX_TURN_SEC: "1", FAKE_DELAY: "8000" } });
+  assert.match(r.out, /exceeded 1s|runaway|stuck/i);
 });
 
 // ---------- Codex→Claude path (the persistent serve daemon) ----------

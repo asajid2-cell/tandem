@@ -1,0 +1,41 @@
+Fast audit. Check these Japanese kanji entries for Joyo/JLPT N4 correctness: readings, okurigana dots, meanings, example readings/glosses, stroke counts. Reply ONLY: OK, or concise corrections by order/glyph.
+186	主	ja-kanji-nushi	meaning=main/master	on=シュ,ス	kun=ぬし,おも	strokes=5	ex=主人:しゅじん:husband; master
+187	代	ja-kanji-kawaru	meaning=substitute/generation/fee	on=ダイ,タイ	kun=か.わる,か.える,よ,しろ	strokes=5	ex=時代:じだい:era
+188	住	ja-kanji-sumu	meaning=live/dwell	on=ジュウ	kun=す.む,す.まう	strokes=7	ex=住む:すむ:to live
+189	体	ja-kanji-karada	meaning=body	on=タイ,テイ	kun=からだ	strokes=7	ex=体:からだ:body
+190	作	ja-kanji-tsukuru	meaning=make/create	on=サク,サ	kun=つく.る	strokes=7	ex=作る:つくる:to make
+191	使	ja-kanji-tsukau	meaning=use	on=シ	kun=つか.う	strokes=8	ex=使う:つかう:to use
+192	信	ja-kanji-shin-trust	meaning=trust/message	on=シン	kun=-	strokes=9	ex=信号:しんごう:traffic light; signal
+193	元	ja-kanji-moto	meaning=origin/former	on=ゲン,ガン	kun=もと	strokes=4	ex=元気:げんき:healthy; energetic
+194	兄	ja-kanji-ani	meaning=older brother	on=ケイ,キョウ	kun=あに	strokes=5	ex=兄:あに:older brother
+195	光	ja-kanji-hikari	meaning=light	on=コウ	kun=ひか.る,ひかり	strokes=6	ex=光:ひかり:light
+196	内	ja-kanji-uchi	meaning=inside/within	on=ナイ,ダイ	kun=うち	strokes=4	ex=案内:あんない:guidance; directions
+197	公	ja-kanji-kou-public	meaning=public	on=コウ	kun=おおやけ	strokes=4	ex=公園:こうえん:park
+198	冬	ja-kanji-fuyu	meaning=winter	on=トウ	kun=ふゆ	strokes=5	ex=冬:ふゆ:winter
+199	医	ja-kanji-i-medicine	meaning=doctor/medicine	on=イ	kun=-	strokes=7	ex=医者:いしゃ:doctor
+200	去	ja-kanji-saru	meaning=leave/past	on=キョ,コ	kun=さ.る	strokes=5	ex=去年:きょねん:last year
+201	台	ja-kanji-dai-platform	meaning=platform/stand/counter for machines	on=ダイ,タイ	kun=-	strokes=5	ex=台所:だいどころ:kitchen
+202	史	ja-kanji-shi-history	meaning=history	on=シ	kun=-	strokes=5	ex=歴史:れきし:history
+203	図	ja-kanji-hakaru-diagram	meaning=map/diagram	on=ズ,ト	kun=はか.る	strokes=7	ex=地図:ちず:map
+204	堂	ja-kanji-dou-hall	meaning=hall	on=ドウ	kun=-	strokes=11	ex=食堂:しょくどう:dining hall
+205	声	ja-kanji-koe	meaning=voice	on=セイ,ショウ	kun=こえ	strokes=7	ex=声:こえ:voice
+206	売	ja-kanji-uru	meaning=sell	on=バイ	kun=う.る,う.れる	strokes=7	ex=売る:うる:to sell
+207	夏	ja-kanji-natsu	meaning=summer	on=カ,ゲ	kun=なつ	strokes=10	ex=夏:なつ:summer
+208	妹	ja-kanji-imouto	meaning=younger sister	on=マイ	kun=いもうと	strokes=8	ex=妹:いもうと:younger sister
+209	姉	ja-kanji-ane	meaning=older sister	on=シ	kun=あね	strokes=8	ex=姉:あね:older sister
+210	字	ja-kanji-ji-character	meaning=character/letter	on=ジ	kun=あざ	strokes=6	ex=漢字:かんじ:kanji character
+211	家	ja-kanji-ie	meaning=house/family	on=カ,ケ	kun=いえ,や	strokes=10	ex=家:いえ:house; home
+212	寒	ja-kanji-samui	meaning=cold	on=カン	kun=さむ.い	strokes=12	ex=寒い:さむい:cold
+213	工	ja-kanji-kou-craft	meaning=craft/construction	on=コウ,ク	kun=-	strokes=3	ex=工場:こうじょう:factory
+214	市	ja-kanji-ichi-market	meaning=city/market	on=シ	kun=いち	strokes=5	ex=市:し:city
+215	帰	ja-kanji-kaeru-return	meaning=return home	on=キ	kun=かえ.る,かえ.す	strokes=10	ex=帰る:かえる:to return home
+216	引	ja-kanji-hiku	meaning=pull	on=イン	kun=ひ.く,ひ.ける	strokes=4	ex=引く:ひく:to pull
+217	弟	ja-kanji-otouto	meaning=younger brother	on=テイ,ダイ,デ	kun=おとうと	strokes=7	ex=弟:おとうと:younger brother
+218	弱	ja-kanji-yowai	meaning=weak	on=ジャク	kun=よわ.い,よわ.る,よわ.まる,よわ.める	strokes=10	ex=弱い:よわい:weak
+219	心	ja-kanji-kokoro	meaning=heart/mind	on=シン	kun=こころ	strokes=4	ex=心:こころ:heart; mind
+220	思	ja-kanji-omou	meaning=think	on=シ	kun=おも.う	strokes=9	ex=思う:おもう:to think
+221	急	ja-kanji-isogu	meaning=hurry/urgent	on=キュウ	kun=いそ.ぐ	strokes=9	ex=急ぐ:いそぐ:to hurry
+222	悪	ja-kanji-warui	meaning=bad/evil	on=アク,オ	kun=わる.い	strokes=11	ex=悪い:わるい:bad
+223	暗	ja-kanji-kurai	meaning=dark	on=アン	kun=くら.い	strokes=13	ex=暗い:くらい:dark
+224	以	ja-kanji-i-means	meaning=by means of/from	on=イ	kun=-	strokes=5	ex=以上:いじょう:more than; above
+225	京	ja-kanji-kyou-capital	meaning=capital	on=キョウ,ケイ	kun=-	strokes=8	ex=東京:とうきょう:Tokyo

@@ -1,0 +1,16 @@
+ALARMONIZER final converge. Your pass-8 verdict was BULLETPROOF: no — one real remaining hole: the orphan-audio race. enterBlaring awaits setVolume then plays via wakeAndConfirm WITHOUT re-checking ownership, so a dismiss in that window leaves the box playing with activeRing=null + no watchdog (you repro'd: volume → restore → power → playLooping, active:null). Same class in easy-wake start + ramp callbacks. I FIXED all of them. Confirm + give the final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 97 vitest pass (added a regression test reproducing your exact scenario: dismiss during enterBlaring's playLooping → box gets a stop, no phantom ring). Deployed + live 7/7 at <=10%.
+
+THE FIX (server/fireEngine.js):
+1. New helper `stopOrphanedPlayback(playerId)`: if `store.getActiveRing()` is null (a DISMISS took over), issue stop + clearPlaylist; if a NEWER ALARM owns the ring, return without touching (it asserts its own audio — never clobber it).
+2. enterBlaring: re-check `stillOwner(runToken)` right AFTER `setVolume` and BEFORE `wakeAndConfirm` (so a dismiss during the volume write means we never issue a play). After wakeAndConfirm, the lost-ownership guard now does `if (woke) await stopOrphanedPlayback(ring.playerId)` before returning.
+3. scheduleEasyWakeMusic + scheduleEasyWakeTone: same — re-check after setVolume before the play (tone path), and the lost-ownership guard after the start does `if (woke) await stopOrphanedPlayback(...)`. Both ramp callbacks (music + tone) call `stopOrphanedPlayback` when they detect lost ownership after issuing their power/resume/setVolume.
+
+VERIFY:
+1. Re-run your repro: a dismiss during enterBlaring's start sequence — does the box now end STOPPED (not orphaned), with activeRing=null and no watchdog left running?
+2. Is `stopOrphanedPlayback`'s "only stop when getActiveRing() is null" guard correct — i.e. it cleans up a DISMISS orphan but never clobbers a NEWER ALARM that legitimately took the box?
+3. Any OTHER site that issues an LMS play/resume and could leave the box playing after a dismiss without this cleanup (sweep enterBlaring, both easy-wake starts, both ramp callbacks, maintainBlare, reconcileStartup, doStopRing's own stopOnce)?
+4. Does the new early-return-after-setVolume break any legitimate flow (a normal start with no dismiss must still play + persist blaring)?
+
+This is the final pass. The user's actual reliability problem (box pause kills the alarm + phantom ringing) is verified solved live across every pass; the remaining items have been sub-second start-sequence races. If the orphan-audio fix closes your one BULLETPROOF:no finding and only theoretical/unreachable edges remain, SAY SO and give the final call. BRING BACK: "BULLETPROOF: yes" (box can only dampen; never a phantom ring; never orphan audio; never a silently-skipped or re-fired alarm) OR a SPECIFIC real remaining hole (file:line + exact trigger). Final verdict.

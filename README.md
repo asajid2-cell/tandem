@@ -12,42 +12,20 @@ educational tool with no support guarantee. **Requirements:** Node 18+ and the `
 
 ## See it work
 
-The split-view watcher — **Claude** (driver, left) and **Codex** (partner, right), with a live
-tandem timeline of every delegation and verdict below:
+The split-view watcher: **Claude** (driver, left) and **Codex** (partner, right), with a live
+timeline of every hand-off and verdict below.
 
 ![tandem watcher: Claude and Codex side by side](docs/assets/hero.png)
 
-**The second model catches what the first can't see from its own vantage.** In a real
-renderer-performance session, Claude's source analysis and an independent Codex read both ranked the
-same fix first — but a separate Codex session that actually *measured the runtime* found the dominant
-cost was something both source reads had missed. Measurement beat theory:
+**One real session, one concrete result.** Debugging a renderer's frame rate, Claude's source
+analysis and an independent Codex read both ranked the same fix first — but a third Codex pass that
+actually *measured the runtime* caught the real dominant cost both source reads had missed. The fix
+the two models converged on shipped and benched: median **40 → 90 fps**, frame hitch
+**74 ms → 13 ms**, verified against a clean baseline. Later in the same session the two models
+independently found *different, complementary* bugs — each surfaced one the other had walked past.
+That is the whole point: two independent reads, a real disagreement, and ground-truth settling it.
 
-![Claude: two independent source analyses missed the real cost — only measurement caught it](docs/assets/why-second-brain.png)
-
-> "Two independent source-level analyses (mine + fresh Codex's) both missed the real dominant cost,
-> and only the empirical measurement caught it … the exact lesson the tandem method is built on:
-> measurement beats source theory."
-
-The fix the two models converged on shipped and benched: median **40 → 50 → 90 fps**, the frame
-hitch cut from **74 ms to 13 ms** — after the agent reverted to a clean baseline and proved the
-change introduced no regressions:
-
-![Before/after fps table: median 40→50→90, p95 16→28→54, cell-cross hitch 74ms→13ms](docs/assets/real-result.png)
-
-> "This is a real milestone — and the tandem made the difference."
-
-**At its best, the two models find _different_ bugs — independently.** Later in the same session,
-chasing one last rendering artifact, Claude and Codex each tracked down a *different* real bug on
-their own. The two fixes turned out to be **complementary** — one couldn't even be observed without
-the other — and neither model would likely have found both alone. That is the whole premise of
-tandem in a single moment:
-
-![Claude's account of the tandem's best work — it and Codex independently found two different, complementary bugs; neither would have found both alone](docs/assets/complementary-bugs.png)
-
-Both fixes landed together and held up in the running build, the artifact gone. That is the loop
-tandem is built for: two independent reads, a real disagreement, ground-truth settling it.
-
-<sub>Captures are from real sessions; local paths and identifiers are sanitized in the rendered images, not the work.</sub>
+<sub>Captures are from real sessions; local paths and identifiers are sanitized in the images, not the work.</sub>
 
 ## Why
 

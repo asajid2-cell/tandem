@@ -1,0 +1,15 @@
+ALARMONIZER pass-5 converge. Last pass you CLOSED #3 (stop-pending restart) + #4 (maxDampening:0), and left two narrowed-but-open: #1 residual restore write-gaps + #2 stale-ring composition. I fixed both. Verify they're genuinely closed in the real source + a final sweep. Your OWN verdict; cite file:line.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 92 vitest pass. Live re-verified at <=10% (stop→reload, dismiss→no-phantom) 7/7.
+
+FIX A — #1 residual (lms.restore write gaps): you found `time <pos>` after `playlist index` (lmsClient.js ~193-194) and `power 0` after `playlist repeat` (~200-201) had no abort() check.
+ FIX: added `if (abort()) return;` before the `time` write AND before the `power(false)` write in server/lmsClient.js restore(). Now EVERY mutating command in restore is preceded by an abort() check.
+ VERIFY: walk restore() top-to-bottom — is there now an abort() before every single mutating command (setVolume, stop, clear, each playlist add, playlist index, time, playlist repeat, power)? Any residual write still reachable after the abort flips?
+
+FIX B — #2 stale-ring composition: you found fireEngine.reconcileStartup clears a too-stale ring (lastAlive > maxResumeAgeMs) WITHOUT marking its occurrence, so the scheduler's orphan-recovery then re-fires it (alarm fired 12:00, restart 12:10, ring too stale to resume, scheduler re-fires within the 60-min window).
+ FIX: in the stale-clear branch (server/fireEngine.js reconcileStartup), when the cleared ring has an occurrenceKey, mark that occurrence "missed" (store.markOccurrence(key,"missed",{missedAt})) BEFORE returning — so the scheduler (which runs after fireEngine startup) sees it as "missed", not "firing", and skips it.
+ VERIFY: (a) does this correctly DISTINGUISH the desired #2 recovery (crashed BEFORE any ring persisted → no active ring to inspect at fireEngine startup → scheduler orphan-recovers + re-fires within catch-up) from the stale-ring case (ring existed, went stale → marked missed → NOT re-fired)? (b) any case where a FRESH ring that SHOULD resume is wrongly marked missed? (c) the genuine #2 (no ring ever) — is it still recovered (re-fires) as intended?
+
+Also a final whole-surface sweep: with #1+#2 closed, is there ANY remaining path to a phantom, an orphan (real alarm ringing with no ring/watchdog), a silently-skipped alarm, or the box stopping the alarm? We've done 5 passes — if remaining items are only negligible/theoretical, say so explicitly.
+
+BRING BACK: "#1 CLOSED / #2 CLOSED" or "still-open: <file:line + exact sequence + fix>", + any new hole. FINAL call: is it NOW truly "wakes him every morning, box can only dampen, never a phantom, never an orphan, never silently skipped"?

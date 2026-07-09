@@ -1,0 +1,14 @@
+ALARMONIZER final converge. Your pass-12 verdict: MSG-9 ownership CLOSED, stopOrphanedPlayback inconclusive-safe, "no other classifier surfaced beyond verifyStopState" — and you reproduced a concrete orphan in verifyStopState (stopOnce write fails/outraced + verify read flakes to mode=play,tracks=[] → returned "stopped" → false-confirm → ring cleared → alarm keeps blaring). I FIXED that last classifier. Confirm + give the final call.
+
+Source: z:/328/CMPUT328-A2/codexworks/301/alarmonizer. 101 vitest pass. Deployed + live 7/7 at <=10%.
+
+THE FIX (server/fireEngine.js verifyStopState): now `if (mode !== "play") return "stopped"`; for mode==="play", an EMPTY/unknown track list (the same partial `status tags:u` flake) returns "unknown", NOT "stopped". So a failed/outraced stop + flaked verify no longer falsely confirms — it returns "unknown", the dismiss stays honest (false), and the enforcer keeps re-stopping until a read can actually confirm the box is quiet. A real non-alarm track still → "stopped" (user music). Identifiable alarm track → "playing" (re-stop). This is now the SAME inconclusive-safe principle as the ownership check + stopOrphanedPlayback: a flaked read NEVER frees the box on a dismiss.
+
+Tests reworked + green (101): (a) the doStopRing-ownership test's verify reads now return mode=stop after stopOnce (so it isolates the ownership fix → confirm → ring cleared); (b) a NEW test reproduces your MSG-13 orphan — flaked verify (mode=play, empty tracks) → dismiss returns false + keeps the ring + enforcer (no false-confirm), then reads recover → enforcer clears.
+
+VERIFY:
+1. Re-run your MSG-13 adversarial probe (stopOnce write fails, verify read = mode:play, tracks:[]): does the dismiss now return false + keep the ring + arm the enforcer (instead of clearing the ring with the alarm still playing)?
+2. With all THREE classifiers now inconclusive-safe (ownership→owned=true, verifyStopState→"unknown", stopOrphanedPlayback→stop), is there ANY remaining reachable path where a flaked read frees the box / leaves an orphan / false-confirms a dismiss?
+3. Does the enforcer correctly resolve the kept ring once a read can confirm (mode=stop OR an identifiable non-alarm track), and give up + clear at the cap if the box stays unreachable?
+
+This is the 13th pass; you said verifyStopState was the last classifier and stopOrphanedPlayback is already safe, so with this fix all stop-gating decisions are flaked-read-safe. The user's actual reliability problem is verified solved live across every pass. If this closes the last hole and only theoretical/unreachable edges remain, SAY SO and give the final call. BRING BACK: "BULLETPROOF: yes" or a SPECIFIC real remaining hole (file:line + exact trigger). FINAL verdict.

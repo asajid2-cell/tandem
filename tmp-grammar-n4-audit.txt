@@ -1,0 +1,1088 @@
+Audit these newly added Japanese N4 grammar patterns for correctness. Focus on conjugations, token/license consistency, natural Japanese, closed-universe risk, and whether the explanations/formulas are accurate. Pay special attention to passive/causative/volitional forms: godan ??????/????/????, ichidan ????????/?????/?????, ??????/???/???/???, ??????/????/????. Return concise verdict OK or corrections by id/order.
+
+[
+  {
+    "id": "ja-plain-volitional-you-ou",
+    "lang": "ja",
+    "order": 133,
+    "title": "Plain volitional with よう and おう",
+    "explanation": "The plain volitional suggests “let’s” or expresses an intention. The tokenizer licenses it as a volitional ending after the dictionary-form verb token.",
+    "formula": "verb volitional stem + よう/おう",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Plain volitional ending for ichidan, godan, and irregular verbs.",
+        "tokens": [
+          "~う"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "よう",
+          "おう",
+          "こう",
+          "しよう"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "ご飯を食べよう。",
+        "gloss": "Let’s eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~う"
+        ],
+        "audioId": "ja-ex-volitional-tabeyou"
+      },
+      {
+        "text": "店へ行こう。",
+        "gloss": "Let’s go to the shop.",
+        "tokens": [
+          "店",
+          "へ",
+          "行く",
+          "~う"
+        ],
+        "audioId": "ja-ex-volitional-ikou"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-volitional-tabeyou",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べよう mean?",
+        "answer": "Let’s eat a meal.",
+        "distractors": [
+          "I ate a meal.",
+          "Do not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~う"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-koto-ga-dekiru-ability",
+    "lang": "ja",
+    "order": 134,
+    "title": "Ability with ことができる",
+    "explanation": "Putting こと after a dictionary-form verb turns the action into “doing that action,” and ことができる means the action is possible.",
+    "formula": "verb dictionary form + こと + が + できる/できます",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Nominalizer こと for verb ability.",
+        "tokens": [
+          "こと"
+        ],
+        "surfaces": [
+          "こと"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本語を読むことができます。",
+        "gloss": "I can read Japanese.",
+        "tokens": [
+          "日本語",
+          "を",
+          "読む",
+          "こと",
+          "が",
+          "できる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-koto-dekiru-yomu"
+      },
+      {
+        "text": "ご飯を食べることができます。",
+        "gloss": "I can eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "こと",
+          "が",
+          "できる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-koto-dekiru-taberu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-koto-dekiru-yomu",
+        "kind": "comprehend",
+        "prompt": "What does 日本語を読むことができます mean?",
+        "answer": "I can read Japanese.",
+        "distractors": [
+          "I must read Japanese.",
+          "I read Japanese while eating."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "を",
+          "読む",
+          "こと",
+          "が",
+          "できる",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-ta-koto-ga-aru-experience",
+    "lang": "ja",
+    "order": 135,
+    "title": "Experience with たことがある",
+    "explanation": "A plain past verb plus ことがある says that someone has had the experience of doing that action.",
+    "formula": "verb plain past + こと + が + ある/あります",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Experience phrase こと after a plain past verb.",
+        "tokens": [
+          "こと"
+        ],
+        "surfaces": [
+          "こと"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本へ行ったことがあります。",
+        "gloss": "I have been to Japan.",
+        "tokens": [
+          "日本",
+          "へ",
+          "行く",
+          "~た",
+          "こと",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-ex-ta-koto-itta"
+      },
+      {
+        "text": "パンを食べたことがあります。",
+        "gloss": "I have eaten bread.",
+        "tokens": [
+          "パン",
+          "を",
+          "食べる",
+          "~た",
+          "こと",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-ex-ta-koto-tabeta"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-ta-koto-itta",
+        "kind": "comprehend",
+        "prompt": "What does 日本へ行ったことがあります mean?",
+        "answer": "I have been to Japan.",
+        "distractors": [
+          "I will go to Japan.",
+          "I cannot go to Japan."
+        ],
+        "sourceTokens": [
+          "日本",
+          "へ",
+          "行く",
+          "~た",
+          "こと",
+          "が",
+          "ある",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-nagara-while",
+    "lang": "ja",
+    "order": 136,
+    "title": "While doing with ながら",
+    "explanation": "ながら attaches to the verb stem to show two actions happening at the same time.",
+    "formula": "verb stem + ながら + main action",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Simultaneous-action connector ながら.",
+        "tokens": [
+          "ながら"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "ながら"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "水を飲みながら話します。",
+        "gloss": "I talk while drinking water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "ながら",
+          "話す",
+          "~ます"
+        ],
+        "audioId": "ja-ex-nagara-nomi-hanasu"
+      },
+      {
+        "text": "パンを食べながら読みます。",
+        "gloss": "I read while eating bread.",
+        "tokens": [
+          "パン",
+          "を",
+          "食べる",
+          "ながら",
+          "読む",
+          "~ます"
+        ],
+        "audioId": "ja-ex-nagara-tabe-yomu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-nagara-nomi",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲みながら話します mean?",
+        "answer": "I talk while drinking water.",
+        "distractors": [
+          "I drink water after talking.",
+          "I cannot drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "ながら",
+          "話す",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-sugiru-too-much",
+    "lang": "ja",
+    "order": 137,
+    "title": "Too much with すぎる",
+    "explanation": "すぎる attaches to a verb stem or adjective stem to mean that something is excessive.",
+    "formula": "verb/adjective stem + すぎる/すぎます",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Excessive-action helper すぎる.",
+        "tokens": [
+          "すぎる"
+        ],
+        "appliesToPos": [
+          "verb",
+          "adjective"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "すぎる",
+          "すぎます"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "ご飯を食べすぎます。",
+        "gloss": "I eat too much rice.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "すぎる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-sugiru-tabesugi"
+      },
+      {
+        "text": "水を飲みすぎます。",
+        "gloss": "I drink too much water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "すぎる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-sugiru-nomisugi"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-sugiru-tabesugi",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べすぎます mean?",
+        "answer": "I eat too much rice.",
+        "distractors": [
+          "I want to eat rice.",
+          "I eat rice while drinking."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "すぎる",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-yasui-nikui-easy-hard",
+    "lang": "ja",
+    "order": 138,
+    "title": "Easy and hard to do with やすい and にくい",
+    "explanation": "やすい and にくい attach to a verb stem to describe whether an action is easy or hard to do.",
+    "formula": "verb stem + やすい / にくい + です",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Ease and difficulty helpers for verb stems.",
+        "tokens": [
+          "やすい",
+          "にくい"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "やすい",
+          "にくい"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本語は読みやすいです。",
+        "gloss": "Japanese is easy to read.",
+        "tokens": [
+          "日本語",
+          "は",
+          "読む",
+          "やすい",
+          "~です"
+        ],
+        "audioId": "ja-ex-yasui-yomiyasui"
+      },
+      {
+        "text": "パンは食べにくいです。",
+        "gloss": "The bread is hard to eat.",
+        "tokens": [
+          "パン",
+          "は",
+          "食べる",
+          "にくい",
+          "~です"
+        ],
+        "audioId": "ja-ex-nikui-tabenikui"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-yasui-yomiyasui",
+        "kind": "comprehend",
+        "prompt": "What does 日本語は読みやすいです mean?",
+        "answer": "Japanese is easy to read.",
+        "distractors": [
+          "Japanese is hard to read.",
+          "I can speak Japanese."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "は",
+          "読む",
+          "やすい",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-souda-appearance",
+    "lang": "ja",
+    "order": 139,
+    "title": "Looks like with そうだ",
+    "explanation": "そう attaches to an adjective stem to say something looks or seems that way from appearance.",
+    "formula": "adjective stem + そう + です",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Appearance marker そう.",
+        "tokens": [
+          "そう"
+        ],
+        "appliesToPos": [
+          "adjective"
+        ],
+        "surfaces": [
+          "そう"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "おいしそうです。",
+        "gloss": "It looks delicious.",
+        "tokens": [
+          "おいしい",
+          "そう",
+          "~です"
+        ],
+        "audioId": "ja-ex-sou-oishisou"
+      },
+      {
+        "text": "高そうです。",
+        "gloss": "It looks expensive.",
+        "tokens": [
+          "高い",
+          "そう",
+          "~です"
+        ],
+        "audioId": "ja-ex-sou-takasou"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-sou-oishisou",
+        "kind": "comprehend",
+        "prompt": "What does おいしそうです mean?",
+        "answer": "It looks delicious.",
+        "distractors": [
+          "It is not delicious.",
+          "It is too delicious."
+        ],
+        "sourceTokens": [
+          "おいしい",
+          "そう",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-nara-conditional",
+    "lang": "ja",
+    "order": 140,
+    "title": "If it is with なら",
+    "explanation": "なら marks a topic-like condition: if it is that thing or case, then the following statement applies.",
+    "formula": "noun/clause + なら + result",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Conditional topic marker なら.",
+        "tokens": [
+          "~なら"
+        ],
+        "surfaces": [
+          "なら"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本語なら分かります。",
+        "gloss": "If it is Japanese, I understand.",
+        "tokens": [
+          "日本語",
+          "~なら",
+          "分かる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-nara-nihongo"
+      },
+      {
+        "text": "店ならあります。",
+        "gloss": "If it is a shop, there is one.",
+        "tokens": [
+          "店",
+          "~なら",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-ex-nara-mise"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-nara-nihongo",
+        "kind": "comprehend",
+        "prompt": "What does 日本語なら分かります mean?",
+        "answer": "If it is Japanese, I understand.",
+        "distractors": [
+          "I study Japanese every day.",
+          "Japanese is hard to read."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "~なら",
+          "分かる",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-passive-causative-rareru-saseru",
+    "lang": "ja",
+    "order": 141,
+    "title": "Passive and causative forms",
+    "explanation": "Passive forms show that the subject receives an action. Causative forms show that someone makes or lets another person do an action.",
+    "formula": "passive: verb + れる/られる; causative: verb + せる/させる",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Passive endings for godan and ichidan verbs.",
+        "tokens": [
+          "れる",
+          "られる"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "れる",
+          "られる",
+          "される",
+          "来られる"
+        ]
+      },
+      {
+        "kind": "inflection",
+        "description": "Causative endings for godan and ichidan verbs.",
+        "tokens": [
+          "せる",
+          "させる"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "せる",
+          "させる",
+          "させる",
+          "来させる"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "先生に聞かれます。",
+        "gloss": "I am asked by the teacher.",
+        "tokens": [
+          "先生",
+          "に",
+          "聞く",
+          "れる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-passive-kikareru"
+      },
+      {
+        "text": "友達に食べさせます。",
+        "gloss": "I make or let my friend eat.",
+        "tokens": [
+          "友達",
+          "に",
+          "食べる",
+          "させる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-causative-tabesaseru"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-passive-kikareru",
+        "kind": "comprehend",
+        "prompt": "What does 先生に聞かれます mean?",
+        "answer": "I am asked by the teacher.",
+        "distractors": [
+          "I ask the teacher.",
+          "I make the teacher eat."
+        ],
+        "sourceTokens": [
+          "先生",
+          "に",
+          "聞く",
+          "れる",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-ba-conditional",
+    "lang": "ja",
+    "order": 142,
+    "title": "Conditional with ば",
+    "explanation": "The ば form marks a condition: if the condition happens or is true, the result follows.",
+    "formula": "verb/adjective ば-form + result",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Conditional ば ending.",
+        "tokens": [
+          "ば"
+        ],
+        "appliesToPos": [
+          "verb",
+          "adjective"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "ば",
+          "れば",
+          "ければ"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "水を飲めば、いいです。",
+        "gloss": "If you drink water, it is good.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "ば",
+          "いい",
+          "~です"
+        ],
+        "audioId": "ja-ex-ba-nomeba"
+      },
+      {
+        "text": "店へ行けば、あります。",
+        "gloss": "If you go to the shop, there is one.",
+        "tokens": [
+          "店",
+          "へ",
+          "行く",
+          "ば",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-ex-ba-ikeba"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-ba-nomeba",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲めば、いいです mean?",
+        "answer": "If you drink water, it is good.",
+        "distractors": [
+          "Do not drink water.",
+          "I drank too much water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "ば",
+          "いい",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-noni-although",
+    "lang": "ja",
+    "order": 143,
+    "title": "Although with のに",
+    "explanation": "のに connects two clauses where the second result is surprising or contrary to what the first clause suggests.",
+    "formula": "plain clause/adjective + のに + surprising result",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Contrary-to-expectation connector のに.",
+        "tokens": [
+          "のに"
+        ],
+        "surfaces": [
+          "のに"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "安いのにおいしいです。",
+        "gloss": "Although it is cheap, it is delicious.",
+        "tokens": [
+          "安い",
+          "のに",
+          "おいしい",
+          "~です"
+        ],
+        "audioId": "ja-ex-noni-yasui-oishii"
+      },
+      {
+        "text": "高いのに買います。",
+        "gloss": "Although it is expensive, I will buy it.",
+        "tokens": [
+          "高い",
+          "の",
+          "に",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-ex-noni-takai-kau"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-noni-yasui-oishii",
+        "kind": "comprehend",
+        "prompt": "What does 安いのにおいしいです mean?",
+        "answer": "Although it is cheap, it is delicious.",
+        "distractors": [
+          "Because it is cheap, it is delicious.",
+          "It is expensive but delicious."
+        ],
+        "sourceTokens": [
+          "安い",
+          "のに",
+          "おいしい",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-shi-listing-reasons",
+    "lang": "ja",
+    "order": 144,
+    "title": "Listing reasons with し",
+    "explanation": "し links clauses to list reasons or qualities, often implying there are other reasons too.",
+    "formula": "clause + し + clause",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Reason-listing connector し.",
+        "tokens": [
+          "し"
+        ],
+        "surfaces": [
+          "し"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "おいしいし安いです。",
+        "gloss": "It is delicious and cheap too.",
+        "tokens": [
+          "おいしい",
+          "し",
+          "安い",
+          "~です"
+        ],
+        "audioId": "ja-ex-shi-oishii-yasui"
+      },
+      {
+        "text": "日本語を読むし書きます。",
+        "gloss": "I read Japanese and write it too.",
+        "tokens": [
+          "日本語",
+          "を",
+          "読む",
+          "し",
+          "書く",
+          "~ます"
+        ],
+        "audioId": "ja-ex-shi-yomu-kaku"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-shi-oishii-yasui",
+        "kind": "comprehend",
+        "prompt": "What does おいしいし安いです mean?",
+        "answer": "It is delicious and cheap too.",
+        "distractors": [
+          "It is delicious but expensive.",
+          "It is too cheap."
+        ],
+        "sourceTokens": [
+          "おいしい",
+          "し",
+          "安い",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-tari-tari-examples",
+    "lang": "ja",
+    "order": 145,
+    "title": "Sample actions with たり〜たり",
+    "explanation": "たり repeats after plain past forms to list representative actions rather than a complete sequence.",
+    "formula": "verb plain past + たり + verb plain past + たり + する",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Representative-listing たり and だり endings.",
+        "tokens": [
+          "たり",
+          "だり"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "たり",
+          "だり"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "食べたり飲んだりします。",
+        "gloss": "I do things like eating and drinking.",
+        "tokens": [
+          "食べる",
+          "たり",
+          "飲む",
+          "だり",
+          "する",
+          "~ます"
+        ],
+        "audioId": "ja-ex-tari-tabetari-nondari"
+      },
+      {
+        "text": "行ったり来たりします。",
+        "gloss": "I do things like going and coming.",
+        "tokens": [
+          "行く",
+          "たり",
+          "来る",
+          "たり",
+          "する",
+          "~ます"
+        ],
+        "audioId": "ja-ex-tari-ittari-kitari"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-tari-tabetari",
+        "kind": "comprehend",
+        "prompt": "What does 食べたり飲んだりします mean?",
+        "answer": "I do things like eating and drinking.",
+        "distractors": [
+          "I eat while drinking.",
+          "I must eat and drink."
+        ],
+        "sourceTokens": [
+          "食べる",
+          "たり",
+          "飲む",
+          "だり",
+          "する",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-tsumori-intention",
+    "lang": "ja",
+    "order": 146,
+    "title": "Intention with つもり",
+    "explanation": "つもり after a dictionary-form verb states a plan or intention.",
+    "formula": "verb dictionary form + つもり + です",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Intention noun つもり.",
+        "tokens": [
+          "つもり"
+        ],
+        "surfaces": [
+          "つもり"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "明日行くつもりです。",
+        "gloss": "I intend to go tomorrow.",
+        "tokens": [
+          "明日",
+          "行く",
+          "つもり",
+          "~です"
+        ],
+        "audioId": "ja-ex-tsumori-iku"
+      },
+      {
+        "text": "水を飲むつもりです。",
+        "gloss": "I intend to drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "つもり",
+          "~です"
+        ],
+        "audioId": "ja-ex-tsumori-nomu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-tsumori-iku",
+        "kind": "comprehend",
+        "prompt": "What does 明日行くつもりです mean?",
+        "answer": "I intend to go tomorrow.",
+        "distractors": [
+          "I went yesterday.",
+          "I cannot go tomorrow."
+        ],
+        "sourceTokens": [
+          "明日",
+          "行く",
+          "つもり",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-you-ni-naru-change",
+    "lang": "ja",
+    "order": 147,
+    "title": "Come to do with ようになる",
+    "explanation": "ようになる after a dictionary-form verb describes a change where an action becomes possible or habitual.",
+    "formula": "verb dictionary form + よう + に + なる/なります",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Change-of-state helper よう.",
+        "tokens": [
+          "よう"
+        ],
+        "surfaces": [
+          "よう"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本語が分かるようになります。",
+        "gloss": "I will come to understand Japanese.",
+        "tokens": [
+          "日本語",
+          "が",
+          "分かる",
+          "よう",
+          "に",
+          "なる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-you-ni-naru-wakaru"
+      },
+      {
+        "text": "早く起きるようになります。",
+        "gloss": "I will come to wake up early.",
+        "tokens": [
+          "早い",
+          "起きる",
+          "よう",
+          "に",
+          "なる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-you-ni-naru-okiru"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-you-ni-naru-wakaru",
+        "kind": "comprehend",
+        "prompt": "What does 日本語が分かるようになります mean?",
+        "answer": "I will come to understand Japanese.",
+        "distractors": [
+          "I intend to read Japanese.",
+          "Japanese looks easy."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "が",
+          "分かる",
+          "よう",
+          "に",
+          "なる",
+          "~ます"
+        ]
+      }
+    ]
+  }
+]
