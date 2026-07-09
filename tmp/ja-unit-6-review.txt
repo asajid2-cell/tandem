@@ -1,0 +1,6 @@
+﻿Final Unit 6 check for closed-universe Japanese beginner content. New lex 100-115: 時(じ hour/o'clock), 晩(ばん evening/night), 毎日, 今日, 明日, 週, 年, する, 待つ, 起きる, 寝る, とても, 早い, 遅い, 仕事, 休む. Grammar: time + に routine / 何 + 時 + に; とても + adjective. Scenes:
+1 A 毎日、何時に起きますか。 B 朝に起きます。 A 何時に寝ますか。 B 晩に寝ます。
+2 A 今日、何をしますか。 B 日本語を読みます。 A 明日、何をしますか。 B 先生を待ちます。日本語を書きます。
+Checkpoint:
+毎日、朝に起きます。 / 何時に寝ますか。 / 今日、先生を待ちます。 / 明日、日本語を書きます。 / とても早いです。
+lint:content passes 0 leaks. Please verdict on naturalness, readings, particles, decodability. Keep concise.

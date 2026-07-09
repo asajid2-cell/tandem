@@ -1,0 +1,36 @@
+
+===== PARTNER VERDICT (codex, 367s) =====
+
+Implemented Part B UI in [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:123).
+
+Added:
+- `ReadingHub` at [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:2420)
+- `PassageReader` at [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:2530)
+- Routes:
+  - `/ja/reading` -> `reading`
+  - `/ja/reading/<id>` -> `passage` using `route.sceneId`
+- JA nav link: `Reading` in `AppHeader`, beside the Japanese course links, pointing to `#/ja/reading`.
+
+Verification:
+- `npx tsc -b` rc `0`
+- `npm run build` rc `0`
+
+Build still reports the existing Vite large chunk warning, but exits successfully. No `vite.config.ts`, audio, deploy, or commit work was touched.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- src/App.tsx'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/App.tsx -Pattern \"function ReadingHub|function PassageReader|href=\\\"#\\/ja\\/reading\\\"|route\\.view === 'reading'|route\\.view === 'passage'|parsedView === 'reading'|segment === 'reading'\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/App.tsx -SimpleMatch -Pattern \"route.view === 'reading'\",\"route.view === 'passage'\",\"href=\\\"#/ja/reading\\\"\",\"function ReadingHub\",\"function PassageReader\",\"parsedView === 'reading'\",\"segment === 'reading'\",\"function orderedReadings\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/App.tsx -SimpleMatch -Pattern \"route.view === 'reading'\",\"route.view === 'passage'\",\"href=\\\"#/ja/reading\\\"\",\"function ReadingHub\",\"function PassageReader\",\"parsedView === 'reading'\",\"segment === 'reading'\",\"function orderedReadings\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/App.tsx -Pattern \"function ReadingHub|function PassageReader|#\\/ja\\/reading|parsedView === 'reading'|segment === 'reading'|function orderedReadings|route\\.view === 'reading'|route\\.view === 'passage'\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/App.tsx -Pattern \"function ReadingHub|function PassageReader|#\\/ja\\/reading|parsedView === 'reading'|segment === 'reading'|function orderedReadings|route\\.view === 'reading'|route\\.view === 'passage'\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+files: 0
+tokens: in 1004924 / out 11045
+

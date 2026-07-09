@@ -1,0 +1,46 @@
+
+===== PARTNER VERDICT (codex, 275s) =====
+
+Implemented Japanese VOCAB Unit 33 in `content/ja/seed.ts`.
+
+Added:
+- 20 travel/transport lexicon entries, orders `679-698`
+- 2 scenes: `ja-scene-travel-booking`, `ja-scene-train-trip`
+- `ja-checkpoint-33` with 10 quiz items
+- `ja-unit-33` wired last with `lexRange: [679, 698]`
+
+Verified counts:
+- Lexicon: `666`
+- Scenes: `67`
+- Checkpoints: `33`
+- Units: `33`
+- `ja-unit-33`: exists
+- `ja-checkpoint-33`: exists
+
+Verification:
+- `npm run lint:content`: `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7 passed`, `36 passed`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; const t=await createJapaneseTokenizer(); const lines=['ホテルの予約がありますか。','はい。パスポートもあります。','出発は今日ですか。','はい。到着は明日です。','駅で切符を買いますか。','はい。乗り換えがあります。','荷物は多いですか。','いいえ。観光に行きます。','旅館に泊まります。','交通は便利です。','出張に行きます。','受付はどこですか。','窓口で聞きます。','改札は駅です。','片道です。','往復です。','運賃は高いです。','電車が遅れます。','国際空港です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line)));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; const t=await createJapaneseTokenizer(); const lines=['ホテルの予約がありますか。','はい。パスポートもあります。','出発は今日ですか。','はい。到着は明日です。','駅で切符を買いますか。','はい。乗り換えがあります。','荷物は多いですか。','いいえ。観光に行きます。','旅館に泊まります。','交通は便利です。','出張に行きます。','受付はどこですか。','窓口で聞きます。','改札は駅です。','片道です。','往復です。','運賃は高いです。','電車が遅れます。','国際空港です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line)));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['ホテルの予約がありますか。','はい。パスポートもあります。','出発は今日ですか。','はい。到着は明日です。','駅で切符を買いますか。','はい。乗り換えがあります。','荷物は多いですか。','いいえ。観光に行きます。','旅館に泊まります。','交通は便利です。','出張に行きます。','受付はどこですか。','窓口で聞きます。','改札は駅です。','片道です。','往復です。','運賃は高いです。','電車が遅れます。','国際空港です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['ホテルの予約がありますか。','はい。パスポートもあります。','出発は今日ですか。','はい。到着は明日です。','駅で切符を買いますか。','はい。乗り換えがあります。','荷物は多いですか。','いいえ。観光に行きます。','旅館に泊まります。','交通は便利です。','出張に行きます。','受付はどこですか。','窓口で聞きます。','改札は駅です。','片道です。','往復です。','運賃は高いです。','電車が遅れます。','国際空港です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); for (const line of ['改札はどこですか。']) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); for (const line of ['改札はどこですか。']) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-33'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-33'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit33:"'!!unit,checkpoint33:!!cp,unit33LexRange:unit?.lexRange,unit33SceneIds:unit?.sceneIds,checkpoint33Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-33'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-33'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit33:"'!!unit,checkpoint33:!!cp,unit33LexRange:unit?.lexRange,unit33SceneIds:unit?.sceneIds,checkpoint33Items:cp?.items.length}, null, 2));"'
+files: 0
+tokens: in 30283710 / out 230474
+
+
+⚠ tandem: codex 019eff3f has run 12 turns (compaction threshold 12).
+   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.
+   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"

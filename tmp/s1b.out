@@ -1,0 +1,58 @@
+
+===== PARTNER VERDICT (codex, 1328s) =====
+
+Implemented S1b in [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:633).
+
+What changed:
+- Added routes/views: `/ja/path` and `/ja/lesson/<id>`, with lesson ID carried in `route.sceneId`.
+- Added `RoadmapView`, `LessonPlayer`, `LessonProgressHeader`, `LessonVocabStep`, `LessonGrammarStep`, `LessonReaderStep`, `LessonCheckStep`, `LessonComplete`, `WordStudyCard`, and `GrammarStudyCard`.
+- Made Japanese entry primary: LanguagePicker now opens `#/ja/path`, and bare `#/ja` defaults to `path`.
+- Header now has prominent `Lessons`, with existing Learn/Scenes/Review/Grammar/Kanji/etc. still reachable under a visible `Practice` label.
+- Lesson completion is guarded in `LessonComplete`: it calls `progress.markLessonComplete(lesson)` from an effect only if the lesson is not already complete and the mounted completion screen has not already recorded that lesson ID.
+
+Verification:
+- `npx tsc -b` rc `0`
+- `npm run build` rc `0`
+- `npm test` rc `0`, 38 tests passed
+
+I also did a non-preview local dev smoke on `http://127.0.0.1:4174/language/`, `#/ja/path`, and `#/ja/lesson/ja-lesson-1?step=0`; all returned HTTP 200 app shells. The dev server was stopped.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path dev-server.log -ErrorAction SilentlyContinue; Get-Content -Path dev-server.err.log -ErrorAction SilentlyContinue'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' } | Select-Object ProcessId, CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path dev-server.log -ErrorAction SilentlyContinue; Get-Content -Path dev-server.err.log -ErrorAction SilentlyContinue'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' } | Select-Object ProcessId, CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const urls = [
+  'http://127.0.0.1:4174/language/',
+  'http://127.0.0.1:4174/language/#/ja/path',
+  'http://127.0.0.1:4174/language/#/ja/lesson/ja-lesson-1?step=0'
+];
+for (const url of urls) {
+  const response = await fetch(url);
+  const text = await response.text();
+  console.log("'`${response.status} ${url} app-root=${text.includes('"'id=\"root\"')}"'`);
+}
+'"'@ | node --input-type=module"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const urls = [
+  'http://127.0.0.1:4174/language/',
+  'http://127.0.0.1:4174/language/#/ja/path',
+  'http://127.0.0.1:4174/language/#/ja/lesson/ja-lesson-1?step=0'
+];
+for (const url of urls) {
+  const response = await fetch(url);
+  const text = await response.text();
+  console.log("'`${response.status} ${url} app-root=${text.includes('"'id=\"root\"')}"'`);
+}
+'"'@ | node --input-type=module"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$procs = Get-CimInstance Win32_Process -Filter "name = '"'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' }; foreach ("'$proc in $procs) { Stop-Process -Id $proc.ProcessId -Force }; Remove-Item -LiteralPath dev-server.log,dev-server.err.log -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process -Filter "name = '"'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' } | Select-Object ProcessId, CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$procs = Get-CimInstance Win32_Process -Filter "name = '"'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' }; foreach ("'$proc in $procs) { Stop-Process -Id $proc.ProcessId -Force }; Remove-Item -LiteralPath dev-server.log,dev-server.err.log -Force -ErrorAction SilentlyContinue; Get-CimInstance Win32_Process -Filter "name = '"'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vite.*4174|npm-cli.js.*run dev' } | Select-Object ProcessId, CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\App.tsx -Pattern \"function RoadmapView|function LessonPlayer|function LessonComplete|function toView|function AppHeader|function LanguagePicker\" | Format-Table LineNumber, Line -AutoSize"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\App.tsx -Pattern \"function RoadmapView|function LessonPlayer|function LessonComplete|function toView|function AppHeader|function LanguagePicker\" | Format-Table LineNumber, Line -AutoSize"
+files: 0
+tokens: in 3657132 / out 19827
+

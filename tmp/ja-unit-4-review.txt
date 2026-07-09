@@ -1,0 +1,20 @@
+﻿Please cross-check this planned Japanese Unit 4 seed content for a closed-universe beginner course. Existing cumulative vocab/grammar before Unit 4 includes: 私, は, こんにちは, 学生, も, か, はい, いいえ, 水, を, ご飯, 食べる, 飲む, に, 日本, の, が, これ, それ, あれ, ここ, そこ, どこ, いくら, 店, 駅, 人, 友達, 行く, 来る, 見る, 買う, ある, いる, いい, あそこ, 家, 帰る, 右, 左, 上, 下, 前, 中, 近い, 遠い, へ, から, まで, 道, 入口; grammar: ~です, ~ます, あります/います, ~ました, direction へ/から/まで, i-adjective before noun.
+
+Planned Unit 4 new lex order 60-75:
+朝(あさ asa morning), 昼(ひる hiru noon/daytime), 夜(よる yoru night), 今(いま ima now), 何(なに nani what), 食べ物(たべもの tabemono food), 飲み物(のみもの nomimono drink/beverage), パン(パン pan bread), 好き(すき suki like/fond of; adjective), おいしい(おいしい oishii delicious), 高い(たかい takai expensive/high), 安い(やすい yasui cheap/inexpensive), 新しい(あたらしい atarashii new), 古い(ふるい furui old), 多い(おおい ooi many), 少ない(すくない sukunai few).
+
+Planned grammar order 76-78:
+1. い-adjective predicates: adjective + です, e.g. パンはおいしいです。 tokens ['パン','は','おいしい','~です']; 飲み物は高いですか。 tokens ['飲み物','は','高い','~です','か']; いいえ、安いです。 tokens ['いいえ','安い','~です'].
+2. 好きです preference: noun + が + 好き + です, e.g. ご飯が好きです。; パンも好きですか。; はい、好きです。
+3. ~たい want to: verb stem + たい + です, licensed token ~たい, e.g. パンを食べたいです。 tokens ['パン','を','食べる','~たい','~です']; 水を飲みたいですか。; 何を食べたいですか.
+
+Scene ordering food:
+A: 何を食べたいですか。 / B: パンを食べたいです。 / A: 飲み物を飲みたいですか。 / B: はい、水を飲みたいです。
+Scene preferences:
+A: ご飯が好きですか。 / B: はい、ご飯が好きです。 / A: パンも好きですか。 / B: はい、パンも好きです。おいしいです。
+Checkpoint items:
+1 パンはおいしいです。 = The bread is delicious.
+2 何を飲みたいですか。 = What do you want to drink?
+3 私は新しい食べ物を食べたいです。 = I want to eat new food.
+
+Please flag any unnatural Japanese, particle/readings issue, tokenization/decodability issue, or better substitutions while keeping closed universe.

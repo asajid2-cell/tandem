@@ -1,0 +1,133 @@
+tandem: codex 019f0116 reached 12 turns (limit 12) — auto-compacting to a fresh session
+
+===== PARTNER VERDICT (codex, 147s) =====
+
+Added Japanese grammar batch 5 in [content/ja/seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts:21704).
+
+Lint: `npm run lint:content` exited `0`.
+
+Added ids:
+- `ja-appearance-sou` order `164`
+- `ja-seems-you-mitai` order `165`
+- `ja-seems-rashii` order `166`
+- `ja-expectation-hazu` order `167`
+
+New grammar count: `62`.
+
+No vite/tests/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '水はよさそうです。',
+  'パンはおいしそうです。',
+  '店は近そうです。',
+  '先生は来そうです。',
+  '日本のようです。',
+  '先生のようです。',
+  '日本みたいです。',
+  '先生みたいです。',
+  '先生らしいです。',
+  '日本らしいです。',
+  'いい学生らしいです。',
+  '先生は来るはずです。',
+  '水があるはずです。',
+  'パンはおいしいはずです。',
+  '店は近いはずです。'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\lint.ts,src\\content\\*.ts,content\\ja\\seed.ts -Pattern \"surface-token|licenses|GrammarLicense|appliesToPos|surfaces\" -Context 2,6 -Encoding UTF8 | Select-Object -First 80"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\lint.ts,src\\content\\*.ts,content\\ja\\seed.ts -Pattern \"surface-token|licenses|GrammarLicense|appliesToPos|surfaces\" -Context 2,6 -Encoding UTF8 | Select-Object -First 80"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '水はよさそうです。',
+  'パンはおいしそうです。',
+  '店は近そうです。',
+  '先生は来そうです。',
+  '日本のようです。',
+  '先生のようです。',
+  '日本みたいです。',
+  '先生みたいです。',
+  '先生らしいです。',
+  '日本らしいです。',
+  'いい学生らしいです。',
+  '先生は来るはずです。',
+  '水があるはずです。',
+  'パンはおいしいはずです。',
+  '店は近いはずです。'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u6c34\\u306f\\u3088\\u3055\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u30d1\\u30f3\\u306f\\u304a\\u3044\\u3057\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306f\\u8fd1\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306f\\u6765\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306e\\u3088\\u3046\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306e\\u3088\\u3046\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u3044\\u3044\\u5b66\\u751f\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306f\\u6765\\u308b\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u6c34\\u304c\\u3042\\u308b\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u30d1\\u30f3\\u306f\\u304a\\u3044\\u3057\\u3044\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306f\\u8fd1\\u3044\\u306f\\u305a\\u3067\\u3059\\u3002'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u6c34\\u306f\\u3088\\u3055\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u30d1\\u30f3\\u306f\\u304a\\u3044\\u3057\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306f\\u8fd1\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306f\\u6765\\u305d\\u3046\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306e\\u3088\\u3046\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306e\\u3088\\u3046\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u3044\\u3044\\u5b66\\u751f\\u3089\\u3057\\u3044\\u3067\\u3059\\u3002',
+  '\\u5148\\u751f\\u306f\\u6765\\u308b\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u6c34\\u304c\\u3042\\u308b\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u30d1\\u30f3\\u306f\\u304a\\u3044\\u3057\\u3044\\u306f\\u305a\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306f\\u8fd1\\u3044\\u306f\\u305a\\u3067\\u3059\\u3002'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log(JSON.stringify({
+  count: jaSeedContent.grammar.length,
+  max: Math.max(...jaSeedContent.grammar.map(g => g.order)),
+  added: jaSeedContent.grammar.slice(-4).map(({ id, order }) => ({ id, order }))
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log(JSON.stringify({
+  count: jaSeedContent.grammar.length,
+  max: Math.max(...jaSeedContent.grammar.map(g => g.order)),
+  added: jaSeedContent.grammar.slice(-4).map(({ id, order }) => ({ id, order }))
+}, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 493493 / out 5916
+

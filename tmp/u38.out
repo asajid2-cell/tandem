@@ -1,0 +1,46 @@
+
+===== PARTNER VERDICT (codex, 224s) =====
+
+Implemented Japanese VOCAB Unit 38 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+Added:
+- `ja-unit-38` / `ja-checkpoint-38`
+- 20 lex entries, orders `779-798`
+- 2 scenes: `ja-scene-soccer-match`, `ja-scene-gym-leisure`
+- 10 checkpoint items
+
+Skipped duplicates already present: `スポーツ`, `練習`, `趣味`, `散歩`.
+
+Final counts:
+- Lexicon: `766`
+- Scenes: `77`
+- Checkpoints: `38`
+- Units: `38`
+- Max lex order: `798`
+- Max scene order: `77`
+- `ja-unit-38`: exists, lexRange `[779, 798]`
+- `ja-checkpoint-38`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: passed, `7` files / `36` tests / `0` skipped
+
+Did not run `audio:ja`, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['バスケットボール','バレー','バレーボール','ゴルフ','卓球','柔道','剣道','スキー','スケート','ダンス','キャンプ','ランニング','マラソン','大会','コート','プール','ボール']; console.log(JSON.stringify(words.map(w=>({w,hits:s.lexicon.filter(x=>x.headword===w).map(x=>({id:x.id,order:x.order,gloss:x.gloss}))})).filter(x=>x.hits.length), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); for (const line of ['野球。','サッカー。','テニス。','水泳。','試合。','選手。','チーム。','勝つ。','負ける。','応援。','運動。','ジム。','バスケットボール。','バレーボール。','ゴルフ。','卓球。','柔道。','剣道。','スキー。','ダンス。']) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-38'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-38'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit38:"'!!unit,checkpoint38:!!cp,unit38LexRange:unit?.lexRange,unit38SceneIds:unit?.sceneIds,checkpoint38Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['野球','サッカー','テニス','水泳','試合','選手','チーム','勝つ','負ける','応援','運動','ジム','バスケットボール','バレーボール','ゴルフ','卓球','柔道','剣道','スキー','ダンス']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length, ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-38'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-38'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit38:"'!!unit,checkpoint38:!!cp,unit38LexRange:unit?.lexRange,unit38SceneIds:unit?.sceneIds,checkpoint38Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['野球','サッカー','テニス','水泳','試合','選手','チーム','勝つ','負ける','応援','運動','ジム','バスケットボール','バレーボール','ゴルフ','卓球','柔道','剣道','スキー','ダンス']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length, ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-38'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-38'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit38:"'!!unit,checkpoint38:!!cp,unit38LexRange:unit?.lexRange,unit38SceneIds:unit?.sceneIds,checkpoint38Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-38'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-38'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit38:"'!!unit,checkpoint38:!!cp,unit38LexRange:unit?.lexRange,unit38SceneIds:unit?.sceneIds,checkpoint38Items:cp?.items.length}, null, 2));"'
+files: 0
+tokens: in 4375057 / out 49916
+

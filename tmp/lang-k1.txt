@@ -1,0 +1,4 @@
+FOCUSED: Japanese KANJI batch (foreground; FAST; resume; N4). File: content/ja/kanji.ts (currently 225 entries, last order 225). ADD ~25 NEW N4 kanji continuing order 226+. 
+KanjiEntry shape (copy EXACTLY): { id, glyph, meanings:[...], onyomi:[katakana...], kunyomi:[hiragana with okurigana dots e.g. 'やす.い'], examples:[{ word, reading(hiragana), gloss, audioId }], strokeCount, group, order, audioId }. Each kanji needs a UNIQUE id + audioId (ja-kanji-<roma>...; suffix on collision) and 1-2 example words.
+Candidates (SKIP any glyph already in kanji.ts; net ~25 NEW): 院 員 運 飲 央 横 屋 温 化 界 開 階 寒 館 起 期 客 究 急 級 球 去 橋 業 局 銀 区 苦 具 君 係 軽 血. Assign sensible group (e.g. 'places','verbs','body','nature','basics'). Append before the closing `];`.
+VERIFY (MANDATORY, EXIT CODES): `npm run build` MUST exit 0; `npm test` 36 passed/0 skipped. Do NOT run audio:ja/deploy/commit. Report: build exit code + new kanji count (grep -c "glyph: '") + test result.

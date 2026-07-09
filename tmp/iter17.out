@@ -1,0 +1,47 @@
+
+===== PARTNER VERDICT (codex, 647s) =====
+
+Implemented the optional BYO-key AI helper. No commit or deploy.
+
+**Changed Files**
+- [server/ai.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/ai.js): new gated `POST /api/ai` handler.
+- [server/app.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/app.js): mounted `/api/ai` and `/language/api/ai`.
+- [server/keyStore.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/keyStore.js): server-only `getFirstSecret()` for the current user.
+- [server/ai.test.ts](Z:/328/CMPUT328-A2/codexworks/301/language/server/ai.test.ts): no-key backend test.
+- [src/App.tsx](Z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx): `AiStudyHelper` on learn, scene, kanji reference, and kanji recognition views.
+- [vite.config.ts](Z:/328/CMPUT328-A2/codexworks/301/language/vite.config.ts): `/language/api` dev proxy.
+- [vitest.config.ts](Z:/328/CMPUT328-A2/codexworks/301/language/vitest.config.ts): includes `server/**/*.test.ts`.
+
+**Backend**
+`POST /api/ai` is behind `requireSession`, loads only that user’s stored key, and calls OpenAI-compatible Chat Completions server-side. DeepSeek defaults to `https://api.deepseek.com` + `deepseek-chat`; other providers use stored `baseUrl` + `model`. Returns `{ reply }`; errors include `no_key` and safe `provider_error`. The key is never returned to the browser, and provider error messages redact key-shaped tokens.
+
+**Frontend**
+The helper is absent for signed-out users. Signed-in users without a key see a small Settings hint. Signed-in users with a key get an unobtrusive Ask AI panel with loading, reply, and error states. Requests use `${import.meta.env.BASE_URL}api/ai` with credentials included.
+
+**Verification**
+- `npm run build`: green; `content lint passed: 0 leaks`; `40 modules transformed`; `✓ built in 2.00s`.
+- `npm run lint:content`: green; `content lint passed: 0 leaks` x3.
+- `npm test`: green; `7 passed`, `34 passed`, `0 skipped`.
+
+**UI Battery**
+Passed light/dark checks for hint, ask, loading, reply, and error states.
+
+Path: `Z:\328\CMPUT328-A2\codexworks\301\language\.uicraft-shots\iter17-final`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- server/app.js server/keyStore.js src/App.tsx vite.config.ts vitest.config.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- server/app.js server/keyStore.js src/App.tsx vite.config.ts vitest.config.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Item server/ai.js,server/ai.test.ts | Select-Object Name,Length'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content .uicraft-shots\\iter17-final\\summary.json"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content .uicraft-shots\\iter17-final\\summary.json"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Item server/ai.js,server/ai.test.ts | Select-Object Name,Length'
+files: 0
+tokens: in 16512378 / out 80042
+

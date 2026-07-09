@@ -1,0 +1,19 @@
+ITERATION 13 — GO DEEP ON JAPANESE (phase 1: full hiragana). You are the Lead; iter1-12 committed & LIVE. The human wants Japanese to become a genuinely DEEP learning experience (deep kana/hiragana, vocab, kanji, grammar). Start with a complete, real HIRAGANA course.
+
+Context to respect (read if needed): docs/foothold-plan.md (§5 closed-universe), LOOPS.md (recent direction change), src/content/types.ts, src/engine/srs.ts, the existing primer + reveal/dark-mode work from iter12 (English hidden by default, hover/tap reveal + global toggle; dark mode). Working dir: z:\328\CMPUT328-A2\codexworks\301\language.
+
+SCOPE — a complete, learnable Hiragana course:
+1. DATA: author the FULL hiragana set as structured script data (separate from the per-unit "kana this unit uses" primer): all 46 base kana (あ-ん), the dakuten/handakuten (が ざ だ ば ぱ rows), and the yōon combos (きゃ/きゅ/きょ etc.). Each entry: glyph, romanization, row/group (for the gojūon table), audioId. Organize by gojūon rows.
+2. KANA COURSE UI: a dedicated, foundational "Hiragana" track in the Japanese experience:
+   - a REFERENCE GRID (the gojūon table, properly laid out) — glyph primary, romanization hidden-by-default + hover/tap reveal (consistent with iter12), audio per cell.
+   - a LEARN/RECOGNITION flow that teaches the kana in sensible batches and uses the existing SRS engine for recall practice (show glyph → recall sound → grade). Reuse the SRS card lifecycle/store; add a kana card kind if needed.
+   - progress tracked per-kana in the store (schema-version it if you change shape; preserve existing progress).
+   - surface it clearly (e.g. a "Hiragana" entry in the Japanese nav / a script section), so it's a real learnable module, not just a reference.
+3. AUDIO: give every hiragana an audioId and run `npm run audio:ja` to generate the audio (this will add ~100+ kana mp3s; they're gitignored + deployed). Confirm generation succeeded with a spot-check (ffprobe a couple).
+4. Keep it consistent with the iter12 design: light + dark mode, English hidden by default, calm reading-first register.
+
+CORRECTNESS (hard rule): every hiragana↔romanization mapping must be correct (use Hepburn; し=shi, ち=chi, つ=tsu, ふ=fu, を=o/wo, ん=n, じ=ji, づ=zu, yōon きょ=kyo etc.). Use your Claude HELPER (SIMPLE invocation: prompt to temp file → node bin/peer.mjs ask - < file from tandem dir) to independently audit the full hiragana table for any wrong romanization or missing/extra kana, and to sanity-check the course UX.
+
+VERIFY before reporting: npm run lint:content 0 leaks (don't break the closed-universe content linter — the kana course data shouldn't introduce leaks), npm test green (25+ passed / 0 SKIPPED — add tests for any new engine/store logic), npm run build green, audio generated. Run the ui-craft battery on the new hiragana grid + learn states in BOTH light and dark (save to .uicraft-shots/iter13-final, give me the path). Don't regress existing units/scenes/checkpoints/FR/KO.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: the hiragana data coverage (counts: base/dakuten/yōon), the course UI + how it integrates with nav/SRS/progress, audio result, helper audit verdict on the kana table, battery results + path, exact lint/test/build output (confirm 0 skipped), and suggested next step for iter14 (full KATAKANA course reusing this UI).

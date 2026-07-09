@@ -1,0 +1,121 @@
+
+===== PARTNER VERDICT (codex, 545s) =====
+
+Implemented Japanese VOCAB Unit 22 only in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:5636).
+
+Added:
+- 20 lexicon entries, orders `459-478`
+- Scenes `ja-scene-problems-and-reasons` and `ja-scene-culture-and-ideas`
+- `ja-checkpoint-22`
+- `ja-unit-22` wired to both scenes and checkpoint
+
+Final counts:
+- Lexicon: `446`
+- Units: `22`
+- Checkpoints: `22`
+- Scenes: `45`
+- `ja-unit-22`: exists
+- `ja-checkpoint-22`: exists
+- No post-Unit-22 lex entries left
+
+Verification:
+- `npm run lint:content`: `content lint passed: 0 leaks` x3
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7 passed`, `36 passed`, `0 skipped`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const malformedLex = jaSeedContent.lexicon.filter((x:any)=>"'!x.headword || !x.examples);
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), post22Lex: jaSeedContent.lexicon.filter(x=>x.order>478).length, unitCount: jaSeedContent.units.length, checkpointCount: jaSeedContent.checkpoints.length, sceneCount: jaSeedContent.scenes.length, maxScene: Math.max(...jaSeedContent.scenes.map(x=>x.order)), maxCheckpoint: Math.max(...jaSeedContent.checkpoints.map(x=>x.order)), maxUnit: Math.max(...jaSeedContent.units.map(x=>x.order)), malformedLex: malformedLex.map((x:any)=>x.id), unit23: jaSeedContent.units.some(u=>u.id==='"'ja-unit-23'), checkpoint23: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-23'), scene23: jaSeedContent.scenes.some(s=>s.id==='ja-scene-phone-messages'||s.id==='ja-scene-online-news')}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs = require('fs');
+const path = 'content/ja/seed.ts';
+let text = fs.readFileSync(path, 'utf8');
+function removeObjectById(source, id) {
+  const idNeedle = "'`id: '"'"'${id}'"'"'`;
+  const idIndex = source.indexOf(idNeedle);
+  if (idIndex < 0) return source;
+  const start = source.lastIndexOf('"'    {', idIndex);
+  if (start < 0) throw new Error("'`start not found for ${id}`);
+  let depth = 0, inString = false, quote = '"'', escaped = false, end = -1;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\\\') escaped = true;
+      else if (ch === quote) inString = false;
+      continue;
+    }
+    if (ch === '\\'' || ch === '\"' || ch === '"'`'"') { inString = true; quote = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) { end = i + 1; break; }
+    }
+  }
+  if (end < 0) throw new Error("'`end not found for ${id}`);
+  if (source.slice(end, end + 2) === '"',\\n') end += 2;
+  else if (source[end] === ',') end += 1;
+  return source.slice(0, start) + source.slice(end);
+}
+for (const id of ['ja-checkpoint-23','ja-unit-23']) text = removeObjectById(text, id);
+fs.writeFileSync(path, text, 'utf8');
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs = require('fs');
+const path = 'content/ja/seed.ts';
+let text = fs.readFileSync(path, 'utf8');
+function removeObjectById(source, id) {
+  const idNeedle = "'`id: '"'"'${id}'"'"'`;
+  const idIndex = source.indexOf(idNeedle);
+  if (idIndex < 0) return source;
+  const start = source.lastIndexOf('"'    {', idIndex);
+  if (start < 0) throw new Error("'`start not found for ${id}`);
+  let depth = 0, inString = false, quote = '"'', escaped = false, end = -1;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\\\') escaped = true;
+      else if (ch === quote) inString = false;
+      continue;
+    }
+    if (ch === '\\'' || ch === '\"' || ch === '"'`'"') { inString = true; quote = ch; continue; }
+    if (ch === '{') depth++;
+    else if (ch === '}') {
+      depth--;
+      if (depth === 0) { end = i + 1; break; }
+    }
+  }
+  if (end < 0) throw new Error("'`end not found for ${id}`);
+  if (source.slice(end, end + 2) === '"',\\n') end += 2;
+  else if (source[end] === ',') end += 1;
+  return source.slice(0, start) + source.slice(end);
+}
+for (const id of ['ja-checkpoint-23','ja-unit-23']) text = removeObjectById(text, id);
+fs.writeFileSync(path, text, 'utf8');
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lex22 = jaSeedContent.lexicon.filter(x => x.order >= 459 && x.order <= 478);
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, unitCount: jaSeedContent.units.length, checkpointCount: jaSeedContent.checkpoints.length, sceneCount: jaSeedContent.scenes.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), lex22Count: lex22.length, lex22Orders: [Math.min(...lex22.map(x=>x.order)), Math.max(...lex22.map(x=>x.order))], post22Lex: jaSeedContent.lexicon.filter(x=>x.order>478).length, unit22: jaSeedContent.units.find(u=>u.id==='ja-unit-22'), checkpoint22Exists: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-22'), unit23: jaSeedContent.units.some(u=>u.id==='ja-unit-23'), checkpoint23: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-23')}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lex22 = jaSeedContent.lexicon.filter(x => x.order >= 459 && x.order <= 478);
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, unitCount: jaSeedContent.units.length, checkpointCount: jaSeedContent.checkpoints.length, sceneCount: jaSeedContent.scenes.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), lex22Count: lex22.length, lex22Orders: [Math.min(...lex22.map(x=>x.order)), Math.max(...lex22.map(x=>x.order))], post22Lex: jaSeedContent.lexicon.filter(x=>x.order>478).length, unit22: jaSeedContent.units.find(u=>u.id==='ja-unit-22'), checkpoint22Exists: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-22'), unit23: jaSeedContent.units.some(u=>u.id==='ja-unit-23'), checkpoint23: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-23')}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-mondai'|id: 'ja-seikatsu'|id: 'ja-scene-problems-and-reasons'|id: 'ja-scene-culture-and-ideas'|id: 'ja-checkpoint-22'|id: 'ja-unit-22'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-mondai'|id: 'ja-seikatsu'|id: 'ja-scene-problems-and-reasons'|id: 'ja-scene-culture-and-ideas'|id: 'ja-checkpoint-22'|id: 'ja-unit-22'\""
+files: 0
+tokens: in 7323210 / out 47791
+

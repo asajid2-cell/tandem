@@ -1,0 +1,8 @@
+DEEP PUSH — Japanese VOCAB Units 12 AND 13 (foreground; efficient; resume). content/ja/seed.ts has 11 units / ~218 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar. Toward N5 (~600-800). Add TWO units; wire each EARLY (unit + checkpoint).
+
+UNIT 12 (~20-24 words) — theme: home & everyday objects: 部屋(have?)/机/椅子/ドア/窓/テレビ/電話/新聞/手紙/鍵/服/靴/帽子/かばん/傘/時計/写真/箱. 
+UNIT 13 (~20-24 words) — theme: food & meals (restaurant): 肉/魚(have?)/野菜/果物/卵/牛乳/お茶/コーヒー/お酒/料理/朝ご飯/昼ご飯/晩ご飯/レストラン/メニュー/注文(する)/砂糖/塩. 
+Pick correct, useful, NON-duplicate (check existing). Headwords in standard kanji+kana (katakana for loanwords テレビ/コーヒー/レストラン etc.). Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example. Grammar patterns only if needed. For EACH unit: 2 natural SCENES (at home / ordering at a restaurant) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer; ja-unit-12/13 + ja-checkpoint-12/13; audioIds on everything.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check readings/loanword katakana/naturalness. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report counts + cumulative + ja-unit-12/13 + checkpoint-12/13 exist + helper verdict + lint/test output.

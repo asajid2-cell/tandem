@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 5 — EVIDENTIALS (foreground; resume; N4). seed.ts grammar[] has 58 patterns. ADD 4 NEW, order after current max. Inside grammar[].
+Shape: copy existing GrammarPattern EXACTLY; license any new surface/inflection.
+ADD:
+17. ～そうだ (looks like / appears — from appearance) — ます-stem or adj-stem + そう — id ja-appearance-sou.
+18. ～ようだ／～みたい (seems like / resembles) — id ja-seems-you-mitai.
+19. ～らしい (seems; typical of) — id ja-seems-rashii.
+20. ～はずだ (should be / is expected to) — plain form + はず — id ja-expectation-hazu.
+Each: 3 examples + 1-2 drills, closed-universe, tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE 0 (trust exit code). NO vite/tests/audio/deploy/commit. Report: lint exit code + 4 ids + new grammar count.

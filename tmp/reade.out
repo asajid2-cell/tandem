@@ -1,0 +1,32 @@
+
+===== PARTNER VERDICT (codex, 582s) =====
+
+Implemented in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:27321).
+
+Added readings:
+- `ja-reading-12`
+- `ja-reading-13`
+- `ja-reading-14`
+- `ja-reading-15`
+
+Verification: `npm run lint:content` exit code `0`.
+
+Total Japanese reading `titleGloss` count: `15`.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"ja-reading-12|readings: \\[|checkpoints: \\[|grammar: \\[|id: 'ja-reading-15'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --shortstat -- content\\ja\\seed.ts; git diff -- content\\ja\\seed.ts | Select-Object -First 60"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"ja-reading-12|readings: \\[|checkpoints: \\[|grammar: \\[|id: 'ja-reading-15'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --shortstat -- content\\ja\\seed.ts; git diff -- content\\ja\\seed.ts | Select-Object -First 60"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as c } from './content/ja/seed.ts'; console.log(JSON.stringify({ids:c.readings.slice(-4).map(r=>r.id), titleGlossCount:c.readings.filter(r=>Boolean(r.titleGloss)).length, readingCount:c.readings.length}, null, 2))\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --shortstat -- content\\ja\\seed.ts; Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-reading-12'|id: 'ja-reading-13'|id: 'ja-reading-14'|id: 'ja-reading-15'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --shortstat -- content\\ja\\seed.ts; Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-reading-12'|id: 'ja-reading-13'|id: 'ja-reading-14'|id: 'ja-reading-15'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as c } from './content/ja/seed.ts'; console.log(JSON.stringify({ids:c.readings.slice(-4).map(r=>r.id), titleGlossCount:c.readings.filter(r=>Boolean(r.titleGloss)).length, readingCount:c.readings.length}, null, 2))\""
+files: 0
+tokens: in 3025827 / out 20485
+

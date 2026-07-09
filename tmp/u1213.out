@@ -1,0 +1,121 @@
+
+===== PARTNER VERDICT (codex, 1073s) =====
+
+Implemented Units 12 and 13 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:2930).
+
+Counts:
+- Unit 12: 22 new words, 2 scenes, `ja-checkpoint-12` with 7 items
+- Unit 13: 22 new words, 2 scenes, `ja-checkpoint-13` with 7 items
+- Cumulative JA lexicon: 262 words
+- Confirmed `ja-unit-12`, `ja-unit-13`, `ja-checkpoint-12`, `ja-checkpoint-13` exist and are wired
+- Only modified file: `content/ja/seed.ts`
+
+Helper verdict: Claude said “ship”; it confirmed 0 tokenizer mismatches/leaks, correct readings/romanization/katakana, natural particles, and valid POS. I used `酒` rather than `お酒` because Kuromoji splits `お酒` as `お + 酒`, which would require introducing/licensing `お`.
+
+Verification:
+
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+> foothold-language@0.1.0 test
+> vitest run --minWorkers=1 --maxWorkers=1
+
+Test Files  7 passed (7)
+Tests       36 passed (36)
+Duration    11.13s
+```
+
+No audio, deploy, or git commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import fs from 'fs';
+import path from 'path';
+import { jaSeedContent } from './content/ja/seed.ts';
+const units = jaSeedContent.units.filter(u => ['ja-unit-12','ja-unit-13'].includes(u.id));
+const lex12 = jaSeedContent.lexicon.filter(e => e.order >= 251 && e.order <= 272);
+const lex13 = jaSeedContent.lexicon.filter(e => e.order >= 273 && e.order <= 294);
+const sceneIds = new Set(units.flatMap(u=>u.sceneIds));
+const scenes = jaSeedContent.scenes.filter(s=>sceneIds.has(s.id));
+const checkpoints = jaSeedContent.checkpoints.filter(c=>['ja-checkpoint-12','ja-checkpoint-13'].includes(c.id));
+const prompt = "'`Audit Japanese VOCAB Units 12 and 13 for correctness. Unit 12 home/everyday objects; Unit 13 food/meals/restaurant. Check readings, romanization, loanword katakana, naturalness, closed-universe decodability, token arrays, and whether avoiding お酒 in favor of 酒 is acceptable. Be strict and concise: list required fixes or say ship. Context: npm run lint:content passes 0 leaks after these edits; existing vocab through order 250 and grammar through order 132 are available.'"\\n\\nUNITS:\\n"'${JSON.stringify(units,null,2)}'"\\n\\nUNIT 12 LEX:\\n"'${JSON.stringify(lex12,null,2)}'"\\n\\nUNIT 13 LEX:\\n"'${JSON.stringify(lex13,null,2)}'"\\n\\nSCENES:\\n"'${JSON.stringify(scenes,null,2)}'"\\n\\nCHECKPOINTS:\\n"'${JSON.stringify(checkpoints,null,2)}'"\\n"'`;
+const outDir = path.resolve('"'..','tandem','tmp');
+fs.mkdirSync(outDir,{recursive:true});
+const out = path.join(outDir,'ja-units-12-13-audit.txt');
+fs.writeFileSync(out,prompt,'utf8');
+console.log(out);
+console.log("'`lex12=${lex12.length} lex13=${lex13.length} scenes=${scenes.length} checkpoints=${checkpoints.length} chars=${prompt.length}`);
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import fs from 'fs';
+import path from 'path';
+import { jaSeedContent } from './content/ja/seed.ts';
+const units = jaSeedContent.units.filter(u => ['ja-unit-12','ja-unit-13'].includes(u.id));
+const lex12 = jaSeedContent.lexicon.filter(e => e.order >= 251 && e.order <= 272);
+const lex13 = jaSeedContent.lexicon.filter(e => e.order >= 273 && e.order <= 294);
+const sceneIds = new Set(units.flatMap(u=>u.sceneIds));
+const scenes = jaSeedContent.scenes.filter(s=>sceneIds.has(s.id));
+const checkpoints = jaSeedContent.checkpoints.filter(c=>['ja-checkpoint-12','ja-checkpoint-13'].includes(c.id));
+const prompt = "'`Audit Japanese VOCAB Units 12 and 13 for correctness. Unit 12 home/everyday objects; Unit 13 food/meals/restaurant. Check readings, romanization, loanword katakana, naturalness, closed-universe decodability, token arrays, and whether avoiding お酒 in favor of 酒 is acceptable. Be strict and concise: list required fixes or say ship. Context: npm run lint:content passes 0 leaks after these edits; existing vocab through order 250 and grammar through order 132 are available.'"\\n\\nUNITS:\\n"'${JSON.stringify(units,null,2)}'"\\n\\nUNIT 12 LEX:\\n"'${JSON.stringify(lex12,null,2)}'"\\n\\nUNIT 13 LEX:\\n"'${JSON.stringify(lex13,null,2)}'"\\n\\nSCENES:\\n"'${JSON.stringify(scenes,null,2)}'"\\n\\nCHECKPOINTS:\\n"'${JSON.stringify(checkpoints,null,2)}'"\\n"'`;
+const outDir = path.resolve('"'..','tandem','tmp');
+fs.mkdirSync(outDir,{recursive:true});
+const out = path.join(outDir,'ja-units-12-13-audit.txt');
+fs.writeFileSync(out,prompt,'utf8');
+console.log(out);
+console.log("'`lex12=${lex12.length} lex13=${lex13.length} scenes=${scenes.length} checkpoints=${checkpoints.length} chars=${prompt.length}`);
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-units-12-13-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-units-12-13-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit12 = jaSeedContent.units.find(u=>u.id==='ja-unit-12');
+const unit13 = jaSeedContent.units.find(u=>u.id==='ja-unit-13');
+const checkpoint12 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-12');
+const checkpoint13 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-13');
+console.log(JSON.stringify({
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit12WordCount: jaSeedContent.lexicon.filter(x=>x.order>=251&&x.order<=272).length,
+  unit13WordCount: jaSeedContent.lexicon.filter(x=>x.order>=273&&x.order<=294).length,
+  totalUnits: jaSeedContent.units.length,
+  totalCheckpoints: jaSeedContent.checkpoints.length,
+  unit12: { exists: "'!!unit12, sceneIds: unit12?.sceneIds, checkpointId: unit12?.checkpointId },
+  unit13: { exists: !!unit13, sceneIds: unit13?.sceneIds, checkpointId: unit13?.checkpointId },
+  checkpoint12: { exists: !!checkpoint12, items: checkpoint12?.items.length ?? 0 },
+  checkpoint13: { exists: !!checkpoint13, items: checkpoint13?.items.length ?? 0 }
+}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-tsukue'|id: 'ja-niku'|id: 'ja-scene-room-objects'|id: 'ja-scene-restaurant-order'|id: 'ja-checkpoint-12'|id: 'ja-checkpoint-13'|id: 'ja-unit-12'|id: 'ja-unit-13'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-tsukue'|id: 'ja-niku'|id: 'ja-scene-room-objects'|id: 'ja-scene-restaurant-order'|id: 'ja-checkpoint-12'|id: 'ja-checkpoint-13'|id: 'ja-unit-12'|id: 'ja-unit-13'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit12 = jaSeedContent.units.find(u=>u.id==='ja-unit-12');
+const unit13 = jaSeedContent.units.find(u=>u.id==='ja-unit-13');
+const checkpoint12 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-12');
+const checkpoint13 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-13');
+console.log(JSON.stringify({
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit12WordCount: jaSeedContent.lexicon.filter(x=>x.order>=251&&x.order<=272).length,
+  unit13WordCount: jaSeedContent.lexicon.filter(x=>x.order>=273&&x.order<=294).length,
+  totalUnits: jaSeedContent.units.length,
+  totalCheckpoints: jaSeedContent.checkpoints.length,
+  unit12: { exists: "'!!unit12, sceneIds: unit12?.sceneIds, checkpointId: unit12?.checkpointId },
+  unit13: { exists: !!unit13, sceneIds: unit13?.sceneIds, checkpointId: unit13?.checkpointId },
+  checkpoint12: { exists: !!checkpoint12, items: checkpoint12?.items.length ?? 0 },
+  checkpoint13: { exists: !!checkpoint13, items: checkpoint13?.items.length ?? 0 }
+}, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 41643444 / out 218706
+

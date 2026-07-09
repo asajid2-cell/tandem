@@ -1,0 +1,8 @@
+DEEP PUSH — Japanese VOCAB Units 14 AND 15 (foreground; efficient; resume). content/ja/seed.ts has 13 units / ~262 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar. Toward N5 (~600-800). Add TWO units; wire each EARLY (unit + checkpoint).
+
+UNIT 14 (~20-24) — family & people: 家族/兄/姉/弟/妹/両親/おじ/おば/夫/妻/赤ちゃん/みんな/人々/大人 + a couple descriptors. (母/父/お母さん/お父さん/友達 already exist — don't dup.)
+UNIT 15 (~20-24) — body & health: 体/頭/顔/髪/耳/鼻/歯/お腹/手/足/目/口 (skip dups)/病気/薬/元気/痛い/医者/風邪. 
+Pick correct, useful, NON-duplicate (check existing). Headwords in standard kanji+kana. Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example. Grammar only if needed. For EACH unit: 2 natural SCENES (talking about family / at the doctor / feeling sick) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer; ja-unit-14/15 + ja-checkpoint-14/15; audioIds on everything.
+
+CORRECTNESS > QUANTITY: natural correct Japanese (family-term register; 痛い usage), closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir). Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report counts + cumulative + units/checkpoints 14/15 exist + helper verdict + lint/test output.

@@ -1,0 +1,92 @@
+
+===== PARTNER VERDICT (codex, 148s) =====
+
+Added 4 Japanese conditional grammar patterns to `grammar[]`:
+
+- `ja-conditional-tara` order `160`
+- `ja-conditional-ba` order `161`
+- `ja-conditional-nara` order `162`
+- `ja-conditional-to-result` order `163`
+
+`npm run lint:content`: exit code `0`
+
+New grammar count: `58`
+
+No vite/tests/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u65e5\\u672c\\u306b\\u884c\\u3063\\u305f\\u3089\\u3001\\u3054\\u98ef\\u3092\\u98df\\u3079\\u307e\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3093\\u3060\\u3089\\u3001\\u4f11\\u307f\\u307e\\u3059\\u3002',
+  '\\u5e97\\u306b\\u884c\\u3063\\u305f\\u3089\\u3001\\u6c34\\u3092\\u8cb7\\u3044\\u307e\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u308c\\u3070\\u3001\\u5143\\u6c17\\u3067\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3081\\u3070\\u3001\\u4f11\\u307f\\u307e\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306b\\u884c\\u3051\\u3070\\u3001\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u307f\\u307e\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306a\\u3089\\u3001\\u884c\\u304d\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u6c34\\u306a\\u3089\\u3001\\u98f2\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u3054\\u98ef\\u306a\\u3089\\u3001\\u98df\\u3079\\u307e\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3080\\u3068\\u3001\\u5143\\u6c17\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306b\\u884c\\u304f\\u3068\\u3001\\u99c5\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u308b\\u3068\\u3001\\u6c34\\u3092\\u98f2\\u307f\\u307e\\u3059\\u3002'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-conditional-tara'\",\"id: 'ja-conditional-ba'\",\"id: 'ja-conditional-nara'\",\"id: 'ja-conditional-to-result'\",\"headword: '元気'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, max: Math.max(...jaSeedContent.grammar.map(g => g.order)), last: jaSeedContent.grammar.slice(-6).map(({id, order}) => ({id, order})) }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u65e5\\u672c\\u306b\\u884c\\u3063\\u305f\\u3089\\u3001\\u3054\\u98ef\\u3092\\u98df\\u3079\\u307e\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3093\\u3060\\u3089\\u3001\\u4f11\\u307f\\u307e\\u3059\\u3002',
+  '\\u5e97\\u306b\\u884c\\u3063\\u305f\\u3089\\u3001\\u6c34\\u3092\\u8cb7\\u3044\\u307e\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u308c\\u3070\\u3001\\u5143\\u6c17\\u3067\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3081\\u3070\\u3001\\u4f11\\u307f\\u307e\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306b\\u884c\\u3051\\u3070\\u3001\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u307f\\u307e\\u3059\\u3002',
+  '\\u65e5\\u672c\\u306a\\u3089\\u3001\\u884c\\u304d\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u6c34\\u306a\\u3089\\u3001\\u98f2\\u307f\\u305f\\u3044\\u3067\\u3059\\u3002',
+  '\\u3054\\u98ef\\u306a\\u3089\\u3001\\u98df\\u3079\\u307e\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3080\\u3068\\u3001\\u5143\\u6c17\\u3067\\u3059\\u3002',
+  '\\u5e97\\u306b\\u884c\\u304f\\u3068\\u3001\\u99c5\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u308b\\u3068\\u3001\\u6c34\\u3092\\u98f2\\u307f\\u307e\\u3059\\u3002'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-genki'];
+console.log(jaSeedContent.lexicon.filter(e => ids.includes(e.id) || e.headword === '元気').map(e => ({id:e.id, order:e.order, headword:e.headword})));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-genki'];
+console.log(jaSeedContent.lexicon.filter(e => ids.includes(e.id) || e.headword === '元気').map(e => ({id:e.id, order:e.order, headword:e.headword})));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-ba-conditional'\" -Context 0,30 -Encoding UTF8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-ba-conditional'\" -Context 0,30 -Encoding UTF8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-conditional-tara','ja-conditional-ba','ja-conditional-nara','ja-conditional-to-result'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-conditional-tara','ja-conditional-ba','ja-conditional-nara','ja-conditional-to-result'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 23667463 / out 157756
+
+
+⚠ tandem: codex 019f0116 has run 12 turns (compaction threshold 12).
+   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.
+   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"

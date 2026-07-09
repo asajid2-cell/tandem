@@ -1,0 +1,77 @@
+
+===== PARTNER VERDICT (codex, 610s) =====
+
+Implemented S1a.
+
+Changed:
+- Added lesson/chapter types and optional `chapters` / `lessons` to `ContentBundle`.
+- Added `completedLessonIds` progress persistence, v7 migration, `completedLessonIds` Set exposure, and `markLessonComplete(lesson)`.
+- `markLessonComplete` now marks the lesson complete, marks lesson lex/grammar orders known, and resolves real lex entries through `allContent` so existing SRS card seeding uses real item IDs.
+- Added `content/ja/lessons.ts` with Chapter 1 and exemplar `ja-lesson-1`.
+- Wired `jaChapters` / `jaLessons` into `jaSeedContent`.
+- Added focused progress tests.
+
+Verification:
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npm test`: rc 0, 38 tests passed across 7 files
+
+Lesson report:
+- Lesson id: `ja-lesson-1`
+- Step kinds: `intro -> vocab -> grammar -> grammar -> scene -> reading -> check`
+- Lex refs: `1:ja-watashi:私`, `2:ja-wa:は`, `4:ja-gakusei:学生`, `6:ja-ka:か`, `10:ja-o:を`, `11:ja-gohan:ご飯`, `12:ja-taberu:食べる`
+- Grammar refs: `18:ja-polite-copula-desu`, `19:ja-polite-masu`
+- Scene ref: `ja-scene-meal`
+- Reading ref: `ja-reading-1`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Path content; Get-Content -Path content/index.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Path content; Get-Content -Path content/index.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lesson = jaSeedContent.lessons?.find((candidate) => candidate.id === 'ja-lesson-1');
+if ("'!lesson) throw new Error('"'lesson missing');
+const lex = lesson.newLexOrders.map((order) => {
+  const entry = jaSeedContent.lexicon.find((candidate) => candidate.order === order);
+  if ("'!entry) throw new Error(`lex order missing: ${order}`);
+  return `${order}:${entry.id}:${entry.headword}`;
+});
+const grammar = lesson.newGrammarOrders.map((order) => {
+  const entry = jaSeedContent.grammar.find((candidate) => candidate.order === order);
+  if (!entry) throw new Error(`grammar order missing: ${order}`);
+  return `${order}:${entry.id}:${entry.title}`;
+});
+const sceneIds = lesson.steps.flatMap((step) => step.sceneId ? [step.sceneId] : []);
+const readingIds = lesson.steps.flatMap((step) => step.readingId ? [step.readingId] : []);
+console.log(JSON.stringify({ steps: lesson.steps.map((step) => step.kind), lex, grammar, sceneIds, readingIds }, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lesson = jaSeedContent.lessons?.find((candidate) => candidate.id === 'ja-lesson-1');
+if ("'!lesson) throw new Error('"'lesson missing');
+const lex = lesson.newLexOrders.map((order) => {
+  const entry = jaSeedContent.lexicon.find((candidate) => candidate.order === order);
+  if ("'!entry) throw new Error(`lex order missing: ${order}`);
+  return `${order}:${entry.id}:${entry.headword}`;
+});
+const grammar = lesson.newGrammarOrders.map((order) => {
+  const entry = jaSeedContent.grammar.find((candidate) => candidate.order === order);
+  if (!entry) throw new Error(`grammar order missing: ${order}`);
+  return `${order}:${entry.id}:${entry.title}`;
+});
+const sceneIds = lesson.steps.flatMap((step) => step.sceneId ? [step.sceneId] : []);
+const readingIds = lesson.steps.flatMap((step) => step.readingId ? [step.readingId] : []);
+console.log(JSON.stringify({ steps: lesson.steps.map((step) => step.kind), lex, grammar, sceneIds, readingIds }, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 2499009 / out 13697
+

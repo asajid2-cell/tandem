@@ -1,0 +1,42 @@
+
+===== PARTNER VERDICT (codex, 364s) =====
+
+Implemented Japanese VOCAB Unit 32 in `content/ja/seed.ts`.
+
+Added:
+- 20 new N4 verb/change lexicon entries, orders `659-678`
+- 2 scenes: `ja-scene-social-change`, `ja-scene-commuting-change`
+- `ja-checkpoint-32` with 10 quiz items
+- `ja-unit-32` wired last with `lexRange: [659, 678]`
+
+Counts verified:
+- Lexicon: `646`
+- Scenes: `65`
+- Checkpoints: `32`
+- Units: `32`
+- `ja-unit-32`: exists
+- `ja-checkpoint-32`: exists
+
+Verification:
+- `npm run lint:content` passed: `content lint passed: 0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1` passed: `7 passed`, `36 passed`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "export" | Select-Object -Last 10'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content content/ja/seed.ts | Select-Object -Last 15'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "export" | Select-Object -Last 10'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content content/ja/seed.ts | Select-Object -Last 15'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent } from './content/ja/seed.ts'; const s=jaSeedContent; const unit32=s.units.find(x=>x.id==='ja-unit-32'); const cp32=s.checkpoints.find(x=>x.id==='ja-checkpoint-32'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit32:"'!!unit32,checkpoint32:!!cp32,unit32LexRange:unit32?.lexRange,unit32SceneIds:unit32?.sceneIds,checkpoint32Items:cp32?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent } from './content/ja/seed.ts'; const s=jaSeedContent; const unit32=s.units.find(x=>x.id==='ja-unit-32'); const cp32=s.checkpoints.find(x=>x.id==='ja-checkpoint-32'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit32:"'!!unit32,checkpoint32:!!cp32,unit32LexRange:unit32?.lexRange,unit32SceneIds:unit32?.sceneIds,checkpoint32Items:cp32?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-Object -First 40'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-Object -First 40'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short -- content/ja/seed.ts; git rev-parse --show-toplevel'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short -- content/ja/seed.ts; git rev-parse --show-toplevel'
+files: 0
+tokens: in 29486895 / out 220034
+

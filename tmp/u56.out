@@ -1,0 +1,38 @@
+
+===== PARTNER VERDICT (codex, 255s) =====
+
+Implemented Japanese VOCAB Unit 56 in [seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Final counts:
+- Lexicon: `1126`
+- Scenes: `113`
+- Checkpoints: `56`
+- Units: `56`
+- Max lex order: `1158`
+- Max scene order: `113`
+- `ja-unit-56`: exists, lexRange `[1139, 1158]`
+- `ja-checkpoint-56`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7` files passed, `36` tests passed, `0` skipped
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; Select-String -Path 'content/ja/seed.ts' -Pattern \"pos: 'adverb'\" | Select-Object -First 5"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['これは重要ですか。','はい。かなり複雑です。','時間は十分ですか。','たぶん確かです。','きっと行きます。','たまに勉強します。','突然電話します。','やはり大切です。','さっき来ました。','ずっと待ちます。','もし雨です。','例えば日本です。','まったく違います。','なるべく休みます。','できるだけ書きます。','ほとんど終わります。','なかなか進みます。','もちろん行きます。','はっきり答えます。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-56'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-56'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit56:"'!!unit,checkpoint56:!!cp,unit56LexRange:unit?.lexRange,unit56SceneIds:unit?.sceneIds,checkpoint56Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['重要','複雑','十分','確か','きっと','たまに','突然','やはり','さっき','ずっと','もし','例えば','かなり','まったく','なるべく','できるだけ','ほとんど','なかなか','もちろん','はっきり']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['重要','複雑','十分','確か','きっと','たまに','突然','やはり','さっき','ずっと','もし','例えば','かなり','まったく','なるべく','できるだけ','ほとんど','なかなか','もちろん','はっきり']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-56'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-56'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit56:"'!!unit,checkpoint56:!!cp,unit56LexRange:unit?.lexRange,unit56SceneIds:unit?.sceneIds,checkpoint56Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+files: 0
+tokens: in 31056597 / out 227801
+

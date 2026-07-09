@@ -1,0 +1,16 @@
+FEATURE: Structured Lessons — Loop S2 (INTERACTIVE DRILLS — the engagement layer). Foreground; resume. Working dir = language repo. Read docs/lessons-design.md. S1a/S1b done: LessonPlayer in src/App.tsx renders steps intro/vocab/grammar/scene/reading/check for ja-lesson-1; LessonStep kinds already include 'match'|'listen'|'build'|'fill'|'recognize'. Build is green. Reuse existing card/button styling + dark mode; targets >=44px; no overflow (will be battery-tested).
+
+Build 4 interactive activity components and render them in LessonPlayer for these step kinds. DERIVE activity items at RUNTIME from the content the step references (so authoring stays light); generate distractors/shuffles in-component (Math.random ok). Give immediate correct/incorrect feedback and a Continue that's enabled once answered correctly (or after showing the answer).
+  1) 'match' (MatchActivity): inputs = step.lexOrders (fallback lesson.newLexOrders). Show the JA words (with readingHints ruby) in one column and their English meanings shuffled in another; learner taps a word then its meaning to pair; correct pairs lock in green, wrong flash red. Done when all paired.
+  2) 'listen' (ListenActivity): inputs = step.lexOrders or a sentence. Auto-or-on-tap play the audio (reuse AudioButton/audio playback by audioId), show 3-4 options (the gloss OR the JA word) and learner picks the one that matches what they heard. Distractors = other glosses from the lesson/nearby lexicon.
+  3) 'build' (BuildActivity = build-the-sentence): inputs = step.sceneId (use a line's tokens[]) or a referenced example sentence. Show the English gloss as the prompt, present the sentence's tokens SHUFFLED as tappable chips; learner taps them into order; check against the original token order; show the assembled sentence with readingHints on success.
+  4) 'fill' (FillActivity = cloze): inputs = a known sentence (from step.sceneId line or example). Blank ONE content token; show the sentence with a gap + 3-4 token options; learner picks the missing token. Feedback + reveal.
+Each activity: a clear prompt, the activity, feedback, and it must respect dark mode + not overflow on phone widths. English meanings ARE shown in these activities (they're tests, not passive reading) — that's fine; the readingHints mode still governs how JA is shown.
+
+Then UPDATE content/ja/lessons.ts ja-lesson-1 steps to interleave the drills into the arc:
+  intro → vocab → match → grammar → grammar → listen → build → scene → reading → fill → check
+(set each drill step's refs: match/listen use the lesson's lexOrders; build/fill reference the same sceneId the scene step uses). Keep everything closed-universe + refs valid.
+
+Also fix a small copy nit: on the roadmap lesson node, '0 of 1 lessons' is wrong for a lesson — show step count (e.g. 'N steps') or the objective only.
+
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0; `npm run lint:content` exit 0; `npm run build` exit 0; `npm test` pass. Do NOT edit vite.config.ts, run vite preview, audio, deploy, or commit. Report: tsc/build rc, the 4 component names, ja-lesson-1's new step order, and how each activity sources its items + distractors.

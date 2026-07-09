@@ -1,0 +1,9 @@
+FOCUSED: add FRENCH Unit 2 (foreground; efficient; ONLY this; resume). content/fr/seed.ts has 1 unit (~18 words: je/tu/le/la/un/une/ne...pas/être/bonjour/merci/oui/non/eau/café/pain/veux...) + fr-checkpoint-1 + fr-unit-1; closed-universe enforced by the linter (FR tokenizer handles elision/contractions) — keep 0 leaks. Reuse existing shapes.
+
+ADD French Unit 2 (continue order indices) — theme: everyday needs & questions. ~14-16 NEW high-frequency French words NOT already present: e.g. avoir (j'ai/tu as), aller (je vais), où, ici, là, combien, c'est combien, le/la (more nouns: la carte, l'addition, le thé, l'eau already?), parler, comprendre, vouloir already?, un peu, beaucoup, s'il vous plaît, pardon. Pick correct, useful, NON-duplicate; include needed function words. Each: reading/pronunciation hint, gloss, pos, audioId, closed-universe example.
+- 1-2 grammar patterns (avoir conjugation j'ai/tu as; question with où / est-ce que / combien) with licenses[].
+- 2 natural SCENES (asking where/how much, a small café order with price) using ONLY cumulative introduced FR vocab+grammar, with comprehension QuizItems; precompute tokens[] with the French tokenizer.
+- COMPLETE THE UNIT this turn: fr-unit-2 (in units[]) + fr-checkpoint-2 + scenes + audioIds. Wire the unit EARLY so it isn't left incomplete if interrupted.
+
+CORRECTNESS > QUANTITY: natural correct French (accents, agreement, elision, register — vous vs tu), closed-universe (0 leaks). Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check. Do NOT run audio, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks (all 3 langs), npm test green (0 skipped), npm run build green. Report: counts + that fr-unit-2 AND fr-checkpoint-2 exist + helper verdict + exact lint/test/build output. Be quick.

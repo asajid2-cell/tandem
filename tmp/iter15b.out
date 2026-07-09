@@ -1,0 +1,39 @@
+
+===== PARTNER VERDICT (codex, 395s) =====
+
+Done. Added the Kanji course UI and persisted kanji SRS progress.
+
+Changed:
+- [src/App.tsx](Z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:1): `#/ja/kanji` nav/route, grouped reference grid, kanji recognition flow
+- [src/store/progress.ts](Z:/328/CMPUT328-A2/codexworks/301/language/src/store/progress.ts:1): v5 progress shape with `seenKanjiIds`, kanji SRS seed/backfill helpers
+- [src/store/progress.test.ts](Z:/328/CMPUT328-A2/codexworks/301/language/src/store/progress.test.ts:1): kanji SRS seeding/backfill coverage
+- Existing chunk-1 files remain changed/uncommitted: `src/content/types.ts`, `content/ja/kanji.ts`
+
+Routes added:
+- `#/ja/kanji` reference view
+- `#/ja/kanji?mode=learn` recognition SRS flow
+
+Verification:
+- `npm run build` green
+- `npm run lint:content` green, `0 leaks`
+- `npm test` green: `33 passed`, `0 skipped`
+
+No git commit made.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+files: 0
+tokens: in 1214860 / out 20736
+

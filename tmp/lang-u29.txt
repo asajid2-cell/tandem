@@ -1,0 +1,3 @@
+FOCUSED: Japanese VOCAB Unit 29 ONLY (foreground; FAST; resume). 28 units / 566 words; closed-universe (0 leaks). STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[]. Wire ja-unit-29 + ja-checkpoint-29 LAST. Valid TypeScript.
+ADD Unit 29 (~18-22) — food & cooking: 米/ご飯(have)/お菓子/飲み物/食べ物/味/甘い/辛い/苦い/熱い(have?)/冷たい/作る(have?)/切る/焼く/茹でる/お皿/箸/コップ. Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. 2 SCENES (in scenes[]) — cooking / eating — using only cumulative vocab+grammar, QuizItems, tokens[]. audioIds on all. Be FAST. No audio:ja/deploy/commit.
+VERIFY: npm run lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + ja-unit-29/checkpoint-29 + lint/test.

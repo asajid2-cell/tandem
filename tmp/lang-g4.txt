@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 4 — CONDITIONALS (foreground; resume; N4). seed.ts grammar[] has 54 patterns. ADD 4 NEW patterns, order after current max. Inside grammar[].
+Shape: copy existing GrammarPattern EXACTLY. Each new conditional inflection (ば-form, たら) must be LICENSED via a licenses[] entry (kind:'inflection', tokens like ['~たら'] / ['~ば'], surfaces, appliesToPos).
+ADD:
+13. ～たら (if/when, past-conditional) — past stem + ら — id ja-conditional-tara.
+14. ～ば (provisional if) — id ja-conditional-ba.
+15. ～なら (if it is the case that ~) — id ja-conditional-nara.
+16. ～と (whenever / natural result) — dict verb + と — id ja-conditional-to-result (distinct from the noun-joining と particle already taught).
+Each: 3 examples + 1-2 drills, closed-universe (known vocab + licensed inflections), tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE 0 (trust exit code). NO vite/tests/audio/deploy/commit. Report: lint exit code + 4 ids + new grammar count.

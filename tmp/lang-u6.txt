@@ -1,0 +1,9 @@
+FOCUSED: add Japanese VOCAB Unit 6 (foreground; efficient; ONLY this; resume). content/ja/seed.ts has 5 units / ~83 words; closed-universe enforced (keep 0 leaks). This unit should bring the core to ~95-100 words — the app's premise.
+
+ADD Unit 6 (continue order indices) — theme: time & daily routine. ~14-16 NEW high-frequency words NOT already present: e.g. 今 now, 時 time/hour/o'clock, 朝 morning, 昼 noon, 晩/夜 evening/night, 毎日 every day, 今日 today, 明日 tomorrow, 週 week, 年 year(if not), する to do, 待つ wait, 起きる get up, 寝る sleep, とても very. Pick correct, useful, NON-duplicate words (check what's already there). Each: reading, romanization, gloss, pos, audioId, closed-universe example.
+- 1-2 grammar patterns if useful (e.g. 時 telling time / 今 + verb / とても + adjective) with licenses[].
+- 2 natural SCENES (daily routine: what time do you get up / what do you do today) using ONLY cumulative introduced vocab+grammar, with comprehension QuizItems; precompute tokens[] with the tokenizer.
+- COMPLETE the unit IN THIS TURN: ja-unit-6 (in units[]) + ja-checkpoint-6 + the scenes + audioIds. Do the unit wiring EARLY so it's not left incomplete if interrupted.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe (0 leaks). Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped), npm run build green. Report: counts + cumulative JA words + that ja-unit-6 AND ja-checkpoint-6 exist + helper verdict + exact lint/test/build output. Be quick.

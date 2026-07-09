@@ -1,0 +1,16 @@
+ITERATION 7 (you are the Lead; same Foothold project; iter1-6 committed & green, LIVE at https://harmonizerlabs.cc/language/ with the full core loop: Flow A learn + Flow B SRS review).
+
+Watcher committed iter6 + redeployed. Now build the PRE-GENERATED AUDIO pipeline so pronunciation is real and reliable (Web Speech is inconsistent across browsers/OSes, especially for Japanese).
+
+SCOPE (build order step 4's audio half + plan section 7/9/20#1):
+1. BUILD-TIME TTS PIPELINE: a script (e.g. scripts/gen-audio.mjs) that walks the JA content (content/ja/seed.ts: every audioId — script/kana glyphs, lexicon headwords, examples, scene lines) and generates an mp3 per audioId into public/audio/ja/<audioId>.mp3. Idempotent: skip files that already exist unless --force. Candidate engine: edge-tts (free, no API key, good ja-JP voice e.g. ja-JP-NanamiNeural). This runs at BUILD time only — the generated mp3s are committed/bundled, so the deployed app stays SELF-CONTAINED (zero runtime external calls).
+   - IMPORTANT (hard rule): if edge-tts (or your chosen engine) cannot actually run here (not installable, network blocked, etc.), DO NOT fake it — do not commit silent/placeholder audio. Report the blocker clearly and leave Web Speech as the working fallback. Real audio or none.
+2. WIRE THE AudioButton: prefer the bundled file at /language/audio/<lang>/<audioId>.mp3 (public/audio → dist/audio → served under the subpath). If the file is missing or fails to load, fall back to Web Speech API (graceful, never a broken control). Make this the single audio path used by new-word card, scene reader, review card, and primer.
+3. DEPLOY PATH: ensure public/audio ends up in dist/ (Vite copies public/ to dist root) so it serves at /language/audio/... live. (CSP already allows media-src 'self'.)
+4. DOCS: short docs/audio-pipeline.md — how to (re)generate, the voice(s) used, and the TTS license consideration for redistribution (plan section 11/20#1: note whether the chosen engine's generated-audio redistribution is permissible; flag it honestly if uncertain).
+
+VERIFY before reporting: generate audio for the current JA content; npm run build green (audio present in dist/audio/ja); npm test green; npm run lint:content 0 leaks. Spot-check that at least one generated mp3 is a real, non-empty audio file (valid duration), and that the AudioButton resolves to the bundled file when present (a quick headless check is fine). Don't regress the UI.
+
+Use your Claude HELPER (SIMPLE invocation: prompt to a temp file → node bin/peer.mjs ask - < file from the tandem dir) to independently sanity-check the pipeline + the fallback logic.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: the engine used + whether it actually ran (with proof: a file size/duration), how the bundled-vs-fallback resolution works, the license note, exact build/test/lint output, helper verdict, and suggested single next step for iter8 (likely: expand JA content toward the ~100-word core in a second unit, or a unit checkpoint).

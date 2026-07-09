@@ -1,0 +1,14 @@
+FOCUSED: fill GRAMMAR HOLES (foreground; resume). content/ja/seed.ts: grammar[] has 74 patterns (max order 179). The curriculum review flagged these missing structures as needed to PARSE ordinary written Japanese.
+
+PART 1 — add 3 PARTICLES as LexEntries in lexicon[] (append at the end with new order values after the current max lex order; like the existing と particle entry): 
+  や (non-exhaustive "and" for listing nouns), ね (sentence-final confirmation "right?/isn't it"), よ (sentence-final emphasis/assertion). Each: headword, reading, romanization, gloss, pos:'particle', audioId (unique), ONE closed-universe example.
+
+PART 2 — add GRAMMAR PATTERNS to grammar[] (append, order from 180 up). Shape: { id, title, order, explanation, formula, licenses?, examples:[{text,gloss,tokens,audioId}], drills:[...] } matching existing entries. Add:
+  1. Quotation と with 言う/思う ("X と言います / X と思います") — quoting speech/thought.
+  2. Negative request ないでください ("〜ないでください" = please don't ~).
+  3. な-adjective + noun modification ("元気な人", "便利な店") — な before a noun.
+  4. Noun-modifying (relative) clauses: plain verb/adj clause directly before a noun ("昨日買った本", "駅にいる人", "私が読んだ話").
+  5. の nominalization ("〜のが好き / 〜のは〜" turning a clause into a noun).
+  6. 時 clauses ("〜とき(は)" = when ~).
+ALL examples CLOSED-UNIVERSE (only already-known vocab + the new particles); declared `tokens` must EXACTLY match the JA tokenizer output; add `licenses` if a pattern introduces an inflection the tokenizer/lint needs licensed; natural Japanese only; UNIQUE audioIds. Each pattern needs >=2 examples and >=1 drill, consistent with existing patterns.
+VERIFY (iterate to green, EXIT CODE): `npm run lint:content` exit 0 (trust exit code); `npx tsc -b` exit 0. NO vite/tests/audio/deploy/commit. Report: lint rc, tsc rc, grammar count, the 3 particle headwords, the 6 new pattern titles+orders.

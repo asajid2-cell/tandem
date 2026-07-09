@@ -1,0 +1,13 @@
+FOCUSED FIX (foreground; FAST; resume). `npm run build` currently FAILS (lint:content secondary checks exit 1 even though it prints "0 leaks"). Two root causes, both in JA content. Working dir = the language repo.
+
+PROBLEM 1 — particle と ("and" between nouns / "with") is NOT taught anywhere, so Unit 76 scenes leak it. FIX: add a lexicon particle entry for と, modeled EXACTLY on the existing particle entries (は order ~1, を, に, が — pos:'particle'). Give と: headword 'と', reading 'と', romanization 'to', gloss 'and (joins nouns); with', pos 'particle', tags ['particle'], audioId 'ja-lex-to-and', examples: []. Set its `order` low enough to fall inside Unit 1 lexRange [1,17] so it is known from the start (use a value like 2 or a fractional order between two existing early particles; verify Unit 1 still renders and ranges stay consistent). Ensure no audioId collision.
+
+PROBLEM 2 — Unit 76 has declared-token mismatches + leaks. For EACH of these, make the declared `tokens`/`sourceTokens` array EXACTLY equal the kuromoji tokenizer output for that text, and ensure every token is in the cumulative known set (use と now that it's taught; never invent untaught tokens):
+- lex ja-oyatsu example 0
+- lex ja-choumiryou example 0
+- scene ja-scene-bento-ingredients lines 1 and 3 + quiz q2,q3
+- scene ja-scene-snack-foods lines 0 and 2 + quiz q1
+- checkpoint ja-checkpoint-76 items q8 and q10
+Tip: import the tokenizer the same way lint does, tokenize each text, and copy the output verbatim into `tokens`.
+
+VERIFY (MANDATORY — use EXIT CODES, not grep): run `npm run build` and confirm it EXITS 0 (this runs lint:content + tsc + vite and is the real gate). Then `npm test` 36 passed/0 skipped. Do NOT run audio:ja/deploy/commit. Report: `npm run build` exit code + any remaining lint lines + test result + confirm と added with its order.

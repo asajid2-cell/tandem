@@ -1,0 +1,88 @@
+
+===== PARTNER VERDICT (codex, 678s) =====
+
+Implemented Japanese Unit 69 in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:17726).
+
+Added `ja-unit-69` with 18 non-duplicate communication entries, 2 scenes, and `ja-checkpoint-69`. `伝える` and `返事` were already present, so I skipped them; added `尋ねる`, `知らせる`, `伝言`, and `合図` to reach 18 entries. New Unit 69 audioIds have 0 collisions.
+
+Counts:
+- Japanese lexicon: 1374 entries
+- Units: 69
+- Scenes: 139
+- Checkpoints: 69
+- Unit 69 lexRange: `[1389, 1406]`
+- `ja-checkpoint-69`: 10 items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test`: passed, `36 passed`, `0 skipped`
+
+No audio generation, deploy, or commit performed.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit69Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1389 && entry.order <= 1406);
+const unit69Audio = collectAudio(unit69Lex);
+const newCollisions = unit69Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit69LexEntries: unit69Lex.length,
+  unit69LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-69')?.lexRange,
+  checkpoint69Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-69')?.items.length,
+  unit69AudioIds: unit69Audio.length,
+  unit69AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit69Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1389 && entry.order <= 1406);
+const unit69Audio = collectAudio(unit69Lex);
+const newCollisions = unit69Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit69LexEntries: unit69Lex.length,
+  unit69LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-69')?.lexRange,
+  checkpoint69Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-69')?.items.length,
+  unit69AudioIds: unit69Audio.length,
+  unit69AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-shuchou'\",\"id: 'ja-scene-meeting-remarks'\",\"id: 'ja-checkpoint-69'\",\"id: 'ja-unit-69'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-shuchou'\",\"id: 'ja-scene-meeting-remarks'\",\"id: 'ja-checkpoint-69'\",\"id: 'ja-unit-69'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+files: 0
+tokens: in 3450103 / out 24824
+

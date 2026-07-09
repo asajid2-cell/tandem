@@ -1,0 +1,17 @@
+NEW FEATURE: Structured Lessons & Roadmap — Loop S1a (DATA MODEL + progress + ONE exemplar lesson; NO UI yet). Foreground; resume. Working dir = language repo. Read docs/lessons-design.md first (the spec).
+
+1) src/content/types.ts — ADD:
+   export type LessonActivityKind = 'intro' | 'vocab' | 'grammar' | 'match' | 'listen' | 'build' | 'fill' | 'recognize' | 'scene' | 'reading' | 'check';
+   export interface LessonStep { kind: LessonActivityKind; prompt?: string; lexOrders?: number[]; grammarOrder?: number; sceneId?: EntityId; readingId?: EntityId; quizItems?: QuizItem[]; }
+   export interface Lesson { id: EntityId; lang: LanguageCode; chapterId: EntityId; order: number; title: string; objective: string; newLexOrders: number[]; newGrammarOrders: number[]; steps: LessonStep[]; }
+   export interface Chapter { id: EntityId; lang: LanguageCode; order: number; title: string; subtitle?: string; lessonIds: EntityId[]; }
+   Add OPTIONAL to ContentBundle: chapters?: Chapter[]; lessons?: Lesson[];
+
+2) src/store/progress.ts — add `completedLessonIds: string[]` to LanguageProgress (default []), expose it as a Set in the store, and add a method `markLessonComplete(lesson: Lesson)` that: adds lesson.id to completedLessonIds AND calls the existing markSeen/markGrammarSeen so the lesson's newLexOrders + newGrammarOrders become known (feeds SRS + unlock gates). Bump the stored-progress migration safely (keep loading old saves). Mirror the existing patterns exactly; don't break existing tests.
+
+3) content/ja/lessons.ts — author Chapter 1 + ONE exemplar Lesson, referencing EXISTING content (grep content/ja/seed.ts to confirm every ref):
+   - Chapter { id:'ja-ch-1', order:1, title:'First steps', subtitle:'Survival basics', lessonIds:['ja-lesson-1'] }
+   - Lesson ja-lesson-1, title + objective (e.g. 'Introduce yourself and say what you do'), newLexOrders/newGrammarOrders = the early items it teaches (pick a coherent ~5-word + 1-2 grammar set from the EARLIEST lexicon orders, e.g. 私/学生/です/食べる/を/ご飯 + grammar です(18) and ます(19) — use REAL orders/headwords). steps[] = the full arc using kinds that EXIST today: intro(prompt=objective), vocab(lexOrders), grammar(grammarOrder), scene(sceneId — pick an early valid scene id), reading(readingId — earliest valid reading id), check(quizItems — 2-3 reusing QuizItem shape, closed-universe). (match/listen/build/fill come in S2; you may include ONE 'build' step referencing the scene's tokens to reserve the slot, but it's fine to omit drill kinds for now.)
+   Export `jaLessons: Lesson[]` and `jaChapters: Chapter[]`; wire them into jaSeedContent (chapters/lessons fields).
+
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0; `npm run lint:content` exit 0; `npm test` all pass. Do NOT build vite/preview/audio/deploy/commit. Report: tsc rc, lint rc, test count, the lesson id + its step kinds in order + the content refs it uses (so I can confirm they exist).

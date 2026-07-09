@@ -1,0 +1,9 @@
+DEEP PUSH — Japanese VOCAB Unit 9 (foreground; efficient; resume). content/ja/seed.ts has 8 units / ~150 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar available. Toward N5 (~600-800). FAST but correct.
+
+ADD Unit 9 (~22-26 NEW words) — theme: numbers, counting, money & quantity (very practical). Include: number words/counters as useful (一つ〜十/いくつ how many, 〜円 yen, いくら how much, 百/千/万 if not present, 半分 half, 全部 all, 少し a little, たくさん a lot, とても(have?)), shopping terms (店(have)/買う(have?)/売る/お金(have?)/高い(have?)/安い(have?)). Pick correct, NON-duplicate, useful. Headwords in standard kanji+kana. Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example.
+- grammar pattern(s) only if needed (e.g. counting/いくら questions).
+- 2 natural SCENES (shopping / asking prices / how many) using ONLY cumulative vocab+grammar (use te-form, past, etc. freely), comprehension QuizItems, tokens[] via tokenizer.
+- ja-unit-9 + ja-checkpoint-9; wire EARLY. audioIds on everything new.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check counters/readings/naturalness. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report counts + cumulative + ja-unit-9/checkpoint-9 exist + helper verdict + lint/test output.

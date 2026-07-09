@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 2 (foreground; resume; N4). seed.ts grammar[] has 46 patterns. ADD 4 NEW N4 patterns, continuing order after current max. Place inside grammar[].
+Shape: copy an existing GrammarPattern EXACTLY (id, lang:'ja', order, title, explanation, formula, licenses:[{kind,description,tokens,appliesToPos,surfaces}], examples:[{text,gloss,tokens,audioId UNIQUE}], drills:[{id,kind:'comprehend',prompt,answer,distractors,sourceTokens}]).
+ADD these 4 (build on already-licensed forms — て-form, ない-form, dict, past た, ます; license any new surface used):
+5. ～なければならない (must / have to) — id ja-must-nakereba.
+6. ～てはいけない (must not / prohibition) — id ja-prohibition-tewaikenai.
+7. ～つもりだ (intend to) — dict verb + つもり — id ja-intention-tsumori.
+8. ～ながら (while doing two things) — ます-stem + ながら — id ja-simultaneous-nagara.
+Each: 3 examples + 1-2 drills, closed-universe (known vocab + licensed inflections), tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE must be 0 (trust exit code, not the "0 leaks" text). NO vite build/tests/audio/deploy/commit. Report: lint exit code + the 4 ids + new grammar count.

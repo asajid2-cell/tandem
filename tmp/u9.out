@@ -1,0 +1,67 @@
+
+===== PARTNER VERDICT (codex, 1145s) =====
+
+Implemented Japanese Unit 9 in `content/ja/seed.ts`.
+
+Counts:
+- Added Unit 9 words: 24
+- Cumulative JA words: 174
+- JA units: 9
+- Unit 9 scenes: 2
+- Checkpoint 9 items: 7
+- `ja-unit-9`: exists
+- `ja-checkpoint-9`: exists
+- New Unit 9 grammar patterns: 0
+
+Helper verdict: Claude found one required fix: `pos: 'numeral'` / `pos: 'counter'` are invalid type values, so I changed those Unit 9 entries to `pos: 'number'`. After that, the content shipped: counter readings, money expressions, scene naturalness, and token arrays were clean.
+
+Verification:
+
+```text
+npm run lint:content
+
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+$env:NODE_OPTIONS='--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1
+
+Test Files 7 passed (7)
+Tests 36 passed (36)
+Duration 25.31s
+```
+
+No audio generation, deploy, or git commit was run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Select-Object ProcessId,CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Select-Object ProcessId,CommandLine | Format-List"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Stop-Process -Id 39708,50804,45736,59128,30648,29292 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vitest|tsc --noEmit|npm-cli.js\" test|npx-cli.js\" tsc' } | Select-Object ProcessId,CommandLine"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Stop-Process -Id 39708,50804,45736,59128,30648,29292 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Get-CimInstance Win32_Process -Filter \"name = 'node.exe'\" | Where-Object { "'$_.CommandLine -match '"'vitest|tsc --noEmit|npm-cli.js\" test|npx-cli.js\" tsc' } | Select-Object ProcessId,CommandLine"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit9 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-9');
+const checkpoint9 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-9');
+console.log(JSON.stringify({units:jaSeedContent.units.length,cumulativeJaWords:jaSeedContent.lexicon.length,unit9Words:jaSeedContent.lexicon.filter(x=>x.order>=183&&x.order<=206).length,unit9Exists:"'!!unit9,checkpoint9Exists:!!checkpoint9,unit9Scenes:unit9?.sceneIds.length ?? 0,checkpoint9Items:checkpoint9?.items.length ?? 0}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit9 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-9');
+const checkpoint9 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-9');
+console.log(JSON.stringify({units:jaSeedContent.units.length,cumulativeJaWords:jaSeedContent.lexicon.length,unit9Words:jaSeedContent.lexicon.filter(x=>x.order>=183&&x.order<=206).length,unit9Exists:"'!!unit9,checkpoint9Exists:!!checkpoint9,unit9Scenes:unit9?.sceneIds.length ?? 0,checkpoint9Items:checkpoint9?.items.length ?? 0}, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 34341084 / out 162839
+

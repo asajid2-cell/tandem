@@ -1,0 +1,46 @@
+
+===== PARTNER VERDICT (codex, 221s) =====
+
+Implemented Japanese VOCAB Unit 44 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+Added:
+- `ja-unit-44` / `ja-checkpoint-44`
+- 20 lex entries, orders `899-918`
+- 2 scenes: `ja-scene-office-deadline`, `ja-scene-contract-team`
+- 10 checkpoint items
+
+Skipped duplicates already present: `報告`, `連絡`, `相談`, `部長`, `社長`, `給料`, `出張`, `会議`.
+
+Final counts:
+- Lexicon: `886`
+- Scenes: `89`
+- Checkpoints: `44`
+- Units: `44`
+- Max lex order: `918`
+- Max scene order: `89`
+- `ja-unit-44`: exists, lexRange `[899, 918]`
+- `ja-checkpoint-44`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: passed, `7` files / `36` tests / `0` skipped
+
+Did not run `audio:ja`, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['資料を見ますか。','はい。書類も見ます。','締め切りは今日ですか。','はい。残業します。','上司に相談しますか。','はい。同僚も来ます。','契約の担当ですか。','はい。営業の担当です。','名刺があります。','部下が来ます。','面接があります。','研修に行きます。','職場はどこですか。','部署は新しいです。','企画を報告します。','勤務します。','退職します。','就職します。','休憩します。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['資料を見ますか。','はい。書類も見ます。','締め切りは今日ですか。','はい。残業します。','上司に相談しますか。','はい。同僚も来ます。','契約の担当ですか。','はい。営業の担当です。','名刺があります。','部下が来ます。','面接があります。','研修に行きます。','職場はどこですか。','部署は新しいです。','企画を報告します。','勤務します。','退職します。','就職します。','休憩します。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-44'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-44'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit44:"'!!unit,checkpoint44:!!cp,unit44LexRange:unit?.lexRange,unit44SceneIds:unit?.sceneIds,checkpoint44Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['資料','担当','残業','契約','営業','書類','名刺','締め切り','同僚','上司','部下','面接','研修','職場','部署','企画','勤務','退職','就職','休憩']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length,ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-44'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-44'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit44:"'!!unit,checkpoint44:!!cp,unit44LexRange:unit?.lexRange,unit44SceneIds:unit?.sceneIds,checkpoint44Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['資料','担当','残業','契約','営業','書類','名刺','締め切り','同僚','上司','部下','面接','研修','職場','部署','企画','勤務','退職','就職','休憩']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length,ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-44'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-44'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit44:"'!!unit,checkpoint44:!!cp,unit44LexRange:unit?.lexRange,unit44SceneIds:unit?.sceneIds,checkpoint44Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-44'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-44'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit44:"'!!unit,checkpoint44:!!cp,unit44LexRange:unit?.lexRange,unit44SceneIds:unit?.sceneIds,checkpoint44Items:cp?.items.length}, null, 2));"'
+files: 0
+tokens: in 17176731 / out 116549
+

@@ -1,0 +1,46 @@
+
+===== PARTNER VERDICT (codex, 507s) =====
+
+Implemented Japanese VOCAB Unit 35 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+Added:
+- `ja-unit-35` / `ja-checkpoint-35`
+- 20 lex entries, orders `719-738`
+- 2 scenes: `ja-scene-classroom-study`, `ja-scene-school-subjects`
+- 10 checkpoint items
+
+Skipped duplicates already present: `大学`, `高校`, `鉛筆`, `ノート`, `研究`, `数学`, `英語`.
+
+Final counts:
+- Lexicon: `706`
+- Scenes: `71`
+- Checkpoints: `35`
+- Units: `35`
+- Max lex order: `738`
+- Max scene order: `71`
+- `ja-unit-35`: exists, lexRange `[719, 738]`
+- `ja-checkpoint-35`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: passed, `7` files / `36` tests / `0` skipped
+
+Did not run `audio:ja`, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-35'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-35'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit35:"'!!unit,checkpoint35:!!cp,unit35LexRange:unit?.lexRange,unit35SceneIds:unit?.sceneIds,checkpoint35Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['中学','小学校','生徒','教科書','辞書','黒板','専門','科目','成績','作文','文法','単語','入学','校長','テスト','理科','地理','体育','美術','制服']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length, ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const heads=['中学','小学校','生徒','教科書','辞書','黒板','専門','科目','成績','作文','文法','単語','入学','校長','テスト','理科','地理','体育','美術','制服']; console.log(JSON.stringify(heads.map(w=>({w,count:s.lexicon.filter(x=>x.headword===w).length, ids:s.lexicon.filter(x=>x.headword===w).map(x=>x.id)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-35'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-35'); const scenes=unit?.sceneIds?.map(id=>s.scenes.find(x=>x.id===id)); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit35:"'!!unit,checkpoint35:!!cp,unit35LexRange:unit?.lexRange,unit35SceneIds:unit?.sceneIds,checkpoint35Items:cp?.items.length,sceneOrders:scenes?.map(x=>x?.order)}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-35'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-35'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit35:"'!!unit,checkpoint35:!!cp,unit35LexRange:unit?.lexRange,unit35SceneIds:unit?.sceneIds,checkpoint35Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-35'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-35'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit35:"'!!unit,checkpoint35:!!cp,unit35LexRange:unit?.lexRange,unit35SceneIds:unit?.sceneIds,checkpoint35Items:cp?.items.length}, null, 2));"'
+files: 0
+tokens: in 1462661 / out 21714
+

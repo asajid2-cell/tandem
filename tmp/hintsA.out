@@ -1,0 +1,33 @@
+
+===== PARTNER VERDICT (codex, 409s) =====
+
+Implemented in `src/App.tsx`.
+
+Report:
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npm test`: rc 0, 37 tests passed across 7 files
+- Reusable component: `ReadingHint`
+- Header control: labeled cycling button, `Hints: Furigana` style, separate from `Show English`
+- Surfaces now respecting `readingHints`: NewWordFlow lex headword cards, Kanji reference glyph cards, Kanji learn glyph cards, kanji example audio rows, and kanji detail example rows
+- Extra UI smoke: `destruct_check` on `#/ja/learn` rc 0, 0 viewport defects
+
+I did not run Vite build, Vite preview, audio, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Process -Id 24944 | Select-Object Id,ProcessName,Path'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'try { (Invoke-WebRequest -UseBasicParsing http://localhost:5173/ -TimeoutSec 5).StatusCode } catch { $_.Exception.Message }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Process -Id 24944 | Select-Object Id,ProcessName,Path'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'try { (Invoke-WebRequest -UseBasicParsing http://localhost:5173/ -TimeoutSec 5).StatusCode } catch { $_.Exception.Message }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "node C:\\Users\\Ahmed\\.codex\\skills\\ui-craft\\scripts\\destruct_check.mjs http://localhost:5173/#/ja/learn --json"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "node C:\\Users\\Ahmed\\.codex\\skills\\ui-craft\\scripts\\destruct_check.mjs http://localhost:5173/#/ja/learn --json"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\App.tsx -Pattern \"showRomanization|forceRomanOff|Reading aid|foothold\\.readingHints|Hints:\" | Format-Table -AutoSize"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --check -- src/App.tsx'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- src/App.tsx'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --check -- src/App.tsx'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- src/App.tsx'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\App.tsx -Pattern \"showRomanization|forceRomanOff|Reading aid|foothold\\.readingHints|Hints:\" | Format-Table -AutoSize"
+files: 0
+tokens: in 1498064 / out 15169
+

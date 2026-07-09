@@ -1,0 +1,12 @@
+FOCUSED CHUNK 3 (continue kanji; foreground-supervised; be efficient). The kanji course (#/ja/kanji, content/ja/kanji.ts with 23 kanji) is built and live but has NO audio. Add kanji audio, consistent with the existing kana/word audio (bundled-first mp3 via /language/audio/ja/<audioId>.mp3 + Web Speech fallback through the existing AudioButton).
+
+DO THIS:
+1. Extend scripts/gen-audio.mjs so `npm run audio:ja` also generates kanji audio:
+   - For each kanji's EXAMPLE WORDS: give each example an audioId (e.g. ja-kanji-<id>-ex0) and speak the example WORD text (unambiguous reading) with the ja-JP voice.
+   - For the kanji glyph reading: to avoid TTS mis-reading a lone kanji, speak the kana of its PRIMARY reading (first kunyomi without okurigana dot, else first onyomi) for the kanji's audioId — NOT the bare glyph.
+   - Idempotent like the rest.
+2. Wire AudioButton into the kanji UI (reference cards + recognition flow): a Play for the kanji reading, and a small Play on each example word. Reuse the existing AudioButton (bundled-first + fallback). Keep light/dark + hidden-by-default reveal behavior intact (audio buttons can stay visible; only the English/readings text is hidden until reveal).
+3. Update content/ja/kanji.ts example entries with audioIds as needed (and the type if needed).
+
+DO NOT run audio:ja yourself or the battery (the Watcher will). DO NOT git commit.
+VERIFY: npm run build green, npm run lint:content 0 leaks, npm test green (0 skipped). Report: what you changed in gen-audio + UI, the audioId scheme, and confirm build/lint/test green. Keep it tight.

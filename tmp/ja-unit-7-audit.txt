@@ -1,0 +1,1093 @@
+Audit Japanese VOCAB Unit 7 for correctness. Check readings/romanization/gloss/pos, naturalness, conjugations, token arrays, and closed-universe decodability. Be strict and concise: list required fixes or say ship. Context: npm run lint:content currently passes 0 leaks. Existing vocabulary through order 118 and grammar through order 132 are available.
+
+UNIT:
+{
+  "id": "ja-unit-7",
+  "lang": "ja",
+  "order": 7,
+  "title": "Everyday actions and work",
+  "lexRange": [
+    133,
+    157
+  ],
+  "grammarRange": [
+    119,
+    132
+  ],
+  "sceneIds": [
+    "ja-scene-going-out",
+    "ja-scene-work-and-shop"
+  ],
+  "checkpointId": "ja-checkpoint-7"
+}
+
+NEW LEXICON:
+[
+  {
+    "id": "ja-deru",
+    "lang": "ja",
+    "order": 133,
+    "headword": "出る",
+    "reading": "でる",
+    "romanization": "deru",
+    "gloss": "go out; leave",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "ichidan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-deru",
+    "examples": [
+      {
+        "text": "出る。",
+        "gloss": "go out; leave.",
+        "tokens": [
+          "出る"
+        ],
+        "audioId": "ja-ex-deru"
+      }
+    ]
+  },
+  {
+    "id": "ja-dekakeru",
+    "lang": "ja",
+    "order": 134,
+    "headword": "出かける",
+    "reading": "でかける",
+    "romanization": "dekakeru",
+    "gloss": "go out",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "ichidan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-dekakeru",
+    "examples": [
+      {
+        "text": "出かける。",
+        "gloss": "go out.",
+        "tokens": [
+          "出かける"
+        ],
+        "audioId": "ja-ex-dekakeru"
+      }
+    ]
+  },
+  {
+    "id": "ja-hairu",
+    "lang": "ja",
+    "order": 135,
+    "headword": "入る",
+    "reading": "はいる",
+    "romanization": "hairu",
+    "gloss": "enter",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-hairu",
+    "examples": [
+      {
+        "text": "入る。",
+        "gloss": "enter.",
+        "tokens": [
+          "入る"
+        ],
+        "audioId": "ja-ex-hairu"
+      }
+    ]
+  },
+  {
+    "id": "ja-tatsu",
+    "lang": "ja",
+    "order": 136,
+    "headword": "立つ",
+    "reading": "たつ",
+    "romanization": "tatsu",
+    "gloss": "stand",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-tatsu",
+    "examples": [
+      {
+        "text": "立つ。",
+        "gloss": "stand.",
+        "tokens": [
+          "立つ"
+        ],
+        "audioId": "ja-ex-tatsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-suwaru",
+    "lang": "ja",
+    "order": 137,
+    "headword": "座る",
+    "reading": "すわる",
+    "romanization": "suwaru",
+    "gloss": "sit",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-suwaru",
+    "examples": [
+      {
+        "text": "座る。",
+        "gloss": "sit.",
+        "tokens": [
+          "座る"
+        ],
+        "audioId": "ja-ex-suwaru"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsukau",
+    "lang": "ja",
+    "order": 138,
+    "headword": "使う",
+    "reading": "つかう",
+    "romanization": "tsukau",
+    "gloss": "use",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-tsukau",
+    "examples": [
+      {
+        "text": "使う。",
+        "gloss": "use.",
+        "tokens": [
+          "使う"
+        ],
+        "audioId": "ja-ex-tsukau"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsukuru",
+    "lang": "ja",
+    "order": 139,
+    "headword": "作る",
+    "reading": "つくる",
+    "romanization": "tsukuru",
+    "gloss": "make; create",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-tsukuru",
+    "examples": [
+      {
+        "text": "作る。",
+        "gloss": "make; create.",
+        "tokens": [
+          "作る"
+        ],
+        "audioId": "ja-ex-tsukuru"
+      }
+    ]
+  },
+  {
+    "id": "ja-motsu",
+    "lang": "ja",
+    "order": 140,
+    "headword": "持つ",
+    "reading": "もつ",
+    "romanization": "motsu",
+    "gloss": "hold; have",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-motsu",
+    "examples": [
+      {
+        "text": "持つ。",
+        "gloss": "hold; have.",
+        "tokens": [
+          "持つ"
+        ],
+        "audioId": "ja-ex-motsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-uru",
+    "lang": "ja",
+    "order": 141,
+    "headword": "売る",
+    "reading": "うる",
+    "romanization": "uru",
+    "gloss": "sell",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "shop"
+    ],
+    "audioId": "ja-lex-uru",
+    "examples": [
+      {
+        "text": "売る。",
+        "gloss": "sell.",
+        "tokens": [
+          "売る"
+        ],
+        "audioId": "ja-ex-uru"
+      }
+    ]
+  },
+  {
+    "id": "ja-hataraku",
+    "lang": "ja",
+    "order": 142,
+    "headword": "働く",
+    "reading": "はたらく",
+    "romanization": "hataraku",
+    "gloss": "work",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "work"
+    ],
+    "audioId": "ja-lex-hataraku",
+    "examples": [
+      {
+        "text": "働く。",
+        "gloss": "work.",
+        "tokens": [
+          "働く"
+        ],
+        "audioId": "ja-ex-hataraku"
+      }
+    ]
+  },
+  {
+    "id": "ja-sumu",
+    "lang": "ja",
+    "order": 143,
+    "headword": "住む",
+    "reading": "すむ",
+    "romanization": "sumu",
+    "gloss": "live; reside",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "daily-life"
+    ],
+    "audioId": "ja-lex-sumu",
+    "examples": [
+      {
+        "text": "住む。",
+        "gloss": "live; reside.",
+        "tokens": [
+          "住む"
+        ],
+        "audioId": "ja-ex-sumu"
+      }
+    ]
+  },
+  {
+    "id": "ja-omou",
+    "lang": "ja",
+    "order": 144,
+    "headword": "思う",
+    "reading": "おもう",
+    "romanization": "omou",
+    "gloss": "think",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "thought"
+    ],
+    "audioId": "ja-lex-omou",
+    "examples": [
+      {
+        "text": "思う。",
+        "gloss": "think.",
+        "tokens": [
+          "思う"
+        ],
+        "audioId": "ja-ex-omou"
+      }
+    ]
+  },
+  {
+    "id": "ja-mono",
+    "lang": "ja",
+    "order": 145,
+    "headword": "物",
+    "reading": "もの",
+    "romanization": "mono",
+    "gloss": "thing; object",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-mono",
+    "examples": [
+      {
+        "text": "物。",
+        "gloss": "thing; object.",
+        "tokens": [
+          "物"
+        ],
+        "audioId": "ja-ex-mono"
+      }
+    ]
+  },
+  {
+    "id": "ja-koto",
+    "lang": "ja",
+    "order": 146,
+    "headword": "事",
+    "reading": "こと",
+    "romanization": "koto",
+    "gloss": "thing; matter",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "abstract"
+    ],
+    "audioId": "ja-lex-koto",
+    "examples": [
+      {
+        "text": "事。",
+        "gloss": "thing; matter.",
+        "tokens": [
+          "事"
+        ],
+        "audioId": "ja-ex-koto"
+      }
+    ]
+  },
+  {
+    "id": "ja-tokoro",
+    "lang": "ja",
+    "order": 147,
+    "headword": "所",
+    "reading": "ところ",
+    "romanization": "tokoro",
+    "gloss": "place",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-tokoro",
+    "examples": [
+      {
+        "text": "所。",
+        "gloss": "place.",
+        "tokens": [
+          "所"
+        ],
+        "audioId": "ja-ex-tokoro"
+      }
+    ]
+  },
+  {
+    "id": "ja-kuruma",
+    "lang": "ja",
+    "order": 148,
+    "headword": "車",
+    "reading": "くるま",
+    "romanization": "kuruma",
+    "gloss": "car",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport"
+    ],
+    "audioId": "ja-lex-kuruma",
+    "examples": [
+      {
+        "text": "車。",
+        "gloss": "car.",
+        "tokens": [
+          "車"
+        ],
+        "audioId": "ja-ex-kuruma"
+      }
+    ]
+  },
+  {
+    "id": "ja-densha",
+    "lang": "ja",
+    "order": 149,
+    "headword": "電車",
+    "reading": "でんしゃ",
+    "romanization": "densha",
+    "gloss": "train",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport"
+    ],
+    "audioId": "ja-lex-densha",
+    "examples": [
+      {
+        "text": "電車。",
+        "gloss": "train.",
+        "tokens": [
+          "電車"
+        ],
+        "audioId": "ja-ex-densha"
+      }
+    ]
+  },
+  {
+    "id": "ja-kaisha",
+    "lang": "ja",
+    "order": 150,
+    "headword": "会社",
+    "reading": "かいしゃ",
+    "romanization": "kaisha",
+    "gloss": "company",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "work"
+    ],
+    "audioId": "ja-lex-kaisha",
+    "examples": [
+      {
+        "text": "会社。",
+        "gloss": "company.",
+        "tokens": [
+          "会社"
+        ],
+        "audioId": "ja-ex-kaisha"
+      }
+    ]
+  },
+  {
+    "id": "ja-okane",
+    "lang": "ja",
+    "order": 151,
+    "headword": "お金",
+    "reading": "おかね",
+    "romanization": "okane",
+    "gloss": "money",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "shop"
+    ],
+    "audioId": "ja-lex-okane",
+    "examples": [
+      {
+        "text": "お金。",
+        "gloss": "money.",
+        "tokens": [
+          "お金"
+        ],
+        "audioId": "ja-ex-okane"
+      }
+    ]
+  },
+  {
+    "id": "ja-te",
+    "lang": "ja",
+    "order": 152,
+    "headword": "手",
+    "reading": "て",
+    "romanization": "te",
+    "gloss": "hand",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-te",
+    "examples": [
+      {
+        "text": "手。",
+        "gloss": "hand.",
+        "tokens": [
+          "手"
+        ],
+        "audioId": "ja-ex-te"
+      }
+    ]
+  },
+  {
+    "id": "ja-me",
+    "lang": "ja",
+    "order": 153,
+    "headword": "目",
+    "reading": "め",
+    "romanization": "me",
+    "gloss": "eye",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-me",
+    "examples": [
+      {
+        "text": "目。",
+        "gloss": "eye.",
+        "tokens": [
+          "目"
+        ],
+        "audioId": "ja-ex-me"
+      }
+    ]
+  },
+  {
+    "id": "ja-kuchi",
+    "lang": "ja",
+    "order": 154,
+    "headword": "口",
+    "reading": "くち",
+    "romanization": "kuchi",
+    "gloss": "mouth",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-kuchi",
+    "examples": [
+      {
+        "text": "口。",
+        "gloss": "mouth.",
+        "tokens": [
+          "口"
+        ],
+        "audioId": "ja-ex-kuchi"
+      }
+    ]
+  },
+  {
+    "id": "ja-denwa",
+    "lang": "ja",
+    "order": 155,
+    "headword": "電話",
+    "reading": "でんわ",
+    "romanization": "denwa",
+    "gloss": "phone; telephone",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "communication"
+    ],
+    "audioId": "ja-lex-denwa",
+    "examples": [
+      {
+        "text": "電話。",
+        "gloss": "phone; telephone.",
+        "tokens": [
+          "電話"
+        ],
+        "audioId": "ja-ex-denwa"
+      }
+    ]
+  },
+  {
+    "id": "ja-hana",
+    "lang": "ja",
+    "order": 156,
+    "headword": "花",
+    "reading": "はな",
+    "romanization": "hana",
+    "gloss": "flower",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "nature"
+    ],
+    "audioId": "ja-lex-hana",
+    "examples": [
+      {
+        "text": "花。",
+        "gloss": "flower.",
+        "tokens": [
+          "花"
+        ],
+        "audioId": "ja-ex-hana"
+      }
+    ]
+  },
+  {
+    "id": "ja-de",
+    "lang": "ja",
+    "order": 157,
+    "headword": "で",
+    "reading": "で",
+    "romanization": "de",
+    "gloss": "at; by means of",
+    "pos": "particle",
+    "tags": [
+      "particle",
+      "place",
+      "means"
+    ],
+    "audioId": "ja-lex-de",
+    "examples": [
+      {
+        "text": "店で。",
+        "gloss": "at the shop.",
+        "tokens": [
+          "店",
+          "で"
+        ],
+        "audioId": "ja-ex-de"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-going-out",
+    "lang": "ja",
+    "order": 14,
+    "unlockedAfter": {
+      "lex": 157,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "今日、出かけますか。",
+        "gloss": "Are you going out today?",
+        "tokens": [
+          "今日",
+          "出かける",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-going-out-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。朝、家を出ます。",
+        "gloss": "Yes. I leave home in the morning.",
+        "tokens": [
+          "はい",
+          "朝",
+          "家",
+          "を",
+          "出る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-going-out-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "電車で会社に行きますか。",
+        "gloss": "Will you go to the company by train?",
+        "tokens": [
+          "電車",
+          "で",
+          "会社",
+          "に",
+          "行く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-going-out-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ、車を使います。",
+        "gloss": "No, I will use a car.",
+        "tokens": [
+          "いいえ",
+          "車",
+          "を",
+          "使う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-going-out-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-going-out-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "Whether B is going out today.",
+        "distractors": [
+          "Whether B works at the company.",
+          "Whether B will buy a car."
+        ],
+        "sourceText": "今日、出かけますか。",
+        "sourceTokens": [
+          "今日",
+          "出かける",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-going-out-q1"
+      },
+      {
+        "id": "ja-scene-going-out-q2",
+        "kind": "comprehend",
+        "prompt": "When does B leave home?",
+        "answer": "In the morning.",
+        "distractors": [
+          "At night.",
+          "Tomorrow."
+        ],
+        "sourceText": "はい。朝、家を出ます。",
+        "sourceTokens": [
+          "はい",
+          "朝",
+          "家",
+          "を",
+          "出る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-going-out-q2"
+      },
+      {
+        "id": "ja-scene-going-out-q3",
+        "kind": "comprehend",
+        "prompt": "How will B go?",
+        "answer": "B will use a car.",
+        "distractors": [
+          "B will use a train.",
+          "B will walk to the shop."
+        ],
+        "sourceText": "いいえ、車を使います。",
+        "sourceTokens": [
+          "いいえ",
+          "車",
+          "を",
+          "使う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-going-out-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-work-and-shop",
+    "lang": "ja",
+    "order": 15,
+    "unlockedAfter": {
+      "lex": 157,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "会社で働きますか。",
+        "gloss": "Do you work at a company?",
+        "tokens": [
+          "会社",
+          "で",
+          "働く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-work-and-shop-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。仕事をします。",
+        "gloss": "Yes. I work.",
+        "tokens": [
+          "はい",
+          "仕事",
+          "を",
+          "する",
+          "~ます"
+        ],
+        "audioId": "ja-scene-work-and-shop-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "何を作りますか。",
+        "gloss": "What do you make?",
+        "tokens": [
+          "何",
+          "を",
+          "作る",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-work-and-shop-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "物を作ります。",
+        "gloss": "I make things.",
+        "tokens": [
+          "物",
+          "を",
+          "作る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-work-and-shop-b2"
+      },
+      {
+        "speaker": "A",
+        "text": "お金を持っていますか。",
+        "gloss": "Do you have money?",
+        "tokens": [
+          "お金",
+          "を",
+          "持つ",
+          "て",
+          "いる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-work-and-shop-a3"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。物を買います。",
+        "gloss": "Yes. I will buy things.",
+        "tokens": [
+          "はい",
+          "物",
+          "を",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-work-and-shop-b3"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-work-and-shop-q1",
+        "kind": "comprehend",
+        "prompt": "Where does B work?",
+        "answer": "At a company.",
+        "distractors": [
+          "At a station.",
+          "At home."
+        ],
+        "sourceText": "会社で働きますか。",
+        "sourceTokens": [
+          "会社",
+          "で",
+          "働く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-work-and-shop-q1"
+      },
+      {
+        "id": "ja-scene-work-and-shop-q2",
+        "kind": "comprehend",
+        "prompt": "What does B make?",
+        "answer": "Things.",
+        "distractors": [
+          "Flowers.",
+          "Phones."
+        ],
+        "sourceText": "物を作ります。",
+        "sourceTokens": [
+          "物",
+          "を",
+          "作る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-work-and-shop-q2"
+      },
+      {
+        "id": "ja-scene-work-and-shop-q3",
+        "kind": "comprehend",
+        "prompt": "What will B buy?",
+        "answer": "Things.",
+        "distractors": [
+          "A car.",
+          "A train."
+        ],
+        "sourceText": "はい。物を買います。",
+        "sourceTokens": [
+          "はい",
+          "物",
+          "を",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-work-and-shop-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINT:
+{
+  "id": "ja-checkpoint-7",
+  "lang": "ja",
+  "unitId": "ja-unit-7",
+  "order": 7,
+  "title": "Unit 7 checkpoint",
+  "items": [
+    {
+      "id": "ja-checkpoint-7-q1",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "Today, I will go to the company by train.",
+      "distractors": [
+        "Today, I will use a car.",
+        "Tomorrow, I will leave home."
+      ],
+      "sourceText": "今日、電車で会社に行きます。",
+      "sourceTokens": [
+        "今日",
+        "電車",
+        "で",
+        "会社",
+        "に",
+        "行く",
+        "~ます"
+      ],
+      "audioId": "ja-checkpoint-7-q1"
+    },
+    {
+      "id": "ja-checkpoint-7-q2",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "I worked at the company.",
+      "distractors": [
+        "I will work at the company.",
+        "I did not go to the company."
+      ],
+      "sourceText": "会社で働きました。",
+      "sourceTokens": [
+        "会社",
+        "で",
+        "働く",
+        "~ました"
+      ],
+      "audioId": "ja-checkpoint-7-q2"
+    },
+    {
+      "id": "ja-checkpoint-7-q3",
+      "kind": "comprehend",
+      "prompt": "What happened?",
+      "answer": "Someone used money and bought things.",
+      "distractors": [
+        "Someone sold a car.",
+        "Someone made money at work."
+      ],
+      "sourceText": "お金を使って、物を買いました。",
+      "sourceTokens": [
+        "お金",
+        "を",
+        "使う",
+        "て",
+        "物",
+        "を",
+        "買う",
+        "~ました"
+      ],
+      "audioId": "ja-checkpoint-7-q3"
+    },
+    {
+      "id": "ja-checkpoint-7-q4",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "I live here.",
+      "distractors": [
+        "I work here.",
+        "I will go out from here."
+      ],
+      "sourceText": "ここに住んでいます。",
+      "sourceTokens": [
+        "ここ",
+        "に",
+        "住む",
+        "で",
+        "いる",
+        "~ます"
+      ],
+      "audioId": "ja-checkpoint-7-q4"
+    },
+    {
+      "id": "ja-checkpoint-7-q5",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "I will not sell the car.",
+      "distractors": [
+        "I bought the car.",
+        "I use the train."
+      ],
+      "sourceText": "車を売りません。",
+      "sourceTokens": [
+        "車",
+        "を",
+        "売る",
+        "~ませ",
+        "~ん"
+      ],
+      "audioId": "ja-checkpoint-7-q5"
+    },
+    {
+      "id": "ja-checkpoint-7-q6",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "I use my hands and make it.",
+      "distractors": [
+        "I hold a phone.",
+        "I see eyes and a mouth."
+      ],
+      "sourceText": "手を使って、作ります。",
+      "sourceTokens": [
+        "手",
+        "を",
+        "使う",
+        "て",
+        "作る",
+        "~ます"
+      ],
+      "audioId": "ja-checkpoint-7-q6"
+    },
+    {
+      "id": "ja-checkpoint-7-q7",
+      "kind": "comprehend",
+      "prompt": "What does this ask?",
+      "answer": "Whether someone has a phone.",
+      "distractors": [
+        "Whether someone will buy a phone.",
+        "Whether someone works by phone."
+      ],
+      "sourceText": "電話を持っていますか。",
+      "sourceTokens": [
+        "電話",
+        "を",
+        "持つ",
+        "て",
+        "いる",
+        "~ます",
+        "か"
+      ],
+      "audioId": "ja-checkpoint-7-q7"
+    }
+  ]
+}

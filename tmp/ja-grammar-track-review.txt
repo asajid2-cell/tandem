@@ -1,0 +1,13 @@
+﻿Please sanity-check this implemented Japanese grammar track for Foothold.
+
+Existing content: content/ja/seed.ts has 4 JA units and 9 GrammarPattern entries: polite identity with です, polite present verbs with ます, existence あります/います, polite past ました, direction/range へ/から/まで, い-adjectives before nouns, い-adjective predicates with です, preferences with 好きです, and たいです want-to. No new grammar patterns were added.
+
+UI implemented in src/App.tsx:
+- Japanese nav adds Grammar.
+- #/ja/grammar reference view groups all patterns into Basics, Verbs, Adjectives, Particles.
+- Each card shows title/order, formula, short explanation, and 1-2 Japanese examples. English gloss and romanized token guide are hidden by default using the existing RevealableText hover/tap primitive. Example audio buttons render when audioId/speech is available.
+- #/ja/grammar?mode=learn drill flow flattens existing GrammarPattern.drills. Learner chooses from answer+distractors; result/grade reveals after attempt. Correct schedules Good, wrong schedules Again through existing SRS. Each attempted drill marks its pattern order known and persists seenGrammarDrillIds.
+- Shared review now recognizes due grammar drill SRS cards and displays prompt + answer/pattern title. No audio is played for grammar drill review prompts because they are English prompt text.
+- Store schema bumped v5 -> v6 with seenGrammarDrillIds, migration normalizes older progress and preserves existing state/cards.
+
+Please flag: Japanese explanation/formula problems, grouping issues, UX issues with hidden English/romaji, and whether wiring grammar drills into SRS this way is coherent. Keep it focused.

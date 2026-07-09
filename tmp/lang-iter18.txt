@@ -1,0 +1,12 @@
+DEEP JAPANESE — expand VOCAB + GRAMMAR. You are the Lead; foreground-supervised. Working dir z:\328\CMPUT328-A2\codexworks\301\language. Japanese currently has 2 vocab units (~35 words, content/ja/seed.ts) + 4 grammar patterns + 2 scenes/unit + checkpoints, plus standalone hiragana/katakana/kanji courses. The premise is "~100 high-frequency words"; grow the core toward that, keeping the CLOSED-UNIVERSE invariant (content linter must stay 0 leaks).
+
+SCOPE — add Unit 3 AND Unit 4 to content/ja/seed.ts (continue the order indices; ~14-18 new words each → cumulative ~65-70 words), genuinely high-frequency + useful, themed (your judgment, e.g. Unit 3 = places/directions/this-that-here-there extensions + going/coming refinements; Unit 4 = food/eating/daily actions + common adjectives like 大きい/小さい/いい/新しい). For EACH unit:
+- new LexEntrys (include any needed particles/adjectives/verbs), each with reading, romanization, gloss, pos, audioId, and a closed-universe example.
+- 2-3 new GRAMMAR patterns total across the two units (e.g. adjective + noun, 〜ません negative, 〜たい want-to, ここ/そこ/あそこ demonstratives, counting/と), with licenses[] so inflections validate.
+- 2 natural SCENES per unit (everyday: directions, a meal/order, shopping) built ONLY from cumulative introduced vocab+grammar, with comprehension QuizItems; precompute tokens[] with the tokenizer.
+- a checkpoint per unit (unseen-but-decodable items) + the unit entries.
+- audioIds on everything new.
+
+CORRECTNESS > QUANTITY (hard rule): natural, correct Japanese (particles, politeness, readings) and STRICTLY closed-universe. USE YOUR CLAUDE HELPER (SIMPLE: write prompt to temp file → node bin/peer.mjs ask - < file from the tandem dir z:\328\CMPUT328-A2\codexworks\301\tandem) to independently audit the new JA for naturalness/particles/readings/decodability + that nothing leaks. Do NOT run audio:ja or the deploy (Watcher does those).
+
+VERIFY: npm run lint:content 0 leaks (all 3 langs), npm test green (0 skipped), npm run build green. Do NOT git commit. REPORT: new word/grammar/scene/checkpoint counts + cumulative JA word total, helper verdict (what it caught), exact lint/test/build output. Keep correctness tight.

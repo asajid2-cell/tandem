@@ -1,0 +1,121 @@
+tandem: partner turn exceeded 2400s — killing it (likely runaway/stuck). Relaunch with a fresh, tightly-scoped task, or raise maxTurnSec for genuinely long builds.
+
+===== PARTNER VERDICT (codex, 2400s) =====
+
+Implemented Japanese VOCAB Unit 6 in `content/ja/seed.ts`.
+
+Counts:
+- JA units: 6
+- cumulative JA words: 99
+- Unit 6 words: 16
+- Unit 6 grammar patterns: 2
+- Unit 6 scenes: 2
+- `ja-unit-6`: exists
+- `ja-checkpoint-6`: exists, 6 items
+
+Helper verdict: final corrected Unit 6 is sound. Claude verified naturalness, readings, particles, and decodability. It specifically confirmed the corrected `朝起きます` / `晩寝ます`, retained `何時に`, accurate `に` grammar note, and `仕事を休みます`.
+
+No `audio:ja`, deploy, or git commit run.
+
+`npm run lint:content`:
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+`npm test`:
+```text
+> foothold-language@0.1.0 test
+> vitest run
+
+Test Files  7 passed (7)
+Tests       36 passed (36)
+Duration    1.67s
+```
+0 skipped.
+
+`npm run build`:
+```text
+> foothold-language@0.1.0 build
+> npm run lint:content && tsc -b && vite build
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+vite v6.4.3 building for production...
+40 modules transformed.
+dist/index.html                 0.41 kB │ gzip:   0.27 kB
+dist/assets/index-DTWl1g1L.css  15.67 kB │ gzip:   3.99 kB
+dist/assets/index-D7P6TvBN.js   392.98 kB │ gzip: 103.12 kB
+built in 9.85s
+```
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$script = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\language\\.tmp-u6-counts.mts'
+@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit6 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-6');
+const checkpoint6 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-6');
+const unit6Words = jaSeedContent.lexicon.filter((entry) => entry.order >= 100 && entry.order <= 115);
+const unit6Grammar = jaSeedContent.grammar.filter((pattern) => pattern.order >= 116 && pattern.order <= 117);
+const unit6Scenes = jaSeedContent.scenes.filter((scene) => unit6?.sceneIds.includes(scene.id));
+console.log(JSON.stringify({
+  units: jaSeedContent.units.length,
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit6Exists: Boolean(unit6),
+  checkpoint6Exists: Boolean(checkpoint6),
+  unit6Words: unit6Words.length,
+  unit6Grammar: unit6Grammar.length,
+  unit6Scenes: unit6Scenes.length,
+  checkpoint6Items: checkpoint6?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path "'$script -Encoding UTF8
+npx tsx $script
+Remove-Item $script'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$script = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\language\\.tmp-u6-counts.mts'
+@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit6 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-6');
+const checkpoint6 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-6');
+const unit6Words = jaSeedContent.lexicon.filter((entry) => entry.order >= 100 && entry.order <= 115);
+const unit6Grammar = jaSeedContent.grammar.filter((pattern) => pattern.order >= 116 && pattern.order <= 117);
+const unit6Scenes = jaSeedContent.scenes.filter((scene) => unit6?.sceneIds.includes(scene.id));
+console.log(JSON.stringify({
+  units: jaSeedContent.units.length,
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit6Exists: Boolean(unit6),
+  checkpoint6Exists: Boolean(checkpoint6),
+  unit6Words: unit6Words.length,
+  unit6Grammar: unit6Grammar.length,
+  unit6Scenes: unit6Scenes.length,
+  checkpoint6Items: checkpoint6?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path "'$script -Encoding UTF8
+npx tsx $script
+Remove-Item $script'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$tmp = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\tandem\\tmp\\ja-unit-6-final-review.txt'
+@'
+Final corrected Unit 6 recheck. Changed 朝に起きます/晩に寝ます to 朝起きます/晩寝ます. Grammar note now says clock/calendar times use に; relative time words 朝/晩/今日/明日/毎日 usually do not. 時 lex example is 何時に. Checkpoint includes 毎日、朝起きます。 / 何時に寝ますか。 / 今日、先生を待ちます。 / 明日、日本語を書きます。 / とても遅いです。 / 明日、仕事を休みます。 lint:content 0 leaks, tests/build pass. Verdict on final naturalness/decodability/readings?
+'@ | Set-Content -Path "'$tmp -Encoding UTF8
+cmd /c "node bin'"\\peer.mjs ask - < tmp\\ja-unit-6-final-review.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$tmp = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\tandem\\tmp\\ja-unit-6-final-review.txt'
+@'
+Final corrected Unit 6 recheck. Changed 朝に起きます/晩に寝ます to 朝起きます/晩寝ます. Grammar note now says clock/calendar times use に; relative time words 朝/晩/今日/明日/毎日 usually do not. 時 lex example is 何時に. Checkpoint includes 毎日、朝起きます。 / 何時に寝ますか。 / 今日、先生を待ちます。 / 明日、日本語を書きます。 / とても遅いです。 / 明日、仕事を休みます。 lint:content 0 leaks, tests/build pass. Verdict on final naturalness/decodability/readings?
+'@ | Set-Content -Path "'$tmp -Encoding UTF8
+cmd /c "node bin'"\\peer.mjs ask - < tmp\\ja-unit-6-final-review.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+files: 0
+tokens: in 17209179 / out 66225
+

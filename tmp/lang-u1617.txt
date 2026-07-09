@@ -1,0 +1,10 @@
+DEEP PUSH — Japanese VOCAB Units 16 AND 17 (foreground; efficient; resume). content/ja/seed.ts has 15 units / ~306 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar. Add TWO units this turn.
+
+STRUCTURE RULE (important): LexEntry→`lexicon` array only; Scene→`scenes` array only; Checkpoint→`checkpoints`; Unit→`units`. NEVER put scenes/checkpoints in the lexicon array. Wire each unit EARLY (unit + checkpoint right after its words+scenes).
+
+UNIT 16 (~20-24) — work & school: 仕事(have?)/会議/授業/宿題/試験/質問/答え/勉強/教える/習う/卒業/会社員/銀行(have?)/店員/英語/数学. 
+UNIT 17 (~20-24) — hobbies & leisure: 趣味/音楽/映画/スポーツ/旅行/ゲーム/歌/絵/写真(have?)/泳ぐ/踊る/遊ぶ/歌う/走る/撮る. 
+Pick correct, useful, NON-duplicate (check existing). Headwords standard kanji+kana (katakana loanwords スポーツ/ゲーム etc.). Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. For EACH unit: 2 natural SCENES (school/work talk; hobbies/weekend plans) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer. audioIds on everything.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir). Do NOT run audio:ja, deploy, or git commit.
+VERIFY (MUST before reporting): npm run lint:content prints "0 leaks" (not crash); npm test 36+ pass / 0 skipped. Report counts + cumulative + units/checkpoints 16/17 exist + helper verdict + lint/test output.

@@ -1,0 +1,21 @@
+FEATURE: global Reading-hints mode — PART A (preference + selector + word/kanji cards). Foreground; resume. Working dir = language repo. Surgical, reuse existing components.
+
+GOAL: a learner who knows kana should be able to drop romaji/English. Add a global "Reading hints" preference with 4 modes, DECOUPLED from the English-meaning toggle (showGuides). Today romaji is wrongly tied to English: src/App.tsx:1615 `const showRomanization = showGuides && !forceRomanOff;`. Fix that.
+
+1) PREFERENCE: add `readingHints: 'romaji' | 'kana' | 'furigana' | 'off'` + `setReadingHints` to the DisplayPreferences interface (App.tsx ~line 58) and to useDisplayPreferencesState (~line 98) + persist to localStorage key 'foothold.readingHints' (mirror how 'foothold.theme'/'foothold.showGuides' are stored ~line 3814-3851). DEFAULT 'furigana'. Validate stored value against the 4 options.
+
+2) HEADER SELECTOR: in AppHeader (~line 144-235), next to the "Show English"/Dark buttons, add a compact, mobile-safe control to choose readingHints. A small segmented control OR a labeled cycling button ("Hints: Furigana") is fine — must be keyboard-accessible, >=44px target, dark-mode correct, and not overflow on phone widths (it will be battery-tested). Keep "Show English" (showGuides) as a SEPARATE control — English meaning is independent of reading hints.
+
+3) REUSABLE RENDERER: add a small component e.g. `ReadingHint`/`Ruby` that, given a target string + its kana reading, renders per mode:
+   - 'romaji': caller passes romanization → show latin reading.
+   - 'kana': show the kana reading (not romaji).
+   - 'furigana': render the WORD as ruby — <ruby>{word}<rt>{reading}</rt></ruby> (whole-word ruby is fine). Use semantic <ruby>/<rt>.
+   - 'off': render the word alone, no reading aid.
+   Make it reusable so PART B can feed it sentence segments later.
+
+4) APPLY to WORD cards (NewWordFlow lex step, ~1666-1773) and KANJI cards/examples (KanjiCourseView and the kanji reading/examples): replace the romaji-only "Reading aid" logic with readingHints. In furigana mode the headword shows kana ruby above it (so the separate reading line is redundant — hide it in furigana mode). Kanji example words (which HAVE readings) should also respect furigana/kana/off. The English MEANING gloss stays gated by showGuides exactly as now.
+   NOTE: sentence surfaces (grammar example sentences, scenes, readings) do NOT have per-token kana yet — leave them showing target text only for now (PART B adds kuromoji-generated sentence furigana). Do not break them.
+
+5) Remove the romaji↔showGuides coupling: romaji visibility is now governed by readingHints==='romaji', independent of showGuides.
+
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0, `npm run lint:content` exit 0, `npm test` all pass. Do NOT run vite build, vite PREVIEW (locks dist), audio, deploy, commit. Report: tsc rc, lint rc, test count, the component name, the header control type, and which card surfaces now respect readingHints.

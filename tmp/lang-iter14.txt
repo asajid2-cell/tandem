@@ -1,0 +1,18 @@
+ITERATION 14 — DEEP JAPANESE phase 2: full KATAKANA course. You are the Lead; iter1-13 committed & LIVE. iter13 added a complete hiragana course (content/ja/hiragana.ts, reusable ScriptCourse shape, #/ja/hiragana reference grid + recognition SRS + audio). Mirror it for katakana.
+
+Working dir: z:\328\CMPUT328-A2\codexworks\301\language. Reuse the ScriptCourse data shape, reference-grid UI, recognition SRS flow, kana progress/store, and audio path from hiragana — do NOT rebuild them; parameterize/reuse.
+
+SCOPE:
+1. DATA: content/ja/katakana.ts — the FULL katakana set mirroring hiragana: 46 base (ア-ン), dakuten/handakuten (ガ ザ ダ バ パ rows), yōon (キャ/キュ/キョ etc.). Same structure/grouping as hiragana, correct Hepburn (シ=shi, チ=chi, ツ=tsu, フ=fu, ヲ=o/wo, ン=n, ジ=ji, ヂ=zu/ji, ヅ=zu, long-vowel mark ー note as appropriate). Collision-safe ids/audioIds (e.g. ja-kata-*).
+2. UI: a #/ja/katakana track (reference grid + recognition SRS), surfaced alongside Hiragana in the Japanese nav/script section. Same hidden-romanization-by-default + reveal + light/dark behavior.
+3. AUDIO: every katakana gets an audioId; run npm run audio:ja to generate (~100+ ja-kata-*.mp3). Spot-check a couple with ffprobe.
+4. PROGRESS: extend the kana progress/SRS to cover katakana too (schema-version if shape changes; preserve existing progress incl. hiragana).
+5. TWO QUICK UX FIXES the helper flagged in iter13 (apply across the kana recognition flow, and the vocab review if trivial):
+   a. In RECOGNITION/recall, the grade buttons (Again/Good) should appear only AFTER the answer is revealed — you can't honestly grade recall before seeing the answer.
+   b. The global "Show English" toggle is a misnomer on kana/script pages where the hidden text is romaji, not English — make the label context-aware (e.g. "Show romaji" on kana pages, "Show English" elsewhere) OR a neutral label like "Show readings". Keep one consistent mechanism.
+
+CORRECTNESS (hard rule): every katakana↔romaji mapping correct. Use your Claude HELPER (SIMPLE invocation: prompt to temp file → node bin/peer.mjs ask - < file from tandem dir) to independently audit the full katakana table for wrong/missing/extra entries and to confirm the grade-after-reveal + label fixes read well.
+
+VERIFY before reporting: npm run lint:content 0 leaks (all 3 langs), npm test green (add katakana inventory/SRS tests; confirm 0 SKIPPED), npm run build green, audio generated. Run the ui-craft battery on the katakana grid + learn states in light AND dark (save to .uicraft-shots/iter14-final, give me the path). Don't regress hiragana/units/FR/KO.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: katakana coverage counts, how you reused the ScriptCourse machinery, the two UX fixes, audio result, helper audit verdict, battery results + path, exact lint/test/build output (confirm 0 skipped), and suggested next step for iter15 (likely: KANJI learning — intro kanji with readings/meanings/SRS — and/or deeper vocab).

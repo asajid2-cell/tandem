@@ -1,0 +1,8 @@
+DEEP PUSH — Japanese VOCAB Units 10 AND 11 (foreground; efficient; resume). content/ja/seed.ts has 9 units / ~174 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar available. Toward N5 (~600-800). Add TWO units this turn; wire each EARLY (unit + checkpoint) so an interruption never leaves a unit half-done.
+
+UNIT 10 (~20-24 words) — theme: transportation & places: 電車(if absent)/バス/タクシー/飛行機/自転車, 空港/銀行/病院/図書館/公園/部屋/会社(have?)/学校(have?)/トイレ/建物, 乗る/降りる/着く. 
+UNIT 11 (~20-24 words) — theme: time & schedule: 曜日 + 月曜日〜日曜日, 午前/午後, 週末, 〜時/〜分(counters), 始まる/終わる, 朝/昼/晩(have?), 早い/遅い(have?). 
+Pick correct, useful, NON-duplicate words (check existing). Headwords in standard kanji+kana. Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example. Add grammar patterns only if needed. For EACH unit: 2 natural SCENES (commuting/asking directions to a place; asking the time/schedule) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer; ja-unit-10/11 + ja-checkpoint-10/11; audioIds on everything.
+
+CORRECTNESS > QUANTITY: natural correct Japanese (esp. day-of-week readings 月曜日=げつようび etc., counters), closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check readings/counters/naturalness. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report counts + cumulative + ja-unit-10/11 + checkpoint-10/11 exist + helper verdict + lint/test output.

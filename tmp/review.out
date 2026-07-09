@@ -1,0 +1,64 @@
+
+===== PARTNER VERDICT (codex, 617s) =====
+
+Wrote the full review to [docs/japanese-curriculum-review.md](z:/328/CMPUT328-A2/codexworks/301/language/docs/japanese-curriculum-review.md).
+
+Verdict: Japanese is **not yet robust enough** for the basic-reading-competency goal. The strongest blockers are grammar gating not being connected to grammar drill completion, kanji/readings being misaligned, kanji examples escaping lint/closed-universe checks, missing kana mechanics like small tsu and long vowels, and gaps in practical sign/message vocabulary.
+
+Verification: ran `npm run lint:content`; it passed with `content lint passed: 0 leaks`. Only the requested review doc was added.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent as c } from './content/ja/seed.ts';
+for (const term of ['close','closed','open','please','sorry','thank','welcome','excuse','when','which','why','how','only','except','together','same','different','medicine','pharmacy','clinic','platform','delay','late','emergency','receipt','business','hours','holiday','closed','caution','prohibit','danger','safe','fee','free']) {
+ const rows=c.lexicon.filter(e=>e.gloss.toLowerCase().includes(term)).slice(0,12).map(e=>"'`${e.order}'"\\t"'${e.headword}'"\\t"'${e.reading||'"''}\\t"'${e.gloss}`);
+ console.log('"'\\n## '+term); console.log(rows.join('\\n')||'NONE');
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent as c } from './content/ja/seed.ts';
+for (const term of ['close','closed','open','please','sorry','thank','welcome','excuse','when','which','why','how','only','except','together','same','different','medicine','pharmacy','clinic','platform','delay','late','emergency','receipt','business','hours','holiday','closed','caution','prohibit','danger','safe','fee','free']) {
+ const rows=c.lexicon.filter(e=>e.gloss.toLowerCase().includes(term)).slice(0,12).map(e=>"'`${e.order}'"\\t"'${e.headword}'"\\t"'${e.reading||'"''}\\t"'${e.gloss}`);
+ console.log('"'\\n## '+term); console.log(rows.join('\\n')||'NONE');
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Test-Path docs/japanese-curriculum-review.md; if (Test-Path docs/japanese-curriculum-review.md) { Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 -TotalCount 80 }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Test-Path docs/japanese-curriculum-review.md; if (Test-Path docs/japanese-curriculum-review.md) { Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 -TotalCount 80 }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 -TotalCount 30'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '(Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 | Measure-Object -Line).Lines'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 -TotalCount 30'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '(Get-Content -Path docs/japanese-curriculum-review.md -Encoding utf8 | Measure-Object -Line).Lines'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+VERDICT: Japanese is not yet robust enough for Foothold's basic-reading-competency goal.
+The curriculum has breadth, but the path is weakened by script/kanji misalignment and broken grammar gating.
+Top gap 1: Grammar drills do not mark grammar orders known, so scenes/readings/checkpoints are not coherently unlocked.
+Top gap 2: Kanji course is not aligned with lexicon/readings; readings use 71 kanji outside the 317-kanji set.
+Top gap 3: Kanji examples are not linted and include 214 example words outside the lexicon.
+Top gap 4: Kana lacks explicit small tsu, long-vowel mark, long-vowel spelling, and foreign katakana combinations before vocab uses them.
+Top gap 5: Practical sign/message vocabulary is missing or late: 本日休業, 営業中, 注意, 危険, 非常口, 受付, レシート, ホーム, 遅延.
+Core vocabulary is broad but spends late units on lower-priority specialty nouns before common public-text phrases.
+Grammar inventory is sizable, but missing/weak items include や, ね/よ, quote と, ないでください, noun modifiers, 時 clauses, and の nominalization.
+SRS is serviceable, and content lint passes for checked text, but lint does not cover kanji examples or script-surface prerequisites.
+The readings are useful controlled practice, but they do not yet prove transfer to everyday Japanese signs/messages.
+Full review written to docs/japanese-curriculum-review.md.
+'@ | Write-Output"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+VERDICT: Japanese is not yet robust enough for Foothold's basic-reading-competency goal.
+The curriculum has breadth, but the path is weakened by script/kanji misalignment and broken grammar gating.
+Top gap 1: Grammar drills do not mark grammar orders known, so scenes/readings/checkpoints are not coherently unlocked.
+Top gap 2: Kanji course is not aligned with lexicon/readings; readings use 71 kanji outside the 317-kanji set.
+Top gap 3: Kanji examples are not linted and include 214 example words outside the lexicon.
+Top gap 4: Kana lacks explicit small tsu, long-vowel mark, long-vowel spelling, and foreign katakana combinations before vocab uses them.
+Top gap 5: Practical sign/message vocabulary is missing or late: 本日休業, 営業中, 注意, 危険, 非常口, 受付, レシート, ホーム, 遅延.
+Core vocabulary is broad but spends late units on lower-priority specialty nouns before common public-text phrases.
+Grammar inventory is sizable, but missing/weak items include や, ね/よ, quote と, ないでください, noun modifiers, 時 clauses, and の nominalization.
+SRS is serviceable, and content lint passes for checked text, but lint does not cover kanji examples or script-surface prerequisites.
+The readings are useful controlled practice, but they do not yet prove transfer to everyday Japanese signs/messages.
+Full review written to docs/japanese-curriculum-review.md.
+'@ | Write-Output"
+files: 0
+tokens: in 2971803 / out 19996
+

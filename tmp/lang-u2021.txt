@@ -1,0 +1,6 @@
+DEEP PUSH — Japanese VOCAB Units 20 AND 21 (foreground; efficient; resume). content/ja/seed.ts has 19 units / ~386 words; closed-universe (0 leaks). STRUCTURE RULE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[] — NEVER mix; wire each unit (unit+checkpoint) EARLY.
+UNIT 20 (~18-22) — more everyday verbs: 開ける/閉める/始める/送る/貸す/借りる/返す/呼ぶ/手伝う/見せる/置く/取る/持つ(have?)/渡す/教える(have?). 
+UNIT 21 (~18-22) — adverbs & connectives: もう/まだ/ちょっと/すぐ/いつも/時々/よく/あまり/一緒に/だから/でも/それから/次に/特に/本当に (skip dups とても/全部/少し/たくさん). 
+Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. For EACH unit: 2 SCENES using only cumulative vocab+grammar, QuizItems, tokens[] via tokenizer; audioIds on all.
+CORRECTNESS: natural correct Japanese, closed-universe. Brief helper check. No audio:ja/deploy/commit.
+VERIFY: lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + units/checkpoints 20/21 exist + lint/test.

@@ -1,0 +1,9 @@
+FOCUSED: add Japanese VOCAB Unit 4 (foreground; efficient; ONLY this; resume — you just built Unit 3). content/ja/seed.ts now has 3 units / ~51 words; closed-universe enforced (keep 0 leaks). Reuse existing shapes.
+
+ADD Unit 4 (continue order indices) — theme: food, eating/daily actions & common adjectives. ~14-16 NEW high-frequency words NOT already present: e.g. 朝/昼/夜 (morning/noon/night), 今 now, 何 what, 飲み物/食べ物 (drink/food) or simpler 茶 tea, パン bread (katakana), 好き like (na-adj), おいしい delicious, 高い expensive/high, 安い cheap, 新しい new, 古い old, 多い many, 少ない few, 〜たい (want to). Include needed particles/adjectives. Each: reading, romanization, gloss, pos, audioId, closed-universe example.
+- 2-3 grammar patterns total: い-adjective predicate (おいしいです), な-adjective (好きです), and/or 〜たい (want to: 食べたい). With licenses[].
+- 2 natural SCENES (ordering food / talking about preferences) using ONLY cumulative introduced vocab+grammar, with comprehension QuizItems; precompute tokens[] with the tokenizer.
+- ja-checkpoint-4 (unseen-but-decodable) + ja-unit-4. audioIds on everything new.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe (0 leaks). Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from z:\328\CMPUT328-A2\codexworks\301\tandem) to cross-check naturalness/particles/readings/decodability. Do NOT run audio:ja, do NOT deploy, do NOT git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped), npm run build green. Report: counts + cumulative JA words + helper verdict + exact lint/test/build output. Be quick.

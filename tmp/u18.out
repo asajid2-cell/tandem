@@ -1,0 +1,97 @@
+
+===== PARTNER VERDICT (codex, 301s) =====
+
+Implemented Japanese Unit 18 only.
+
+Added:
+- 20 new nature/animal words, orders `379-398`
+- 2 scenes: `ja-scene-pets`, `ja-scene-outdoors`
+- `ja-checkpoint-18` with 9 comprehension items
+- `ja-unit-18` wired with lexRange `[379, 398]`
+
+Counts:
+- Cumulative JA words: `366`
+- Total JA units: `18`
+- `ja-unit-18`: exists
+- `ja-checkpoint-18`: exists
+
+Verification:
+
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+> foothold-language@0.1.0 test
+> vitest run --minWorkers=1 --maxWorkers=1
+
+Test Files  7 passed (7)
+Tests       36 passed (36)
+```
+
+No audio, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const heads = new Map(jaSeedContent.lexicon.map(e => [e.headword, e]));
+const candidates = ['動物','犬','猫','鳥','魚','花','空','海','星','太陽','木','葉','草','虫','牛','馬','森','林','石','風','雲','月'];
+for (const h of candidates) {
+  const e = heads.get(h);
+  console.log(h, e ? "'`EXISTS order=${e.order} id=${e.id}` : '"'new');
+}
+console.log('maxLex', Math.max(...jaSeedContent.lexicon.map(e => e.order)));
+console.log('maxScene', Math.max(...jaSeedContent.scenes.map(e => e.order)));
+console.log('maxCheckpoint', Math.max(...jaSeedContent.checkpoints.map(e => e.order)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const heads = new Map(jaSeedContent.lexicon.map(e => [e.headword, e]));
+const candidates = ['動物','犬','猫','鳥','魚','花','空','海','星','太陽','木','葉','草','虫','牛','馬','森','林','石','風','雲','月'];
+for (const h of candidates) {
+  const e = heads.get(h);
+  console.log(h, e ? "'`EXISTS order=${e.order} id=${e.id}` : '"'new');
+}
+console.log('maxLex', Math.max(...jaSeedContent.lexicon.map(e => e.order)));
+console.log('maxScene', Math.max(...jaSeedContent.scenes.map(e => e.order)));
+console.log('maxCheckpoint', Math.max(...jaSeedContent.checkpoints.map(e => e.order)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "''^  grammar:|''^  scenes:|''^  checkpoints:|''^  units:" -Context 3,2'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "''^  grammar:|''^  scenes:|''^  checkpoints:|''^  units:" -Context 3,2'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints, scenes } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-18');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-18');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+const unitScenes = unit ? scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit18WordCount: unitWords.length, totalUnits: units.length, unit18Exists: Boolean(unit), checkpoint18Exists: Boolean(checkpoint), checkpoint18Items: checkpoint?.items.length ?? 0, unit18SceneCount: unitScenes.length, unit18LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints, scenes } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-18');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-18');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+const unitScenes = unit ? scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit18WordCount: unitWords.length, totalUnits: units.length, unit18Exists: Boolean(unit), checkpoint18Exists: Boolean(checkpoint), checkpoint18Items: checkpoint?.items.length ?? 0, unit18SceneCount: unitScenes.length, unit18LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 58574177 / out 298480
+
+
+⚠ tandem: codex 019ef3c5 has run 12 turns (compaction threshold 12).
+   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.
+   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"

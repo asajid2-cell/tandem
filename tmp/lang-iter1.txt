@@ -1,0 +1,28 @@
+You are the LEAD ENGINEER for "Foothold", a self-contained language-learning web app. This is iteration 1 of an autonomous tandem loop.
+
+ROLE & TOPOLOGY (read carefully):
+- I am the Watcher (Claude, the human's planner/orchestrator). I hold the broad goal, verify your work, commit, and dispatch you each iteration. I do NOT micro-spec — you are the director.
+- You are the Lead engineer. Each turn: review state, pick the single highest-impact next step per the build order, implement + build + self-verify, then report. ONE focused step per turn.
+- You have a Claude HELPER you should use as a true second mind and for heavy/parallel edits and (later) linguistic cross-checks. Invoke it from the tandem dir:
+    cd to z:\328\CMPUT328-A2\codexworks\301\tandem  then:  node bin/peer.mjs ask -   (pipe the task on stdin)
+  Use it especially for independent verification and, in later content iterations, to cross-check Japanese/Korean sentence correctness (script, particles, politeness, naturalness). Do not echo it your conclusion — ask it to reach its own.
+- Do NOT git commit — the Watcher commits after verifying. Do NOT touch any OAT/T6 or unrelated repos.
+
+THE SPEC (read these two files FULLY before doing anything):
+- z:\328\CMPUT328-A2\codexworks\301\language\docs\foothold-plan.md  — the full 20-section build plan. The mental model in section 5 (closed-universe vocabulary invariant) and the build order in section 18 are load-bearing.
+- z:\328\CMPUT328-A2\codexworks\301\language\LOOPS.md  — the loop protocol and invariants.
+
+Your working directory IS the project: z:\328\CMPUT328-A2\codexworks\301\language
+
+ITERATION 1 SCOPE — Foundation (build order steps 1-3): scaffold + content contract + engine + the content linter (the guardian of the invariant). Concretely:
+1. Scaffold a Vite + React + TypeScript + Tailwind app, configured with base:'/language/' (subpath deploy) and HASH routing (so the SPA works under a subpath with no nginx rewrites). App should boot to a minimal placeholder. Wire Vitest. (Use npm.)
+2. Content contract: full TypeScript types for every entity in plan section 6 — Language, ScriptUnit, LexEntry, GrammarPattern, Example, Scene, QuizItem, Unit, Progress, SrsCard. Put them in src/engine/ (or src/content/types.ts). These types ARE the product; make them precise.
+3. Engine (pure, UI-agnostic, fully unit-tested):
+   - src/engine/srs.ts — Leitner scheduler (boxes -> intervals e.g. 0,1d,3d,7d,16d,35d; wrong -> box 1/relearn). Golden-case Vitest tests.
+   - src/engine/unlock.ts — pure resolver (progress + content -> { dueReviews, nextNewItems, availableScenes, availableCheckpoints }) enforcing review-before-new and unlockedAfter gates. Tests.
+   - src/engine/lint.ts — the CONTENT LINTER: for each Example/Scene/QuizItem, assert every token is in the cumulative known set at that item's order; fail with offending item + leaked token. Define a tokenizer-adapter interface; implement the FR whitespace/punct/elision adapter now (JA/KO adapters come later). Include a Vitest fixture with a PLANTED leak that must be caught, plus a clean fixture that must pass.
+4. npm scripts: dev, build, test, and lint:content (runs the linter over content/ — fine to point at a tiny seed/fixture for now).
+
+VERIFY before reporting: npm install succeeds, `npm run build` is green, `npm test` is green (engine + linter fixtures), `npm run lint:content` runs and reports 0 leaks on the clean seed. Do not leave the build broken.
+
+REPORT back: what you built (key files), the exact build/test output (pass/fail), any decisions you made that touch the plan's open decisions (section 20), and your suggested next single step for iteration 2. Be concise and concrete.

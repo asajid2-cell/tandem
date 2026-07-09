@@ -1,0 +1,16 @@
+ITERATION 6 (you are the Lead; same Foothold project; iter1-5 committed & green, and the app is now LIVE at https://harmonizerlabs.cc/language/ — Flow A works end-to-end: picker → primer → new-word cards → scene reader → comprehension).
+
+Watcher deployed Flow A and verified it renders live. Now build Flow B — the RETURNING-SESSION SRS review loop — which completes the core learning method.
+
+SCOPE (build order: the daily loop, review-before-new):
+1. SRS REVIEW UI: a review session that surfaces cards DUE for review (use the existing engine/srs.ts Leitner scheduler + the progress store). A review card shows the prompt (e.g. the Japanese word or a recognition challenge), lets the user attempt/recall, reveals the answer, then GRADE buttons (at minimum "Again" and "Good"; "Hard"/"Easy" optional) that drive the SRS transition (box up on Good, back to box 1/relearn on Again) and persist dueAt to the store.
+2. SRS CARD CREATION: when a learner marks a new word "seen" in the new-word flow, create/seed its SRS card so it enters the review schedule. (Wire this into the existing progress store.)
+3. REVIEW-BEFORE-NEW wiring: on the learn/home flow, surface "N due for review" and route the user through due reviews BEFORE introducing new words (this ordering is a core invariant — see plan section 5/4). When nothing is due, proceed to new words / available scenes.
+4. STATES: "X cards due" entry, mid-review card (question/revealed/graded), "all caught up / no reviews due" empty state, "review session complete" summary.
+5. Keep everything client-side in localStorage; make sure progress (including SRS state) survives reload. If you change the stored progress schema, version it + migrate (don't wipe a returning learner's progress).
+
+ui-craft IS MANDATORY on the new review surfaces (same calm reading-first register). Run the ui-craft battery on the new states (review-due-entry, review-card-question, review-card-revealed, review-graded, all-caught-up, review-complete) across viewports; save to .uicraft-shots/iter6-final and TELL ME THE ABSOLUTE PATH. Fix any breakage. Use your Claude HELPER (SIMPLE invocation: write prompt to a temp file then `node bin/peer.mjs ask - < file` from the tandem dir) to independently review the rendered review UI + the SRS scheduling correctness cold.
+
+VERIFY before reporting: npm run build green, npm test green (add/extend SRS+store tests for card creation + review-before-new ordering if useful), npm run lint:content 0 leaks. Don't regress Flow A.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: what you built, how review-before-new + SRS card lifecycle work, schema-migration handling, battery results + screenshot path, helper verdict, exact build/test/lint output, and suggested single next step for iter7 (likely: pre-generated audio pipeline, or expanding JA content toward the ~100-word core, or a unit checkpoint).

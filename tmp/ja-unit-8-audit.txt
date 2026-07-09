@@ -1,0 +1,1067 @@
+Audit Japanese VOCAB Unit 8 for correctness. Check readings/romanization/gloss/pos, standard kanji/kana headwords, naturalness, token arrays, and closed-universe decodability. Be strict and concise: list required fixes or say ship. Context: npm run lint:content currently passes 0 leaks. Existing vocabulary through order 157 and grammar through order 132 are available.
+
+UNIT:
+{
+  "id": "ja-unit-8",
+  "lang": "ja",
+  "order": 8,
+  "title": "Descriptions and weather",
+  "lexRange": [
+    158,
+    182
+  ],
+  "grammarRange": [
+    119,
+    132
+  ],
+  "sceneIds": [
+    "ja-scene-weather-talk",
+    "ja-scene-colors-and-feelings"
+  ],
+  "checkpointId": "ja-checkpoint-8"
+}
+
+NEW LEXICON:
+[
+  {
+    "id": "ja-shiroi",
+    "lang": "ja",
+    "order": 158,
+    "headword": "白い",
+    "reading": "しろい",
+    "romanization": "shiroi",
+    "gloss": "white",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "color",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-shiroi",
+    "examples": [
+      {
+        "text": "白い。",
+        "gloss": "white.",
+        "tokens": [
+          "白い"
+        ],
+        "audioId": "ja-ex-shiroi"
+      }
+    ]
+  },
+  {
+    "id": "ja-kuroi",
+    "lang": "ja",
+    "order": 159,
+    "headword": "黒い",
+    "reading": "くろい",
+    "romanization": "kuroi",
+    "gloss": "black",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "color",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-kuroi",
+    "examples": [
+      {
+        "text": "黒い。",
+        "gloss": "black.",
+        "tokens": [
+          "黒い"
+        ],
+        "audioId": "ja-ex-kuroi"
+      }
+    ]
+  },
+  {
+    "id": "ja-akai",
+    "lang": "ja",
+    "order": 160,
+    "headword": "赤い",
+    "reading": "あかい",
+    "romanization": "akai",
+    "gloss": "red",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "color",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-akai",
+    "examples": [
+      {
+        "text": "赤い。",
+        "gloss": "red.",
+        "tokens": [
+          "赤い"
+        ],
+        "audioId": "ja-ex-akai"
+      }
+    ]
+  },
+  {
+    "id": "ja-aoi",
+    "lang": "ja",
+    "order": 161,
+    "headword": "青い",
+    "reading": "あおい",
+    "romanization": "aoi",
+    "gloss": "blue",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "color",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-aoi",
+    "examples": [
+      {
+        "text": "青い。",
+        "gloss": "blue.",
+        "tokens": [
+          "青い"
+        ],
+        "audioId": "ja-ex-aoi"
+      }
+    ]
+  },
+  {
+    "id": "ja-iro",
+    "lang": "ja",
+    "order": 162,
+    "headword": "色",
+    "reading": "いろ",
+    "romanization": "iro",
+    "gloss": "color",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "color"
+    ],
+    "audioId": "ja-lex-iro",
+    "examples": [
+      {
+        "text": "色。",
+        "gloss": "color.",
+        "tokens": [
+          "色"
+        ],
+        "audioId": "ja-ex-iro"
+      }
+    ]
+  },
+  {
+    "id": "ja-atama",
+    "lang": "ja",
+    "order": 163,
+    "headword": "頭",
+    "reading": "あたま",
+    "romanization": "atama",
+    "gloss": "head",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-atama",
+    "examples": [
+      {
+        "text": "頭。",
+        "gloss": "head.",
+        "tokens": [
+          "頭"
+        ],
+        "audioId": "ja-ex-atama"
+      }
+    ]
+  },
+  {
+    "id": "ja-ashi-body",
+    "lang": "ja",
+    "order": 164,
+    "headword": "足",
+    "reading": "あし",
+    "romanization": "ashi",
+    "gloss": "foot; leg",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-ashi-body",
+    "examples": [
+      {
+        "text": "足。",
+        "gloss": "foot; leg.",
+        "tokens": [
+          "足"
+        ],
+        "audioId": "ja-ex-ashi-body"
+      }
+    ]
+  },
+  {
+    "id": "ja-tenki",
+    "lang": "ja",
+    "order": 165,
+    "headword": "天気",
+    "reading": "てんき",
+    "romanization": "tenki",
+    "gloss": "weather",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "weather"
+    ],
+    "audioId": "ja-lex-tenki",
+    "examples": [
+      {
+        "text": "天気。",
+        "gloss": "weather.",
+        "tokens": [
+          "天気"
+        ],
+        "audioId": "ja-ex-tenki"
+      }
+    ]
+  },
+  {
+    "id": "ja-atsui-weather",
+    "lang": "ja",
+    "order": 166,
+    "headword": "暑い",
+    "reading": "あつい",
+    "romanization": "atsui",
+    "gloss": "hot (weather)",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "weather",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-atsui-weather",
+    "examples": [
+      {
+        "text": "暑い。",
+        "gloss": "hot.",
+        "tokens": [
+          "暑い"
+        ],
+        "audioId": "ja-ex-atsui-weather"
+      }
+    ]
+  },
+  {
+    "id": "ja-samui",
+    "lang": "ja",
+    "order": 167,
+    "headword": "寒い",
+    "reading": "さむい",
+    "romanization": "samui",
+    "gloss": "cold (weather)",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "weather",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-samui",
+    "examples": [
+      {
+        "text": "寒い。",
+        "gloss": "cold.",
+        "tokens": [
+          "寒い"
+        ],
+        "audioId": "ja-ex-samui"
+      }
+    ]
+  },
+  {
+    "id": "ja-ame",
+    "lang": "ja",
+    "order": 168,
+    "headword": "雨",
+    "reading": "あめ",
+    "romanization": "ame",
+    "gloss": "rain",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "weather"
+    ],
+    "audioId": "ja-lex-ame",
+    "examples": [
+      {
+        "text": "雨。",
+        "gloss": "rain.",
+        "tokens": [
+          "雨"
+        ],
+        "audioId": "ja-ex-ame"
+      }
+    ]
+  },
+  {
+    "id": "ja-yuki",
+    "lang": "ja",
+    "order": 169,
+    "headword": "雪",
+    "reading": "ゆき",
+    "romanization": "yuki",
+    "gloss": "snow",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "weather"
+    ],
+    "audioId": "ja-lex-yuki",
+    "examples": [
+      {
+        "text": "雪。",
+        "gloss": "snow.",
+        "tokens": [
+          "雪"
+        ],
+        "audioId": "ja-ex-yuki"
+      }
+    ]
+  },
+  {
+    "id": "ja-muzukashii",
+    "lang": "ja",
+    "order": 170,
+    "headword": "難しい",
+    "reading": "むずかしい",
+    "romanization": "muzukashii",
+    "gloss": "difficult",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "quality",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-muzukashii",
+    "examples": [
+      {
+        "text": "難しい。",
+        "gloss": "difficult.",
+        "tokens": [
+          "難しい"
+        ],
+        "audioId": "ja-ex-muzukashii"
+      }
+    ]
+  },
+  {
+    "id": "ja-kantan",
+    "lang": "ja",
+    "order": 171,
+    "headword": "簡単",
+    "reading": "かんたん",
+    "romanization": "kantan",
+    "gloss": "simple; easy",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "quality",
+      "na-adjective"
+    ],
+    "audioId": "ja-lex-kantan",
+    "examples": [
+      {
+        "text": "簡単。",
+        "gloss": "simple; easy.",
+        "tokens": [
+          "簡単"
+        ],
+        "audioId": "ja-ex-kantan"
+      }
+    ]
+  },
+  {
+    "id": "ja-tanoshii",
+    "lang": "ja",
+    "order": 172,
+    "headword": "楽しい",
+    "reading": "たのしい",
+    "romanization": "tanoshii",
+    "gloss": "fun; enjoyable",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "feeling",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-tanoshii",
+    "examples": [
+      {
+        "text": "楽しい。",
+        "gloss": "fun; enjoyable.",
+        "tokens": [
+          "楽しい"
+        ],
+        "audioId": "ja-ex-tanoshii"
+      }
+    ]
+  },
+  {
+    "id": "ja-omoshiroi",
+    "lang": "ja",
+    "order": 173,
+    "headword": "面白い",
+    "reading": "おもしろい",
+    "romanization": "omoshiroi",
+    "gloss": "interesting; funny",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "quality",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-omoshiroi",
+    "examples": [
+      {
+        "text": "面白い。",
+        "gloss": "interesting; funny.",
+        "tokens": [
+          "面白い"
+        ],
+        "audioId": "ja-ex-omoshiroi"
+      }
+    ]
+  },
+  {
+    "id": "ja-isogashii",
+    "lang": "ja",
+    "order": 174,
+    "headword": "忙しい",
+    "reading": "いそがしい",
+    "romanization": "isogashii",
+    "gloss": "busy",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "daily-life",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-isogashii",
+    "examples": [
+      {
+        "text": "忙しい。",
+        "gloss": "busy.",
+        "tokens": [
+          "忙しい"
+        ],
+        "audioId": "ja-ex-isogashii"
+      }
+    ]
+  },
+  {
+    "id": "ja-hayai-fast",
+    "lang": "ja",
+    "order": 175,
+    "headword": "速い",
+    "reading": "はやい",
+    "romanization": "hayai",
+    "gloss": "fast",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "speed",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-hayai-fast",
+    "examples": [
+      {
+        "text": "速い。",
+        "gloss": "fast.",
+        "tokens": [
+          "速い"
+        ],
+        "audioId": "ja-ex-hayai-fast"
+      }
+    ]
+  },
+  {
+    "id": "ja-nagai",
+    "lang": "ja",
+    "order": 176,
+    "headword": "長い",
+    "reading": "ながい",
+    "romanization": "nagai",
+    "gloss": "long",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "size",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-nagai",
+    "examples": [
+      {
+        "text": "長い。",
+        "gloss": "long.",
+        "tokens": [
+          "長い"
+        ],
+        "audioId": "ja-ex-nagai"
+      }
+    ]
+  },
+  {
+    "id": "ja-mijikai",
+    "lang": "ja",
+    "order": 177,
+    "headword": "短い",
+    "reading": "みじかい",
+    "romanization": "mijikai",
+    "gloss": "short",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "size",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-mijikai",
+    "examples": [
+      {
+        "text": "短い。",
+        "gloss": "short.",
+        "tokens": [
+          "短い"
+        ],
+        "audioId": "ja-ex-mijikai"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsuyoi",
+    "lang": "ja",
+    "order": 178,
+    "headword": "強い",
+    "reading": "つよい",
+    "romanization": "tsuyoi",
+    "gloss": "strong",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "quality",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-tsuyoi",
+    "examples": [
+      {
+        "text": "強い。",
+        "gloss": "strong.",
+        "tokens": [
+          "強い"
+        ],
+        "audioId": "ja-ex-tsuyoi"
+      }
+    ]
+  },
+  {
+    "id": "ja-yowai",
+    "lang": "ja",
+    "order": 179,
+    "headword": "弱い",
+    "reading": "よわい",
+    "romanization": "yowai",
+    "gloss": "weak",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "quality",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-yowai",
+    "examples": [
+      {
+        "text": "弱い。",
+        "gloss": "weak.",
+        "tokens": [
+          "弱い"
+        ],
+        "audioId": "ja-ex-yowai"
+      }
+    ]
+  },
+  {
+    "id": "ja-genki",
+    "lang": "ja",
+    "order": 180,
+    "headword": "元気",
+    "reading": "げんき",
+    "romanization": "genki",
+    "gloss": "healthy; energetic",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "feeling",
+      "na-adjective"
+    ],
+    "audioId": "ja-lex-genki",
+    "examples": [
+      {
+        "text": "元気。",
+        "gloss": "healthy; energetic.",
+        "tokens": [
+          "元気"
+        ],
+        "audioId": "ja-ex-genki"
+      }
+    ]
+  },
+  {
+    "id": "ja-sora",
+    "lang": "ja",
+    "order": 181,
+    "headword": "空",
+    "reading": "そら",
+    "romanization": "sora",
+    "gloss": "sky",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "nature"
+    ],
+    "audioId": "ja-lex-sora",
+    "examples": [
+      {
+        "text": "空。",
+        "gloss": "sky.",
+        "tokens": [
+          "空"
+        ],
+        "audioId": "ja-ex-sora"
+      }
+    ]
+  },
+  {
+    "id": "ja-kaze",
+    "lang": "ja",
+    "order": 182,
+    "headword": "風",
+    "reading": "かぜ",
+    "romanization": "kaze",
+    "gloss": "wind",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "weather"
+    ],
+    "audioId": "ja-lex-kaze",
+    "examples": [
+      {
+        "text": "風。",
+        "gloss": "wind.",
+        "tokens": [
+          "風"
+        ],
+        "audioId": "ja-ex-kaze"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-weather-talk",
+    "lang": "ja",
+    "order": 16,
+    "unlockedAfter": {
+      "lex": 182,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "今日、天気はいいですか。",
+        "gloss": "Is the weather good today?",
+        "tokens": [
+          "今日",
+          "天気",
+          "は",
+          "いい",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-weather-talk-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。雨です。寒いです。",
+        "gloss": "No. It is rain. It is cold.",
+        "tokens": [
+          "いいえ",
+          "雨",
+          "~です",
+          "寒い",
+          "~です"
+        ],
+        "audioId": "ja-scene-weather-talk-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "明日、雪ですか。",
+        "gloss": "Will it be snow tomorrow?",
+        "tokens": [
+          "明日",
+          "雪",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-weather-talk-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。明日は暑いです。",
+        "gloss": "No. Tomorrow will be hot.",
+        "tokens": [
+          "いいえ",
+          "明日",
+          "は",
+          "暑い",
+          "~です"
+        ],
+        "audioId": "ja-scene-weather-talk-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-weather-talk-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "Whether the weather is good today.",
+        "distractors": [
+          "Whether it will snow tomorrow.",
+          "Whether B likes blue."
+        ],
+        "sourceText": "今日、天気はいいですか。",
+        "sourceTokens": [
+          "今日",
+          "天気",
+          "は",
+          "いい",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-weather-talk-q1"
+      },
+      {
+        "id": "ja-scene-weather-talk-q2",
+        "kind": "comprehend",
+        "prompt": "What is the weather like today?",
+        "answer": "It is rainy and cold.",
+        "distractors": [
+          "It is snowy and hot.",
+          "It is blue and fun."
+        ],
+        "sourceText": "いいえ。雨です。寒いです。",
+        "sourceTokens": [
+          "いいえ",
+          "雨",
+          "~です",
+          "寒い",
+          "~です"
+        ],
+        "audioId": "ja-scene-weather-talk-q2"
+      },
+      {
+        "id": "ja-scene-weather-talk-q3",
+        "kind": "comprehend",
+        "prompt": "What does B say about tomorrow?",
+        "answer": "It will be hot.",
+        "distractors": [
+          "It will snow.",
+          "It will be cold."
+        ],
+        "sourceText": "いいえ。明日は暑いです。",
+        "sourceTokens": [
+          "いいえ",
+          "明日",
+          "は",
+          "暑い",
+          "~です"
+        ],
+        "audioId": "ja-scene-weather-talk-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-colors-and-feelings",
+    "lang": "ja",
+    "order": 17,
+    "unlockedAfter": {
+      "lex": 182,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "何の色が好きですか。",
+        "gloss": "What color do you like?",
+        "tokens": [
+          "何",
+          "の",
+          "色",
+          "が",
+          "好き",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "青い色が好きです。",
+        "gloss": "I like the color blue.",
+        "tokens": [
+          "青い",
+          "色",
+          "が",
+          "好き",
+          "~です"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "日本語は難しいですか。",
+        "gloss": "Is Japanese difficult?",
+        "tokens": [
+          "日本語",
+          "は",
+          "難しい",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。面白いです。楽しいです。",
+        "gloss": "No. It is interesting. It is fun.",
+        "tokens": [
+          "いいえ",
+          "面白い",
+          "~です",
+          "楽しい",
+          "~です"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-colors-and-feelings-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "What color B likes.",
+        "distractors": [
+          "What weather B likes.",
+          "Whether Japanese is difficult."
+        ],
+        "sourceText": "何の色が好きですか。",
+        "sourceTokens": [
+          "何",
+          "の",
+          "色",
+          "が",
+          "好き",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-q1"
+      },
+      {
+        "id": "ja-scene-colors-and-feelings-q2",
+        "kind": "comprehend",
+        "prompt": "What color does B like?",
+        "answer": "Blue.",
+        "distractors": [
+          "Red.",
+          "Black."
+        ],
+        "sourceText": "青い色が好きです。",
+        "sourceTokens": [
+          "青い",
+          "色",
+          "が",
+          "好き",
+          "~です"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-q2"
+      },
+      {
+        "id": "ja-scene-colors-and-feelings-q3",
+        "kind": "comprehend",
+        "prompt": "What does B say about Japanese?",
+        "answer": "It is interesting and fun.",
+        "distractors": [
+          "It is difficult and busy.",
+          "It is short and weak."
+        ],
+        "sourceText": "いいえ。面白いです。楽しいです。",
+        "sourceTokens": [
+          "いいえ",
+          "面白い",
+          "~です",
+          "楽しい",
+          "~です"
+        ],
+        "audioId": "ja-scene-colors-and-feelings-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINT:
+{
+  "id": "ja-checkpoint-8",
+  "lang": "ja",
+  "unitId": "ja-unit-8",
+  "order": 8,
+  "title": "Unit 8 checkpoint",
+  "items": [
+    {
+      "id": "ja-checkpoint-8-q1",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "Today, the weather is rainy.",
+      "distractors": [
+        "Today, the sky is blue.",
+        "Tomorrow, it will snow."
+      ],
+      "sourceText": "今日の天気は雨です。",
+      "sourceTokens": [
+        "今日",
+        "の",
+        "天気",
+        "は",
+        "雨",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q1"
+    },
+    {
+      "id": "ja-checkpoint-8-q2",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "Snow is white.",
+      "distractors": [
+        "Rain is black.",
+        "The sky is blue."
+      ],
+      "sourceText": "雪は白いです。",
+      "sourceTokens": [
+        "雪",
+        "は",
+        "白い",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q2"
+    },
+    {
+      "id": "ja-checkpoint-8-q3",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "The blue car is fast.",
+      "distractors": [
+        "The red flower is interesting.",
+        "The black phone is short."
+      ],
+      "sourceText": "青い車は速いです。",
+      "sourceTokens": [
+        "青い",
+        "車",
+        "は",
+        "速い",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q3"
+    },
+    {
+      "id": "ja-checkpoint-8-q4",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "The company work is busy, but fun.",
+      "distractors": [
+        "The company work is easy but weak.",
+        "Japanese is difficult and busy."
+      ],
+      "sourceText": "会社の仕事は忙しいですが、楽しいです。",
+      "sourceTokens": [
+        "会社",
+        "の",
+        "仕事",
+        "は",
+        "忙しい",
+        "~です",
+        "が",
+        "楽しい",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q4"
+    },
+    {
+      "id": "ja-checkpoint-8-q5",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "The leg is long.",
+      "distractors": [
+        "The head is short.",
+        "The hand is strong."
+      ],
+      "sourceText": "足は長いです。",
+      "sourceTokens": [
+        "足",
+        "は",
+        "長い",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q5"
+    },
+    {
+      "id": "ja-checkpoint-8-q6",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "This is a black phone.",
+      "distractors": [
+        "This is a blue train.",
+        "This is a white flower."
+      ],
+      "sourceText": "これは黒い電話です。",
+      "sourceTokens": [
+        "これ",
+        "は",
+        "黒い",
+        "電話",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q6"
+    },
+    {
+      "id": "ja-checkpoint-8-q7",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "The road is short.",
+      "distractors": [
+        "The road is long.",
+        "The wind is cold."
+      ],
+      "sourceText": "道は短いです。",
+      "sourceTokens": [
+        "道",
+        "は",
+        "短い",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-8-q7"
+    }
+  ]
+}

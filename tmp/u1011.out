@@ -1,0 +1,86 @@
+
+===== PARTNER VERDICT (codex, 836s) =====
+
+Implemented Japanese VOCAB Units 10 and 11 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:2358).
+
+Counts:
+- Unit 10: 22 new words, 2 scenes, `ja-checkpoint-10` with 6 items
+- Unit 11: 22 new words, 2 scenes, `ja-checkpoint-11` with 7 items
+- Cumulative JA lexicon: 218 words
+- Confirmed `ja-unit-10`, `ja-unit-11`, `ja-checkpoint-10`, and `ja-checkpoint-11` exist and are wired
+
+Helper verdict: Claude said “ship”; it confirmed readings, weekday/counter forms, particles, POS values, token arrays, and closed-universe decodability. It reported 0 token mismatches and no blocking fixes.
+
+Verification:
+
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+> foothold-language@0.1.0 test
+> vitest run --minWorkers=1 --maxWorkers=1
+
+Test Files  7 passed (7)
+Tests       36 passed (36)
+Duration    7.56s
+```
+
+No audio, deploy, or git commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit10 = jaSeedContent.units.find(u=>u.id==='ja-unit-10');
+const unit11 = jaSeedContent.units.find(u=>u.id==='ja-unit-11');
+const checkpoint10 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-10');
+const checkpoint11 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-11');
+console.log(JSON.stringify({
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit10WordCount: jaSeedContent.lexicon.filter(x=>x.order>=207&&x.order<=228).length,
+  unit11WordCount: jaSeedContent.lexicon.filter(x=>x.order>=229&&x.order<=250).length,
+  totalUnits: jaSeedContent.units.length,
+  totalCheckpoints: jaSeedContent.checkpoints.length,
+  unit10: { exists: "'!!unit10, sceneIds: unit10?.sceneIds, checkpointId: unit10?.checkpointId },
+  unit11: { exists: !!unit11, sceneIds: unit11?.sceneIds, checkpointId: unit11?.checkpointId },
+  checkpoint10: { exists: !!checkpoint10, items: checkpoint10?.items.length ?? 0 },
+  checkpoint11: { exists: !!checkpoint11, items: checkpoint11?.items.length ?? 0 }
+}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit10 = jaSeedContent.units.find(u=>u.id==='ja-unit-10');
+const unit11 = jaSeedContent.units.find(u=>u.id==='ja-unit-11');
+const checkpoint10 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-10');
+const checkpoint11 = jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-11');
+console.log(JSON.stringify({
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit10WordCount: jaSeedContent.lexicon.filter(x=>x.order>=207&&x.order<=228).length,
+  unit11WordCount: jaSeedContent.lexicon.filter(x=>x.order>=229&&x.order<=250).length,
+  totalUnits: jaSeedContent.units.length,
+  totalCheckpoints: jaSeedContent.checkpoints.length,
+  unit10: { exists: "'!!unit10, sceneIds: unit10?.sceneIds, checkpointId: unit10?.checkpointId },
+  unit11: { exists: !!unit11, sceneIds: unit11?.sceneIds, checkpointId: unit11?.checkpointId },
+  checkpoint10: { exists: !!checkpoint10, items: checkpoint10?.items.length ?? 0 },
+  checkpoint11: { exists: !!checkpoint11, items: checkpoint11?.items.length ?? 0 }
+}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"id: 'ja-basu'|id: 'ja-youbi'|id: 'ja-scene-bus-to-library'|id: 'ja-scene-school-schedule'|id: 'ja-checkpoint-10'|id: 'ja-unit-10'\" content/ja/seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"id: 'ja-checkpoint-11'|id: 'ja-unit-11'\" content/ja/seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"id: 'ja-basu'|id: 'ja-youbi'|id: 'ja-scene-bus-to-library'|id: 'ja-scene-school-schedule'|id: 'ja-checkpoint-10'|id: 'ja-unit-10'\" content/ja/seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "rg -n \"id: 'ja-checkpoint-11'|id: 'ja-unit-11'\" content/ja/seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-basu'|id: 'ja-youbi'|id: 'ja-scene-bus-to-library'|id: 'ja-scene-school-schedule'|id: 'ja-checkpoint-10'|id: 'ja-unit-10'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-checkpoint-11'|id: 'ja-unit-11'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-checkpoint-11'|id: 'ja-unit-11'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-basu'|id: 'ja-youbi'|id: 'ja-scene-bus-to-library'|id: 'ja-scene-school-schedule'|id: 'ja-checkpoint-10'|id: 'ja-unit-10'\""
+files: 0
+tokens: in 36646572 / out 184370
+

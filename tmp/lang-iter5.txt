@@ -1,0 +1,16 @@
+ITERATION 5 (you are the Lead; same Foothold project; iter1-4 committed & green — foundation, JA tokenizer, first JA unit, and the first UI slice [picker/primer/new-word card] are all in).
+
+Watcher reviewed your iter4 screenshots at native resolution and committed — the reading-first UI is genuinely good (JA-first hierarchy, no slop, clean responsive). Two notes:
+- HELPER INVOCATION: last round your helper call failed because you piped a complex PowerShell here-string into peer.mjs. Use the SIMPLE form: write your prompt to a temp file, then  node bin/peer.mjs ask - < z:\path\to\prompt.txt  (from the tandem dir). That avoids the here-string breakage.
+
+SCOPE (completes Flow A — the MVP success metric: a first-time user goes picker → ... → correctly answers a comprehension question on a real closed-universe scene):
+1. SCENE READER view: render a Scene from content/ja/seed.ts (the dialogue lines, speaker-labelled) reading-first — each line's Japanese is primary, tap-to-reveal gloss per line (NO layout shift), audio per line (Web Speech ja-JP, graceful if unavailable). Calm, literary, same design system as iter4.
+2. COMPREHENSION: after the scene, present its QuizItems (kind 'comprehend') — prompt + answer + distractors, multiple-choice; grade the answer, show correct/incorrect clearly, allow moving on. Closed-universe still holds (the linter already guarantees scene/quiz tokens are in-set).
+3. UNLOCK WIRING: use the existing engine/unlock.ts resolver so a scene becomes AVAILABLE only once its unlockedAfter (lex/grammar orders) are satisfied by the learner's progress (knownLex/knownGrammar in the store). Surface available scenes from the learn flow (e.g. after the new-word batch, route into the unlocked scene). If nothing's unlocked yet, a clean "keep learning words to unlock the first scene" state.
+4. The two iter4 nits: FR language nativeName should be "français" (cedilla), and replace the French picker card's dev-facing copy ("Seed content is present for engine verification") with real user-facing copy.
+
+ui-craft IS STILL MANDATORY on the new views. Run the ui-craft battery on the new states (scene-reader, line-gloss-revealed, comprehension-question, comprehension-correct, comprehension-incorrect, no-scene-unlocked) across viewports; save to .uicraft-shots/iter5-final and TELL ME THE ABSOLUTE PATH. Fix any breakage the battery finds. Use your Claude helper (simple invocation) to independently review the rendered screenshots + the scene/comprehension correctness cold.
+
+VERIFY before reporting: npm run build green, npm test green, npm run lint:content 0 leaks. Don't regress iter4.
+
+DO NOT git commit (Watcher commits). REPORT: views/components built, how unlock wiring works, the battery results + screenshot folder path, helper verdict (converge/diverge), exact build/test/lint output, and suggested single next step for iter6 (likely: the SRS review loop — Flow B, returning-session review-before-new — then we deploy the working JA experience).

@@ -1,0 +1,22 @@
+ITERATION 4 (you are the Lead; same Foothold project; iter1-3 committed & green: foundation + JA tokenizer + first real JA unit in content/ja/seed.ts).
+
+Watcher verified & committed iter3 (your helper routed correctly — nice). Now we build the UI, and UI-CRAFT IS MANDATORY AND METICULOUS (the human cares about this most).
+
+FIRST: invoke the ui-craft skill (/ui-craft) and follow it properly — it governs the visual register AND ships a Playwright viewport battery you MUST run to VERIFY (not assert) the UI across viewports/orientations and every UI state. No AI slop: no purple-on-dark gradients, no card-soup, no buzzword copy, no vanilla-default styling. Plan section 10 is the design brief: calm, literary, READING-FIRST (this is a comprehension tool, should feel like a beautifully set reader, not a game); one focus per screen; target Japanese text is always the largest, most legible element; Noto Sans JP loaded for JA; WCAG AA contrast including on Japanese script; tap-to-reveal gloss with NO layout shift; obvious one-tap audio affordance; controls must work on touch (never hover-only).
+
+SCOPE (build order step 6, focused vertical slice — quality over breadth):
+1. Design system: Tailwind theme tokens (restrained palette, type scale, spacing), fonts (Noto Sans JP + a clean humanist UI sans), the reading-first register. A small set of reusable primitives (Button, Card, RevealableText, AudioButton).
+2. App shell wired to the existing hash router (base /language/): clean header/nav, the calm register.
+3. Language picker view: Japanese ACTIVE; French present (content exists); Korean shown as "coming soon"/disabled. Selecting sets the language and routes in.
+4. Script primer view: the hiragana from content/ja/seed.ts as a recognition grid — glyph large, romanization secondary, the は/を notes surfaced, audio per glyph.
+5. New-word card flow: walk the JA lexicon (content/ja/seed.ts) one card at a time — headword LARGE, reading (kana) + romanization secondary and TOGGLEABLE (romanization should be de-emphasizable, per the "fade" pedagogy), gloss revealed on tap (no layout shift), example sentence, and an audio button. Mark words "seen" in the progress store (localStorage) as the user advances.
+   - AUDIO: pre-generated audio files are a LATER iteration. For now use the Web Speech API (ja-JP) as the audio source, degrading gracefully (hide/disable the control cleanly if no JA voice is available — never a broken button).
+6. Wire progress to the store (Zustand or context+reducer per the plan) persisted to localStorage; this is the start of real state.
+
+VERIFY before reporting:
+- npm run build green, npm test green, npm run lint:content 0 leaks (don't regress).
+- RUN THE UI-CRAFT VIEWPORT BATTERY across states (picker, primer, new-word card front, gloss-revealed, romanization-off, audio-unavailable, empty/first-run). Save the battery screenshots to a folder under the repo (e.g. .uicraft-shots/ — gitignore it) and TELL ME THE ABSOLUTE PATH so the Watcher can review them at native resolution. Report the battery's pass/fail per state/viewport. Fix any broken-container/clipped-text/covered-button/overflow issues the battery finds before reporting.
+
+USE YOUR CLAUDE HELPER as an independent design/QA second mind: have it review the rendered screenshots and the component code cold for AI-slop tells and layout breakage you might have rationalized. Don't tell it your self-assessment first.
+
+DO NOT git commit (Watcher commits). REPORT: components/views built, the design choices (palette, type, register), the ui-craft battery results + screenshot folder path, helper's independent design verdict, exact build/test/lint output, and your suggested single next step for iter5 (likely: the review/SRS loop + scene reader + comprehension, wired to the same content).

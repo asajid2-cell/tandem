@@ -1,0 +1,1991 @@
+Audit Japanese VOCAB Units 14 and 15 for correctness. Unit 14 family/people; Unit 15 body/health. Check readings, romanization, family-term register (?/?/?/?/?/?/??/??), ??/?? usage, naturalness, token arrays, and closed-universe decodability. Be strict and concise: list required fixes or say ship. Context: npm run lint:content passes 0 leaks after these edits; existing vocab through order 294 and grammar through order 132 are available.
+
+UNITS:
+[
+  {
+    "id": "ja-unit-14",
+    "lang": "ja",
+    "order": 14,
+    "title": "Family and people",
+    "lexRange": [
+      295,
+      316
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-family-siblings",
+      "ja-scene-family-health"
+    ],
+    "checkpointId": "ja-checkpoint-14"
+  },
+  {
+    "id": "ja-unit-15",
+    "lang": "ja",
+    "order": 15,
+    "title": "Body and health",
+    "lexRange": [
+      317,
+      338
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-doctor-visit",
+      "ja-scene-cold-symptoms"
+    ],
+    "checkpointId": "ja-checkpoint-15"
+  }
+]
+
+UNIT 14 LEX:
+[
+  {
+    "id": "ja-kazoku",
+    "lang": "ja",
+    "order": 295,
+    "headword": "家族",
+    "reading": "かぞく",
+    "romanization": "kazoku",
+    "gloss": "family",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-kazoku",
+    "examples": [
+      {
+        "text": "家族。",
+        "gloss": "family.",
+        "tokens": [
+          "家族"
+        ],
+        "audioId": "ja-ex-kazoku"
+      }
+    ]
+  },
+  {
+    "id": "ja-ani",
+    "lang": "ja",
+    "order": 296,
+    "headword": "兄",
+    "reading": "あに",
+    "romanization": "ani",
+    "gloss": "older brother",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-ani",
+    "examples": [
+      {
+        "text": "兄。",
+        "gloss": "older brother.",
+        "tokens": [
+          "兄"
+        ],
+        "audioId": "ja-ex-ani"
+      }
+    ]
+  },
+  {
+    "id": "ja-ane",
+    "lang": "ja",
+    "order": 297,
+    "headword": "姉",
+    "reading": "あね",
+    "romanization": "ane",
+    "gloss": "older sister",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-ane",
+    "examples": [
+      {
+        "text": "姉。",
+        "gloss": "older sister.",
+        "tokens": [
+          "姉"
+        ],
+        "audioId": "ja-ex-ane"
+      }
+    ]
+  },
+  {
+    "id": "ja-otouto",
+    "lang": "ja",
+    "order": 298,
+    "headword": "弟",
+    "reading": "おとうと",
+    "romanization": "otouto",
+    "gloss": "younger brother",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-otouto",
+    "examples": [
+      {
+        "text": "弟。",
+        "gloss": "younger brother.",
+        "tokens": [
+          "弟"
+        ],
+        "audioId": "ja-ex-otouto"
+      }
+    ]
+  },
+  {
+    "id": "ja-imouto",
+    "lang": "ja",
+    "order": 299,
+    "headword": "妹",
+    "reading": "いもうと",
+    "romanization": "imouto",
+    "gloss": "younger sister",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-imouto",
+    "examples": [
+      {
+        "text": "妹。",
+        "gloss": "younger sister.",
+        "tokens": [
+          "妹"
+        ],
+        "audioId": "ja-ex-imouto"
+      }
+    ]
+  },
+  {
+    "id": "ja-ryoushin",
+    "lang": "ja",
+    "order": 300,
+    "headword": "両親",
+    "reading": "りょうしん",
+    "romanization": "ryoushin",
+    "gloss": "parents",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-ryoushin",
+    "examples": [
+      {
+        "text": "両親。",
+        "gloss": "parents.",
+        "tokens": [
+          "両親"
+        ],
+        "audioId": "ja-ex-ryoushin"
+      }
+    ]
+  },
+  {
+    "id": "ja-oji",
+    "lang": "ja",
+    "order": 301,
+    "headword": "おじ",
+    "reading": "おじ",
+    "romanization": "oji",
+    "gloss": "uncle",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-oji",
+    "examples": [
+      {
+        "text": "おじ。",
+        "gloss": "uncle.",
+        "tokens": [
+          "おじ"
+        ],
+        "audioId": "ja-ex-oji"
+      }
+    ]
+  },
+  {
+    "id": "ja-oba",
+    "lang": "ja",
+    "order": 302,
+    "headword": "おば",
+    "reading": "おば",
+    "romanization": "oba",
+    "gloss": "aunt",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-oba",
+    "examples": [
+      {
+        "text": "おば。",
+        "gloss": "aunt.",
+        "tokens": [
+          "おば"
+        ],
+        "audioId": "ja-ex-oba"
+      }
+    ]
+  },
+  {
+    "id": "ja-otto",
+    "lang": "ja",
+    "order": 303,
+    "headword": "夫",
+    "reading": "おっと",
+    "romanization": "otto",
+    "gloss": "husband",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-otto",
+    "examples": [
+      {
+        "text": "夫。",
+        "gloss": "husband.",
+        "tokens": [
+          "夫"
+        ],
+        "audioId": "ja-ex-otto"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsuma",
+    "lang": "ja",
+    "order": 304,
+    "headword": "妻",
+    "reading": "つま",
+    "romanization": "tsuma",
+    "gloss": "wife",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-tsuma",
+    "examples": [
+      {
+        "text": "妻。",
+        "gloss": "wife.",
+        "tokens": [
+          "妻"
+        ],
+        "audioId": "ja-ex-tsuma"
+      }
+    ]
+  },
+  {
+    "id": "ja-akachan",
+    "lang": "ja",
+    "order": 305,
+    "headword": "赤ちゃん",
+    "reading": "あかちゃん",
+    "romanization": "akachan",
+    "gloss": "baby",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-akachan",
+    "examples": [
+      {
+        "text": "赤ちゃん。",
+        "gloss": "baby.",
+        "tokens": [
+          "赤ちゃん"
+        ],
+        "audioId": "ja-ex-akachan"
+      }
+    ]
+  },
+  {
+    "id": "ja-minna",
+    "lang": "ja",
+    "order": 306,
+    "headword": "みんな",
+    "reading": "みんな",
+    "romanization": "minna",
+    "gloss": "everyone",
+    "pos": "pronoun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-minna",
+    "examples": [
+      {
+        "text": "みんな。",
+        "gloss": "everyone.",
+        "tokens": [
+          "みんな"
+        ],
+        "audioId": "ja-ex-minna"
+      }
+    ]
+  },
+  {
+    "id": "ja-otona",
+    "lang": "ja",
+    "order": 307,
+    "headword": "大人",
+    "reading": "おとな",
+    "romanization": "otona",
+    "gloss": "adult",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-otona",
+    "examples": [
+      {
+        "text": "大人。",
+        "gloss": "adult.",
+        "tokens": [
+          "大人"
+        ],
+        "audioId": "ja-ex-otona"
+      }
+    ]
+  },
+  {
+    "id": "ja-kodomo",
+    "lang": "ja",
+    "order": 308,
+    "headword": "子供",
+    "reading": "こども",
+    "romanization": "kodomo",
+    "gloss": "child",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-kodomo",
+    "examples": [
+      {
+        "text": "子供。",
+        "gloss": "child.",
+        "tokens": [
+          "子供"
+        ],
+        "audioId": "ja-ex-kodomo"
+      }
+    ]
+  },
+  {
+    "id": "ja-otoko",
+    "lang": "ja",
+    "order": 309,
+    "headword": "男",
+    "reading": "おとこ",
+    "romanization": "otoko",
+    "gloss": "man; male",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-otoko",
+    "examples": [
+      {
+        "text": "男。",
+        "gloss": "man; male.",
+        "tokens": [
+          "男"
+        ],
+        "audioId": "ja-ex-otoko"
+      }
+    ]
+  },
+  {
+    "id": "ja-onna",
+    "lang": "ja",
+    "order": 310,
+    "headword": "女",
+    "reading": "おんな",
+    "romanization": "onna",
+    "gloss": "woman; female",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-onna",
+    "examples": [
+      {
+        "text": "女。",
+        "gloss": "woman; female.",
+        "tokens": [
+          "女"
+        ],
+        "audioId": "ja-ex-onna"
+      }
+    ]
+  },
+  {
+    "id": "ja-wakai",
+    "lang": "ja",
+    "order": 311,
+    "headword": "若い",
+    "reading": "わかい",
+    "romanization": "wakai",
+    "gloss": "young",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "descriptor",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-wakai",
+    "examples": [
+      {
+        "text": "若い。",
+        "gloss": "young.",
+        "tokens": [
+          "若い"
+        ],
+        "audioId": "ja-ex-wakai"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsuyoi",
+    "lang": "ja",
+    "order": 312,
+    "headword": "強い",
+    "reading": "つよい",
+    "romanization": "tsuyoi",
+    "gloss": "strong",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "descriptor",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-tsuyoi",
+    "examples": [
+      {
+        "text": "強い。",
+        "gloss": "strong.",
+        "tokens": [
+          "強い"
+        ],
+        "audioId": "ja-ex-tsuyoi"
+      }
+    ]
+  },
+  {
+    "id": "ja-yowai",
+    "lang": "ja",
+    "order": 313,
+    "headword": "弱い",
+    "reading": "よわい",
+    "romanization": "yowai",
+    "gloss": "weak",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "descriptor",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-yowai",
+    "examples": [
+      {
+        "text": "弱い。",
+        "gloss": "weak.",
+        "tokens": [
+          "弱い"
+        ],
+        "audioId": "ja-ex-yowai"
+      }
+    ]
+  },
+  {
+    "id": "ja-oya",
+    "lang": "ja",
+    "order": 314,
+    "headword": "親",
+    "reading": "おや",
+    "romanization": "oya",
+    "gloss": "parent",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-oya",
+    "examples": [
+      {
+        "text": "親。",
+        "gloss": "parent.",
+        "tokens": [
+          "親"
+        ],
+        "audioId": "ja-ex-oya"
+      }
+    ]
+  },
+  {
+    "id": "ja-kyoudai",
+    "lang": "ja",
+    "order": 315,
+    "headword": "兄弟",
+    "reading": "きょうだい",
+    "romanization": "kyoudai",
+    "gloss": "siblings; brothers",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "family"
+    ],
+    "audioId": "ja-lex-kyoudai",
+    "examples": [
+      {
+        "text": "兄弟。",
+        "gloss": "siblings.",
+        "tokens": [
+          "兄弟"
+        ],
+        "audioId": "ja-ex-kyoudai"
+      }
+    ]
+  },
+  {
+    "id": "ja-hitobito",
+    "lang": "ja",
+    "order": 316,
+    "headword": "人々",
+    "reading": "ひとびと",
+    "romanization": "hitobito",
+    "gloss": "people",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "people"
+    ],
+    "audioId": "ja-lex-hitobito",
+    "examples": [
+      {
+        "text": "人々。",
+        "gloss": "people.",
+        "tokens": [
+          "人々"
+        ],
+        "audioId": "ja-ex-hitobito"
+      }
+    ]
+  }
+]
+
+UNIT 15 LEX:
+[
+  {
+    "id": "ja-karada",
+    "lang": "ja",
+    "order": 317,
+    "headword": "体",
+    "reading": "からだ",
+    "romanization": "karada",
+    "gloss": "body",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-karada",
+    "examples": [
+      {
+        "text": "体。",
+        "gloss": "body.",
+        "tokens": [
+          "体"
+        ],
+        "audioId": "ja-ex-karada"
+      }
+    ]
+  },
+  {
+    "id": "ja-kao",
+    "lang": "ja",
+    "order": 318,
+    "headword": "顔",
+    "reading": "かお",
+    "romanization": "kao",
+    "gloss": "face",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-kao",
+    "examples": [
+      {
+        "text": "顔。",
+        "gloss": "face.",
+        "tokens": [
+          "顔"
+        ],
+        "audioId": "ja-ex-kao"
+      }
+    ]
+  },
+  {
+    "id": "ja-kami-hair",
+    "lang": "ja",
+    "order": 319,
+    "headword": "髪",
+    "reading": "かみ",
+    "romanization": "kami",
+    "gloss": "hair",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-kami-hair",
+    "examples": [
+      {
+        "text": "髪。",
+        "gloss": "hair.",
+        "tokens": [
+          "髪"
+        ],
+        "audioId": "ja-ex-kami-hair"
+      }
+    ]
+  },
+  {
+    "id": "ja-mimi",
+    "lang": "ja",
+    "order": 320,
+    "headword": "耳",
+    "reading": "みみ",
+    "romanization": "mimi",
+    "gloss": "ear",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-mimi",
+    "examples": [
+      {
+        "text": "耳。",
+        "gloss": "ear.",
+        "tokens": [
+          "耳"
+        ],
+        "audioId": "ja-ex-mimi"
+      }
+    ]
+  },
+  {
+    "id": "ja-hana-nose",
+    "lang": "ja",
+    "order": 321,
+    "headword": "鼻",
+    "reading": "はな",
+    "romanization": "hana",
+    "gloss": "nose",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-hana-nose",
+    "examples": [
+      {
+        "text": "鼻。",
+        "gloss": "nose.",
+        "tokens": [
+          "鼻"
+        ],
+        "audioId": "ja-ex-hana-nose"
+      }
+    ]
+  },
+  {
+    "id": "ja-ha-tooth",
+    "lang": "ja",
+    "order": 322,
+    "headword": "歯",
+    "reading": "は",
+    "romanization": "ha",
+    "gloss": "tooth; teeth",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-ha-tooth",
+    "examples": [
+      {
+        "text": "歯。",
+        "gloss": "tooth; teeth.",
+        "tokens": [
+          "歯"
+        ],
+        "audioId": "ja-ex-ha-tooth"
+      }
+    ]
+  },
+  {
+    "id": "ja-onaka",
+    "lang": "ja",
+    "order": 323,
+    "headword": "お腹",
+    "reading": "おなか",
+    "romanization": "onaka",
+    "gloss": "stomach; belly",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-onaka",
+    "examples": [
+      {
+        "text": "お腹。",
+        "gloss": "stomach; belly.",
+        "tokens": [
+          "お腹"
+        ],
+        "audioId": "ja-ex-onaka"
+      }
+    ]
+  },
+  {
+    "id": "ja-byouki",
+    "lang": "ja",
+    "order": 324,
+    "headword": "病気",
+    "reading": "びょうき",
+    "romanization": "byouki",
+    "gloss": "illness; sickness",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-byouki",
+    "examples": [
+      {
+        "text": "病気。",
+        "gloss": "illness.",
+        "tokens": [
+          "病気"
+        ],
+        "audioId": "ja-ex-byouki"
+      }
+    ]
+  },
+  {
+    "id": "ja-kusuri",
+    "lang": "ja",
+    "order": 325,
+    "headword": "薬",
+    "reading": "くすり",
+    "romanization": "kusuri",
+    "gloss": "medicine",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-kusuri",
+    "examples": [
+      {
+        "text": "薬。",
+        "gloss": "medicine.",
+        "tokens": [
+          "薬"
+        ],
+        "audioId": "ja-ex-kusuri"
+      }
+    ]
+  },
+  {
+    "id": "ja-itai",
+    "lang": "ja",
+    "order": 326,
+    "headword": "痛い",
+    "reading": "いたい",
+    "romanization": "itai",
+    "gloss": "painful; hurts",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "health",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-itai",
+    "examples": [
+      {
+        "text": "痛い。",
+        "gloss": "painful; hurts.",
+        "tokens": [
+          "痛い"
+        ],
+        "audioId": "ja-ex-itai"
+      }
+    ]
+  },
+  {
+    "id": "ja-isha",
+    "lang": "ja",
+    "order": 327,
+    "headword": "医者",
+    "reading": "いしゃ",
+    "romanization": "isha",
+    "gloss": "doctor",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-isha",
+    "examples": [
+      {
+        "text": "医者。",
+        "gloss": "doctor.",
+        "tokens": [
+          "医者"
+        ],
+        "audioId": "ja-ex-isha"
+      }
+    ]
+  },
+  {
+    "id": "ja-kaze-cold",
+    "lang": "ja",
+    "order": 328,
+    "headword": "風邪",
+    "reading": "かぜ",
+    "romanization": "kaze",
+    "gloss": "cold; common cold",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-kaze-cold",
+    "examples": [
+      {
+        "text": "風邪。",
+        "gloss": "cold.",
+        "tokens": [
+          "風邪"
+        ],
+        "audioId": "ja-ex-kaze-cold"
+      }
+    ]
+  },
+  {
+    "id": "ja-netsu",
+    "lang": "ja",
+    "order": 329,
+    "headword": "熱",
+    "reading": "ねつ",
+    "romanization": "netsu",
+    "gloss": "fever; heat",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-netsu",
+    "examples": [
+      {
+        "text": "熱。",
+        "gloss": "fever; heat.",
+        "tokens": [
+          "熱"
+        ],
+        "audioId": "ja-ex-netsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-nodo",
+    "lang": "ja",
+    "order": 330,
+    "headword": "喉",
+    "reading": "のど",
+    "romanization": "nodo",
+    "gloss": "throat",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body",
+      "health"
+    ],
+    "audioId": "ja-lex-nodo",
+    "examples": [
+      {
+        "text": "喉。",
+        "gloss": "throat.",
+        "tokens": [
+          "喉"
+        ],
+        "audioId": "ja-ex-nodo"
+      }
+    ]
+  },
+  {
+    "id": "ja-yubi",
+    "lang": "ja",
+    "order": 331,
+    "headword": "指",
+    "reading": "ゆび",
+    "romanization": "yubi",
+    "gloss": "finger",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-yubi",
+    "examples": [
+      {
+        "text": "指。",
+        "gloss": "finger.",
+        "tokens": [
+          "指"
+        ],
+        "audioId": "ja-ex-yubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-kubi",
+    "lang": "ja",
+    "order": 332,
+    "headword": "首",
+    "reading": "くび",
+    "romanization": "kubi",
+    "gloss": "neck",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-kubi",
+    "examples": [
+      {
+        "text": "首。",
+        "gloss": "neck.",
+        "tokens": [
+          "首"
+        ],
+        "audioId": "ja-ex-kubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-ude",
+    "lang": "ja",
+    "order": 333,
+    "headword": "腕",
+    "reading": "うで",
+    "romanization": "ude",
+    "gloss": "arm",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-ude",
+    "examples": [
+      {
+        "text": "腕。",
+        "gloss": "arm.",
+        "tokens": [
+          "腕"
+        ],
+        "audioId": "ja-ex-ude"
+      }
+    ]
+  },
+  {
+    "id": "ja-senaka",
+    "lang": "ja",
+    "order": 334,
+    "headword": "背中",
+    "reading": "せなか",
+    "romanization": "senaka",
+    "gloss": "back",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-senaka",
+    "examples": [
+      {
+        "text": "背中。",
+        "gloss": "back.",
+        "tokens": [
+          "背中"
+        ],
+        "audioId": "ja-ex-senaka"
+      }
+    ]
+  },
+  {
+    "id": "ja-seki",
+    "lang": "ja",
+    "order": 335,
+    "headword": "咳",
+    "reading": "せき",
+    "romanization": "seki",
+    "gloss": "cough",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-seki",
+    "examples": [
+      {
+        "text": "咳。",
+        "gloss": "cough.",
+        "tokens": [
+          "咳"
+        ],
+        "audioId": "ja-ex-seki"
+      }
+    ]
+  },
+  {
+    "id": "ja-kibun",
+    "lang": "ja",
+    "order": 336,
+    "headword": "気分",
+    "reading": "きぶん",
+    "romanization": "kibun",
+    "gloss": "feeling; mood",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "health"
+    ],
+    "audioId": "ja-lex-kibun",
+    "examples": [
+      {
+        "text": "気分。",
+        "gloss": "feeling; mood.",
+        "tokens": [
+          "気分"
+        ],
+        "audioId": "ja-ex-kibun"
+      }
+    ]
+  },
+  {
+    "id": "ja-koe",
+    "lang": "ja",
+    "order": 337,
+    "headword": "声",
+    "reading": "こえ",
+    "romanization": "koe",
+    "gloss": "voice",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-koe",
+    "examples": [
+      {
+        "text": "声。",
+        "gloss": "voice.",
+        "tokens": [
+          "声"
+        ],
+        "audioId": "ja-ex-koe"
+      }
+    ]
+  },
+  {
+    "id": "ja-kokoro",
+    "lang": "ja",
+    "order": 338,
+    "headword": "心",
+    "reading": "こころ",
+    "romanization": "kokoro",
+    "gloss": "heart; mind",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "body"
+    ],
+    "audioId": "ja-lex-kokoro",
+    "examples": [
+      {
+        "text": "心。",
+        "gloss": "heart; mind.",
+        "tokens": [
+          "心"
+        ],
+        "audioId": "ja-ex-kokoro"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-family-siblings",
+    "lang": "ja",
+    "order": 28,
+    "unlockedAfter": {
+      "lex": 316,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "家族は多いですか。",
+        "gloss": "Do you have a big family?",
+        "tokens": [
+          "家族",
+          "は",
+          "多い",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-family-siblings-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。兄も姉もいます。",
+        "gloss": "Yes. I have an older brother and an older sister.",
+        "tokens": [
+          "はい",
+          "兄",
+          "も",
+          "姉",
+          "も",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-siblings-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "弟もいますか。",
+        "gloss": "Do you also have a younger brother?",
+        "tokens": [
+          "弟",
+          "も",
+          "いる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-family-siblings-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。妹もいます。",
+        "gloss": "Yes. I also have a younger sister.",
+        "tokens": [
+          "はい",
+          "妹",
+          "も",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-siblings-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-family-siblings-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "Whether B has a big family.",
+        "distractors": [
+          "Whether B is sick.",
+          "Whether B has a job."
+        ],
+        "sourceText": "家族は多いですか。",
+        "sourceTokens": [
+          "家族",
+          "は",
+          "多い",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-family-siblings-q1"
+      },
+      {
+        "id": "ja-scene-family-siblings-q2",
+        "kind": "comprehend",
+        "prompt": "Who does B have?",
+        "answer": "An older brother and an older sister.",
+        "distractors": [
+          "Parents and a baby.",
+          "An uncle and an aunt."
+        ],
+        "sourceText": "はい。兄も姉もいます。",
+        "sourceTokens": [
+          "はい",
+          "兄",
+          "も",
+          "姉",
+          "も",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-siblings-q2"
+      },
+      {
+        "id": "ja-scene-family-siblings-q3",
+        "kind": "comprehend",
+        "prompt": "Who else does B have?",
+        "answer": "A younger sister.",
+        "distractors": [
+          "A husband.",
+          "A doctor."
+        ],
+        "sourceText": "はい。妹もいます。",
+        "sourceTokens": [
+          "はい",
+          "妹",
+          "も",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-siblings-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-family-health",
+    "lang": "ja",
+    "order": 29,
+    "unlockedAfter": {
+      "lex": 316,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "両親は元気ですか。",
+        "gloss": "Are your parents well?",
+        "tokens": [
+          "両親",
+          "は",
+          "元気",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-family-health-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。家族はみんな元気です。",
+        "gloss": "Yes. Everyone in my family is well.",
+        "tokens": [
+          "はい",
+          "家族",
+          "は",
+          "みんな",
+          "元気",
+          "~です"
+        ],
+        "audioId": "ja-scene-family-health-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "夫は仕事をしますか。",
+        "gloss": "Does your husband work?",
+        "tokens": [
+          "夫",
+          "は",
+          "仕事",
+          "を",
+          "する",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-family-health-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。妻も仕事をします。",
+        "gloss": "Yes. My wife also works.",
+        "tokens": [
+          "はい",
+          "妻",
+          "も",
+          "仕事",
+          "を",
+          "する",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-health-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-family-health-q1",
+        "kind": "comprehend",
+        "prompt": "Who does A ask about first?",
+        "answer": "B’s parents.",
+        "distractors": [
+          "B’s older brother.",
+          "B’s doctor."
+        ],
+        "sourceText": "両親は元気ですか。",
+        "sourceTokens": [
+          "両親",
+          "は",
+          "元気",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-family-health-q1"
+      },
+      {
+        "id": "ja-scene-family-health-q2",
+        "kind": "comprehend",
+        "prompt": "How is B’s family?",
+        "answer": "Everyone is well.",
+        "distractors": [
+          "Everyone is sick.",
+          "Everyone is at the hospital."
+        ],
+        "sourceText": "はい。家族はみんな元気です。",
+        "sourceTokens": [
+          "はい",
+          "家族",
+          "は",
+          "みんな",
+          "元気",
+          "~です"
+        ],
+        "audioId": "ja-scene-family-health-q2"
+      },
+      {
+        "id": "ja-scene-family-health-q3",
+        "kind": "comprehend",
+        "prompt": "Who also works?",
+        "answer": "The wife.",
+        "distractors": [
+          "The baby.",
+          "The aunt."
+        ],
+        "sourceText": "はい。妻も仕事をします。",
+        "sourceTokens": [
+          "はい",
+          "妻",
+          "も",
+          "仕事",
+          "を",
+          "する",
+          "~ます"
+        ],
+        "audioId": "ja-scene-family-health-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-doctor-visit",
+    "lang": "ja",
+    "order": 30,
+    "unlockedAfter": {
+      "lex": 338,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "元気ですか。",
+        "gloss": "Are you well?",
+        "tokens": [
+          "元気",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-doctor-visit-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。頭が痛いです。",
+        "gloss": "No. My head hurts.",
+        "tokens": [
+          "いいえ",
+          "頭",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-scene-doctor-visit-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "医者に行きますか。",
+        "gloss": "Will you go to the doctor?",
+        "tokens": [
+          "医者",
+          "に",
+          "行く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-doctor-visit-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。薬を買います。",
+        "gloss": "Yes. I will buy medicine.",
+        "tokens": [
+          "はい",
+          "薬",
+          "を",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-doctor-visit-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-doctor-visit-q1",
+        "kind": "comprehend",
+        "prompt": "What hurts?",
+        "answer": "B’s head.",
+        "distractors": [
+          "B’s ear.",
+          "B’s stomach."
+        ],
+        "sourceText": "いいえ。頭が痛いです。",
+        "sourceTokens": [
+          "いいえ",
+          "頭",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-scene-doctor-visit-q1"
+      },
+      {
+        "id": "ja-scene-doctor-visit-q2",
+        "kind": "comprehend",
+        "prompt": "Where will B go?",
+        "answer": "To the doctor.",
+        "distractors": [
+          "To the library.",
+          "To the park."
+        ],
+        "sourceText": "医者に行きますか。",
+        "sourceTokens": [
+          "医者",
+          "に",
+          "行く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-doctor-visit-q2"
+      },
+      {
+        "id": "ja-scene-doctor-visit-q3",
+        "kind": "comprehend",
+        "prompt": "What will B buy?",
+        "answer": "Medicine.",
+        "distractors": [
+          "Tea.",
+          "Shoes."
+        ],
+        "sourceText": "はい。薬を買います。",
+        "sourceTokens": [
+          "はい",
+          "薬",
+          "を",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-doctor-visit-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-cold-symptoms",
+    "lang": "ja",
+    "order": 31,
+    "unlockedAfter": {
+      "lex": 338,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "風邪ですか。",
+        "gloss": "Do you have a cold?",
+        "tokens": [
+          "風邪",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-cold-symptoms-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。熱があります。",
+        "gloss": "Yes. I have a fever.",
+        "tokens": [
+          "はい",
+          "熱",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-cold-symptoms-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "喉も痛いですか。",
+        "gloss": "Does your throat hurt too?",
+        "tokens": [
+          "喉",
+          "も",
+          "痛い",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-cold-symptoms-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。お腹も痛いです。",
+        "gloss": "Yes. My stomach also hurts.",
+        "tokens": [
+          "はい",
+          "お腹",
+          "も",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-scene-cold-symptoms-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-cold-symptoms-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask about?",
+        "answer": "A cold.",
+        "distractors": [
+          "A family member.",
+          "A medicine."
+        ],
+        "sourceText": "風邪ですか。",
+        "sourceTokens": [
+          "風邪",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-cold-symptoms-q1"
+      },
+      {
+        "id": "ja-scene-cold-symptoms-q2",
+        "kind": "comprehend",
+        "prompt": "What symptom does B have?",
+        "answer": "A fever.",
+        "distractors": [
+          "A cough.",
+          "A sore tooth."
+        ],
+        "sourceText": "はい。熱があります。",
+        "sourceTokens": [
+          "はい",
+          "熱",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-cold-symptoms-q2"
+      },
+      {
+        "id": "ja-scene-cold-symptoms-q3",
+        "kind": "comprehend",
+        "prompt": "What else hurts?",
+        "answer": "B’s stomach.",
+        "distractors": [
+          "B’s nose.",
+          "B’s finger."
+        ],
+        "sourceText": "はい。お腹も痛いです。",
+        "sourceTokens": [
+          "はい",
+          "お腹",
+          "も",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-scene-cold-symptoms-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINTS:
+[
+  {
+    "id": "ja-checkpoint-14",
+    "lang": "ja",
+    "unitId": "ja-unit-14",
+    "order": 14,
+    "title": "Unit 14 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-14-q1",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "Everyone in the family is well.",
+        "distractors": [
+          "Everyone in the family is sick.",
+          "The parents are at home."
+        ],
+        "sourceText": "家族はみんな元気です。",
+        "sourceTokens": [
+          "家族",
+          "は",
+          "みんな",
+          "元気",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q1"
+      },
+      {
+        "id": "ja-checkpoint-14-q2",
+        "kind": "comprehend",
+        "prompt": "Who are students?",
+        "answer": "The younger brother and younger sister.",
+        "distractors": [
+          "The uncle and aunt.",
+          "The husband and wife."
+        ],
+        "sourceText": "弟も妹も学生です。",
+        "sourceTokens": [
+          "弟",
+          "も",
+          "妹",
+          "も",
+          "学生",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q2"
+      },
+      {
+        "id": "ja-checkpoint-14-q3",
+        "kind": "comprehend",
+        "prompt": "Where are the parents?",
+        "answer": "At home.",
+        "distractors": [
+          "At the hospital.",
+          "At the company."
+        ],
+        "sourceText": "両親は家にいます。",
+        "sourceTokens": [
+          "両親",
+          "は",
+          "家",
+          "に",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-14-q3"
+      },
+      {
+        "id": "ja-checkpoint-14-q4",
+        "kind": "comprehend",
+        "prompt": "What is the uncle?",
+        "answer": "An adult.",
+        "distractors": [
+          "A child.",
+          "A baby."
+        ],
+        "sourceText": "おじは大人です。",
+        "sourceTokens": [
+          "おじ",
+          "は",
+          "大人",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q4"
+      },
+      {
+        "id": "ja-checkpoint-14-q5",
+        "kind": "comprehend",
+        "prompt": "How is the aunt?",
+        "answer": "Well.",
+        "distractors": [
+          "Weak.",
+          "Busy."
+        ],
+        "sourceText": "おばも元気です。",
+        "sourceTokens": [
+          "おば",
+          "も",
+          "元気",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q5"
+      },
+      {
+        "id": "ja-checkpoint-14-q6",
+        "kind": "comprehend",
+        "prompt": "What is the baby?",
+        "answer": "A child.",
+        "distractors": [
+          "An adult.",
+          "A parent."
+        ],
+        "sourceText": "赤ちゃんは子供です。",
+        "sourceTokens": [
+          "赤ちゃん",
+          "は",
+          "子供",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q6"
+      },
+      {
+        "id": "ja-checkpoint-14-q7",
+        "kind": "comprehend",
+        "prompt": "How is the man described?",
+        "answer": "Young.",
+        "distractors": [
+          "Old.",
+          "Expensive."
+        ],
+        "sourceText": "男の人は若いです。",
+        "sourceTokens": [
+          "男",
+          "の",
+          "人",
+          "は",
+          "若い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q7"
+      },
+      {
+        "id": "ja-checkpoint-14-q8",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "People in town are well.",
+        "distractors": [
+          "The parents are weak.",
+          "The children are at school."
+        ],
+        "sourceText": "町の人々は元気です。",
+        "sourceTokens": [
+          "町",
+          "の",
+          "人々",
+          "は",
+          "元気",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-14-q8"
+      }
+    ]
+  },
+  {
+    "id": "ja-checkpoint-15",
+    "lang": "ja",
+    "unitId": "ja-unit-15",
+    "order": 15,
+    "title": "Unit 15 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-15-q1",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "My body hurts.",
+        "distractors": [
+          "My family is well.",
+          "My voice is strong."
+        ],
+        "sourceText": "体が痛いです。",
+        "sourceTokens": [
+          "体",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-15-q1"
+      },
+      {
+        "id": "ja-checkpoint-15-q2",
+        "kind": "comprehend",
+        "prompt": "What is long?",
+        "answer": "Hair.",
+        "distractors": [
+          "A finger.",
+          "A neck."
+        ],
+        "sourceText": "髪は長いです。",
+        "sourceTokens": [
+          "髪",
+          "は",
+          "長い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-15-q2"
+      },
+      {
+        "id": "ja-checkpoint-15-q3",
+        "kind": "comprehend",
+        "prompt": "What hurts?",
+        "answer": "An ear.",
+        "distractors": [
+          "A nose.",
+          "A tooth."
+        ],
+        "sourceText": "耳が痛いです。",
+        "sourceTokens": [
+          "耳",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-15-q3"
+      },
+      {
+        "id": "ja-checkpoint-15-q4",
+        "kind": "comprehend",
+        "prompt": "What hurts?",
+        "answer": "A nose.",
+        "distractors": [
+          "A throat.",
+          "A back."
+        ],
+        "sourceText": "鼻が痛いです。",
+        "sourceTokens": [
+          "鼻",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-15-q4"
+      },
+      {
+        "id": "ja-checkpoint-15-q5",
+        "kind": "comprehend",
+        "prompt": "What hurts?",
+        "answer": "A tooth.",
+        "distractors": [
+          "A face.",
+          "An arm."
+        ],
+        "sourceText": "歯が痛いです。",
+        "sourceTokens": [
+          "歯",
+          "が",
+          "痛い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-15-q5"
+      },
+      {
+        "id": "ja-checkpoint-15-q6",
+        "kind": "comprehend",
+        "prompt": "What symptom is there?",
+        "answer": "A cough.",
+        "distractors": [
+          "A fever.",
+          "A cold."
+        ],
+        "sourceText": "咳があります。",
+        "sourceTokens": [
+          "咳",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-15-q6"
+      },
+      {
+        "id": "ja-checkpoint-15-q7",
+        "kind": "comprehend",
+        "prompt": "Who does someone ask?",
+        "answer": "A doctor.",
+        "distractors": [
+          "A parent.",
+          "An older sister."
+        ],
+        "sourceText": "医者に聞きます。",
+        "sourceTokens": [
+          "医者",
+          "に",
+          "聞く",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-15-q7"
+      },
+      {
+        "id": "ja-checkpoint-15-q8",
+        "kind": "comprehend",
+        "prompt": "What does someone drink?",
+        "answer": "Medicine.",
+        "distractors": [
+          "Milk.",
+          "Coffee."
+        ],
+        "sourceText": "薬を飲みます。",
+        "sourceTokens": [
+          "薬",
+          "を",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-15-q8"
+      },
+      {
+        "id": "ja-checkpoint-15-q9",
+        "kind": "comprehend",
+        "prompt": "What does someone hear?",
+        "answer": "A voice.",
+        "distractors": [
+          "A newspaper.",
+          "A letter."
+        ],
+        "sourceText": "声を聞きます。",
+        "sourceTokens": [
+          "声",
+          "を",
+          "聞く",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-15-q9"
+      }
+    ]
+  }
+]

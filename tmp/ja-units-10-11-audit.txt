@@ -1,0 +1,1982 @@
+Audit Japanese VOCAB Units 10 and 11 for correctness. Unit 10 transportation/places; Unit 11 time/schedule. Check readings, romanization, pos, day-of-week readings, time/counter readings, naturalness, token arrays, closed-universe decodability, and any type-invalid pos values. Be strict and concise: list required fixes or say ship. Context: lint passes 0 leaks after these edits. Existing vocab through order 206 and grammar through order 132 are available.
+
+UNITS:
+[
+  {
+    "id": "ja-unit-10",
+    "lang": "ja",
+    "order": 10,
+    "title": "Transportation and places",
+    "lexRange": [
+      207,
+      228
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-bus-to-library",
+      "ja-scene-hospital-directions"
+    ],
+    "checkpointId": "ja-checkpoint-10"
+  },
+  {
+    "id": "ja-unit-11",
+    "lang": "ja",
+    "order": 11,
+    "title": "Time and schedules",
+    "lexRange": [
+      229,
+      250
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-school-schedule",
+      "ja-scene-weekend-plans"
+    ],
+    "checkpointId": "ja-checkpoint-11"
+  }
+]
+
+UNIT 10 LEX:
+[
+  {
+    "id": "ja-basu",
+    "lang": "ja",
+    "order": 207,
+    "headword": "バス",
+    "reading": "バス",
+    "romanization": "basu",
+    "gloss": "bus",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport",
+      "katakana"
+    ],
+    "audioId": "ja-lex-basu",
+    "examples": [
+      {
+        "text": "バス。",
+        "gloss": "bus.",
+        "tokens": [
+          "バス"
+        ],
+        "audioId": "ja-ex-basu"
+      }
+    ]
+  },
+  {
+    "id": "ja-takushii",
+    "lang": "ja",
+    "order": 208,
+    "headword": "タクシー",
+    "reading": "タクシー",
+    "romanization": "takushii",
+    "gloss": "taxi",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport",
+      "katakana"
+    ],
+    "audioId": "ja-lex-takushii",
+    "examples": [
+      {
+        "text": "タクシー。",
+        "gloss": "taxi.",
+        "tokens": [
+          "タクシー"
+        ],
+        "audioId": "ja-ex-takushii"
+      }
+    ]
+  },
+  {
+    "id": "ja-hikouki",
+    "lang": "ja",
+    "order": 209,
+    "headword": "飛行機",
+    "reading": "ひこうき",
+    "romanization": "hikouki",
+    "gloss": "airplane",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport"
+    ],
+    "audioId": "ja-lex-hikouki",
+    "examples": [
+      {
+        "text": "飛行機。",
+        "gloss": "airplane.",
+        "tokens": [
+          "飛行機"
+        ],
+        "audioId": "ja-ex-hikouki"
+      }
+    ]
+  },
+  {
+    "id": "ja-jitensha",
+    "lang": "ja",
+    "order": 210,
+    "headword": "自転車",
+    "reading": "じてんしゃ",
+    "romanization": "jitensha",
+    "gloss": "bicycle",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "transport"
+    ],
+    "audioId": "ja-lex-jitensha",
+    "examples": [
+      {
+        "text": "自転車。",
+        "gloss": "bicycle.",
+        "tokens": [
+          "自転車"
+        ],
+        "audioId": "ja-ex-jitensha"
+      }
+    ]
+  },
+  {
+    "id": "ja-kuukou",
+    "lang": "ja",
+    "order": 211,
+    "headword": "空港",
+    "reading": "くうこう",
+    "romanization": "kuukou",
+    "gloss": "airport",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-kuukou",
+    "examples": [
+      {
+        "text": "空港。",
+        "gloss": "airport.",
+        "tokens": [
+          "空港"
+        ],
+        "audioId": "ja-ex-kuukou"
+      }
+    ]
+  },
+  {
+    "id": "ja-ginkou",
+    "lang": "ja",
+    "order": 212,
+    "headword": "銀行",
+    "reading": "ぎんこう",
+    "romanization": "ginkou",
+    "gloss": "bank",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-ginkou",
+    "examples": [
+      {
+        "text": "銀行。",
+        "gloss": "bank.",
+        "tokens": [
+          "銀行"
+        ],
+        "audioId": "ja-ex-ginkou"
+      }
+    ]
+  },
+  {
+    "id": "ja-byouin",
+    "lang": "ja",
+    "order": 213,
+    "headword": "病院",
+    "reading": "びょういん",
+    "romanization": "byouin",
+    "gloss": "hospital",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-byouin",
+    "examples": [
+      {
+        "text": "病院。",
+        "gloss": "hospital.",
+        "tokens": [
+          "病院"
+        ],
+        "audioId": "ja-ex-byouin"
+      }
+    ]
+  },
+  {
+    "id": "ja-toshokan",
+    "lang": "ja",
+    "order": 214,
+    "headword": "図書館",
+    "reading": "としょかん",
+    "romanization": "toshokan",
+    "gloss": "library",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-toshokan",
+    "examples": [
+      {
+        "text": "図書館。",
+        "gloss": "library.",
+        "tokens": [
+          "図書館"
+        ],
+        "audioId": "ja-ex-toshokan"
+      }
+    ]
+  },
+  {
+    "id": "ja-kouen",
+    "lang": "ja",
+    "order": 215,
+    "headword": "公園",
+    "reading": "こうえん",
+    "romanization": "kouen",
+    "gloss": "park",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-kouen",
+    "examples": [
+      {
+        "text": "公園。",
+        "gloss": "park.",
+        "tokens": [
+          "公園"
+        ],
+        "audioId": "ja-ex-kouen"
+      }
+    ]
+  },
+  {
+    "id": "ja-heya",
+    "lang": "ja",
+    "order": 216,
+    "headword": "部屋",
+    "reading": "へや",
+    "romanization": "heya",
+    "gloss": "room",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-heya",
+    "examples": [
+      {
+        "text": "部屋。",
+        "gloss": "room.",
+        "tokens": [
+          "部屋"
+        ],
+        "audioId": "ja-ex-heya"
+      }
+    ]
+  },
+  {
+    "id": "ja-gakkou",
+    "lang": "ja",
+    "order": 217,
+    "headword": "学校",
+    "reading": "がっこう",
+    "romanization": "gakkou",
+    "gloss": "school",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-gakkou",
+    "examples": [
+      {
+        "text": "学校。",
+        "gloss": "school.",
+        "tokens": [
+          "学校"
+        ],
+        "audioId": "ja-ex-gakkou"
+      }
+    ]
+  },
+  {
+    "id": "ja-toire",
+    "lang": "ja",
+    "order": 218,
+    "headword": "トイレ",
+    "reading": "トイレ",
+    "romanization": "toire",
+    "gloss": "toilet; restroom",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place",
+      "katakana"
+    ],
+    "audioId": "ja-lex-toire",
+    "examples": [
+      {
+        "text": "トイレ。",
+        "gloss": "restroom.",
+        "tokens": [
+          "トイレ"
+        ],
+        "audioId": "ja-ex-toire"
+      }
+    ]
+  },
+  {
+    "id": "ja-tatemono",
+    "lang": "ja",
+    "order": 219,
+    "headword": "建物",
+    "reading": "たてもの",
+    "romanization": "tatemono",
+    "gloss": "building",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-tatemono",
+    "examples": [
+      {
+        "text": "建物。",
+        "gloss": "building.",
+        "tokens": [
+          "建物"
+        ],
+        "audioId": "ja-ex-tatemono"
+      }
+    ]
+  },
+  {
+    "id": "ja-hoteru",
+    "lang": "ja",
+    "order": 220,
+    "headword": "ホテル",
+    "reading": "ホテル",
+    "romanization": "hoteru",
+    "gloss": "hotel",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place",
+      "katakana"
+    ],
+    "audioId": "ja-lex-hoteru",
+    "examples": [
+      {
+        "text": "ホテル。",
+        "gloss": "hotel.",
+        "tokens": [
+          "ホテル"
+        ],
+        "audioId": "ja-ex-hoteru"
+      }
+    ]
+  },
+  {
+    "id": "ja-resutoran",
+    "lang": "ja",
+    "order": 221,
+    "headword": "レストラン",
+    "reading": "レストラン",
+    "romanization": "resutoran",
+    "gloss": "restaurant",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place",
+      "katakana"
+    ],
+    "audioId": "ja-lex-resutoran",
+    "examples": [
+      {
+        "text": "レストラン。",
+        "gloss": "restaurant.",
+        "tokens": [
+          "レストラン"
+        ],
+        "audioId": "ja-ex-resutoran"
+      }
+    ]
+  },
+  {
+    "id": "ja-kouban",
+    "lang": "ja",
+    "order": 222,
+    "headword": "交番",
+    "reading": "こうばん",
+    "romanization": "kouban",
+    "gloss": "police box",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-kouban",
+    "examples": [
+      {
+        "text": "交番。",
+        "gloss": "police box.",
+        "tokens": [
+          "交番"
+        ],
+        "audioId": "ja-ex-kouban"
+      }
+    ]
+  },
+  {
+    "id": "ja-chizu",
+    "lang": "ja",
+    "order": 223,
+    "headword": "地図",
+    "reading": "ちず",
+    "romanization": "chizu",
+    "gloss": "map",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-chizu",
+    "examples": [
+      {
+        "text": "地図。",
+        "gloss": "map.",
+        "tokens": [
+          "地図"
+        ],
+        "audioId": "ja-ex-chizu"
+      }
+    ]
+  },
+  {
+    "id": "ja-machi",
+    "lang": "ja",
+    "order": 224,
+    "headword": "町",
+    "reading": "まち",
+    "romanization": "machi",
+    "gloss": "town",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "place"
+    ],
+    "audioId": "ja-lex-machi",
+    "examples": [
+      {
+        "text": "町。",
+        "gloss": "town.",
+        "tokens": [
+          "町"
+        ],
+        "audioId": "ja-ex-machi"
+      }
+    ]
+  },
+  {
+    "id": "ja-noru",
+    "lang": "ja",
+    "order": 225,
+    "headword": "乗る",
+    "reading": "のる",
+    "romanization": "noru",
+    "gloss": "ride; get on",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "transport"
+    ],
+    "audioId": "ja-lex-noru",
+    "examples": [
+      {
+        "text": "乗る。",
+        "gloss": "ride; get on.",
+        "tokens": [
+          "乗る"
+        ],
+        "audioId": "ja-ex-noru"
+      }
+    ]
+  },
+  {
+    "id": "ja-oriru",
+    "lang": "ja",
+    "order": 226,
+    "headword": "降りる",
+    "reading": "おりる",
+    "romanization": "oriru",
+    "gloss": "get off",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "ichidan",
+      "transport"
+    ],
+    "audioId": "ja-lex-oriru",
+    "examples": [
+      {
+        "text": "降りる。",
+        "gloss": "get off.",
+        "tokens": [
+          "降りる"
+        ],
+        "audioId": "ja-ex-oriru"
+      }
+    ]
+  },
+  {
+    "id": "ja-tsuku",
+    "lang": "ja",
+    "order": 227,
+    "headword": "着く",
+    "reading": "つく",
+    "romanization": "tsuku",
+    "gloss": "arrive",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "transport"
+    ],
+    "audioId": "ja-lex-tsuku",
+    "examples": [
+      {
+        "text": "着く。",
+        "gloss": "arrive.",
+        "tokens": [
+          "着く"
+        ],
+        "audioId": "ja-ex-tsuku"
+      }
+    ]
+  },
+  {
+    "id": "ja-aruku",
+    "lang": "ja",
+    "order": 228,
+    "headword": "歩く",
+    "reading": "あるく",
+    "romanization": "aruku",
+    "gloss": "walk",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "transport"
+    ],
+    "audioId": "ja-lex-aruku",
+    "examples": [
+      {
+        "text": "歩く。",
+        "gloss": "walk.",
+        "tokens": [
+          "歩く"
+        ],
+        "audioId": "ja-ex-aruku"
+      }
+    ]
+  }
+]
+
+UNIT 11 LEX:
+[
+  {
+    "id": "ja-youbi",
+    "lang": "ja",
+    "order": 229,
+    "headword": "曜日",
+    "reading": "ようび",
+    "romanization": "youbi",
+    "gloss": "day of the week",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-youbi",
+    "examples": [
+      {
+        "text": "曜日。",
+        "gloss": "day of the week.",
+        "tokens": [
+          "曜日"
+        ],
+        "audioId": "ja-ex-youbi"
+      }
+    ]
+  },
+  {
+    "id": "ja-getsuyoubi",
+    "lang": "ja",
+    "order": 230,
+    "headword": "月曜日",
+    "reading": "げつようび",
+    "romanization": "getsuyoubi",
+    "gloss": "Monday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-getsuyoubi",
+    "examples": [
+      {
+        "text": "月曜日。",
+        "gloss": "Monday.",
+        "tokens": [
+          "月曜日"
+        ],
+        "audioId": "ja-ex-getsuyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-kayoubi",
+    "lang": "ja",
+    "order": 231,
+    "headword": "火曜日",
+    "reading": "かようび",
+    "romanization": "kayoubi",
+    "gloss": "Tuesday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-kayoubi",
+    "examples": [
+      {
+        "text": "火曜日。",
+        "gloss": "Tuesday.",
+        "tokens": [
+          "火曜日"
+        ],
+        "audioId": "ja-ex-kayoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-suiyoubi",
+    "lang": "ja",
+    "order": 232,
+    "headword": "水曜日",
+    "reading": "すいようび",
+    "romanization": "suiyoubi",
+    "gloss": "Wednesday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-suiyoubi",
+    "examples": [
+      {
+        "text": "水曜日。",
+        "gloss": "Wednesday.",
+        "tokens": [
+          "水曜日"
+        ],
+        "audioId": "ja-ex-suiyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-mokuyoubi",
+    "lang": "ja",
+    "order": 233,
+    "headword": "木曜日",
+    "reading": "もくようび",
+    "romanization": "mokuyoubi",
+    "gloss": "Thursday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-mokuyoubi",
+    "examples": [
+      {
+        "text": "木曜日。",
+        "gloss": "Thursday.",
+        "tokens": [
+          "木曜日"
+        ],
+        "audioId": "ja-ex-mokuyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-kinyoubi",
+    "lang": "ja",
+    "order": 234,
+    "headword": "金曜日",
+    "reading": "きんようび",
+    "romanization": "kinyoubi",
+    "gloss": "Friday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-kinyoubi",
+    "examples": [
+      {
+        "text": "金曜日。",
+        "gloss": "Friday.",
+        "tokens": [
+          "金曜日"
+        ],
+        "audioId": "ja-ex-kinyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-doyoubi",
+    "lang": "ja",
+    "order": 235,
+    "headword": "土曜日",
+    "reading": "どようび",
+    "romanization": "doyoubi",
+    "gloss": "Saturday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-doyoubi",
+    "examples": [
+      {
+        "text": "土曜日。",
+        "gloss": "Saturday.",
+        "tokens": [
+          "土曜日"
+        ],
+        "audioId": "ja-ex-doyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-nichiyoubi",
+    "lang": "ja",
+    "order": 236,
+    "headword": "日曜日",
+    "reading": "にちようび",
+    "romanization": "nichiyoubi",
+    "gloss": "Sunday",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time",
+      "weekday"
+    ],
+    "audioId": "ja-lex-nichiyoubi",
+    "examples": [
+      {
+        "text": "日曜日。",
+        "gloss": "Sunday.",
+        "tokens": [
+          "日曜日"
+        ],
+        "audioId": "ja-ex-nichiyoubi"
+      }
+    ]
+  },
+  {
+    "id": "ja-gozen",
+    "lang": "ja",
+    "order": 237,
+    "headword": "午前",
+    "reading": "ごぜん",
+    "romanization": "gozen",
+    "gloss": "morning; a.m.",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-gozen",
+    "examples": [
+      {
+        "text": "午前。",
+        "gloss": "morning; a.m.",
+        "tokens": [
+          "午前"
+        ],
+        "audioId": "ja-ex-gozen"
+      }
+    ]
+  },
+  {
+    "id": "ja-gogo",
+    "lang": "ja",
+    "order": 238,
+    "headword": "午後",
+    "reading": "ごご",
+    "romanization": "gogo",
+    "gloss": "afternoon; p.m.",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-gogo",
+    "examples": [
+      {
+        "text": "午後。",
+        "gloss": "afternoon; p.m.",
+        "tokens": [
+          "午後"
+        ],
+        "audioId": "ja-ex-gogo"
+      }
+    ]
+  },
+  {
+    "id": "ja-shuumatsu",
+    "lang": "ja",
+    "order": 239,
+    "headword": "週末",
+    "reading": "しゅうまつ",
+    "romanization": "shuumatsu",
+    "gloss": "weekend",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-shuumatsu",
+    "examples": [
+      {
+        "text": "週末。",
+        "gloss": "weekend.",
+        "tokens": [
+          "週末"
+        ],
+        "audioId": "ja-ex-shuumatsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-fun",
+    "lang": "ja",
+    "order": 240,
+    "headword": "分",
+    "reading": "ふん",
+    "romanization": "fun",
+    "gloss": "minute",
+    "pos": "number",
+    "tags": [
+      "core",
+      "time",
+      "counter"
+    ],
+    "audioId": "ja-lex-fun",
+    "examples": [
+      {
+        "text": "分。",
+        "gloss": "minute.",
+        "tokens": [
+          "分"
+        ],
+        "audioId": "ja-ex-fun"
+      }
+    ]
+  },
+  {
+    "id": "ja-jikan",
+    "lang": "ja",
+    "order": 241,
+    "headword": "時間",
+    "reading": "じかん",
+    "romanization": "jikan",
+    "gloss": "time; hour",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-jikan",
+    "examples": [
+      {
+        "text": "時間。",
+        "gloss": "time; hour.",
+        "tokens": [
+          "時間"
+        ],
+        "audioId": "ja-ex-jikan"
+      }
+    ]
+  },
+  {
+    "id": "ja-hajimaru",
+    "lang": "ja",
+    "order": 242,
+    "headword": "始まる",
+    "reading": "はじまる",
+    "romanization": "hajimaru",
+    "gloss": "begin; start",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "time"
+    ],
+    "audioId": "ja-lex-hajimaru",
+    "examples": [
+      {
+        "text": "始まる。",
+        "gloss": "begin; start.",
+        "tokens": [
+          "始まる"
+        ],
+        "audioId": "ja-ex-hajimaru"
+      }
+    ]
+  },
+  {
+    "id": "ja-owaru",
+    "lang": "ja",
+    "order": 243,
+    "headword": "終わる",
+    "reading": "おわる",
+    "romanization": "owaru",
+    "gloss": "end; finish",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "godan",
+      "time"
+    ],
+    "audioId": "ja-lex-owaru",
+    "examples": [
+      {
+        "text": "終わる。",
+        "gloss": "end; finish.",
+        "tokens": [
+          "終わる"
+        ],
+        "audioId": "ja-ex-owaru"
+      }
+    ]
+  },
+  {
+    "id": "ja-maishuu",
+    "lang": "ja",
+    "order": 244,
+    "headword": "毎週",
+    "reading": "まいしゅう",
+    "romanization": "maishuu",
+    "gloss": "every week",
+    "pos": "adverb",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-maishuu",
+    "examples": [
+      {
+        "text": "毎週。",
+        "gloss": "every week.",
+        "tokens": [
+          "毎週"
+        ],
+        "audioId": "ja-ex-maishuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-konshuu",
+    "lang": "ja",
+    "order": 245,
+    "headword": "今週",
+    "reading": "こんしゅう",
+    "romanization": "konshuu",
+    "gloss": "this week",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-konshuu",
+    "examples": [
+      {
+        "text": "今週。",
+        "gloss": "this week.",
+        "tokens": [
+          "今週"
+        ],
+        "audioId": "ja-ex-konshuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-raishuu",
+    "lang": "ja",
+    "order": 246,
+    "headword": "来週",
+    "reading": "らいしゅう",
+    "romanization": "raishuu",
+    "gloss": "next week",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-raishuu",
+    "examples": [
+      {
+        "text": "来週。",
+        "gloss": "next week.",
+        "tokens": [
+          "来週"
+        ],
+        "audioId": "ja-ex-raishuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-senshuu",
+    "lang": "ja",
+    "order": 247,
+    "headword": "先週",
+    "reading": "せんしゅう",
+    "romanization": "senshuu",
+    "gloss": "last week",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-senshuu",
+    "examples": [
+      {
+        "text": "先週。",
+        "gloss": "last week.",
+        "tokens": [
+          "先週"
+        ],
+        "audioId": "ja-ex-senshuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-yotei",
+    "lang": "ja",
+    "order": 248,
+    "headword": "予定",
+    "reading": "よてい",
+    "romanization": "yotei",
+    "gloss": "plan; schedule",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "time"
+    ],
+    "audioId": "ja-lex-yotei",
+    "examples": [
+      {
+        "text": "予定。",
+        "gloss": "plan; schedule.",
+        "tokens": [
+          "予定"
+        ],
+        "audioId": "ja-ex-yotei"
+      }
+    ]
+  },
+  {
+    "id": "ja-hachi-number",
+    "lang": "ja",
+    "order": 249,
+    "headword": "八",
+    "reading": "はち",
+    "romanization": "hachi",
+    "gloss": "eight",
+    "pos": "number",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-hachi-number",
+    "examples": [
+      {
+        "text": "八。",
+        "gloss": "eight.",
+        "tokens": [
+          "八"
+        ],
+        "audioId": "ja-ex-hachi-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-kyuu-number",
+    "lang": "ja",
+    "order": 250,
+    "headword": "九",
+    "reading": "きゅう",
+    "romanization": "kyuu",
+    "gloss": "nine",
+    "pos": "number",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-kyuu-number",
+    "examples": [
+      {
+        "text": "九。",
+        "gloss": "nine.",
+        "tokens": [
+          "九"
+        ],
+        "audioId": "ja-ex-kyuu-number"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-bus-to-library",
+    "lang": "ja",
+    "order": 20,
+    "unlockedAfter": {
+      "lex": 228,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "バスで行きますか。",
+        "gloss": "Will you go by bus?",
+        "tokens": [
+          "バス",
+          "で",
+          "行く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-bus-to-library-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。バスで行きます。",
+        "gloss": "Yes. I will go by bus.",
+        "tokens": [
+          "はい",
+          "バス",
+          "で",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-bus-to-library-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "どこで降りますか。",
+        "gloss": "Where will you get off?",
+        "tokens": [
+          "どこ",
+          "で",
+          "降りる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-bus-to-library-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "公園で降ります。図書館に行きます。",
+        "gloss": "I will get off at the park. I will go to the library.",
+        "tokens": [
+          "公園",
+          "で",
+          "降りる",
+          "~ます",
+          "図書館",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-bus-to-library-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-bus-to-library-q1",
+        "kind": "comprehend",
+        "prompt": "How will B go?",
+        "answer": "By bus.",
+        "distractors": [
+          "By taxi.",
+          "By bicycle."
+        ],
+        "sourceText": "はい。バスで行きます。",
+        "sourceTokens": [
+          "はい",
+          "バス",
+          "で",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-bus-to-library-q1"
+      },
+      {
+        "id": "ja-scene-bus-to-library-q2",
+        "kind": "comprehend",
+        "prompt": "Where will B get off?",
+        "answer": "At the park.",
+        "distractors": [
+          "At the airport.",
+          "At the hospital."
+        ],
+        "sourceText": "公園で降ります。",
+        "sourceTokens": [
+          "公園",
+          "で",
+          "降りる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-bus-to-library-q2"
+      },
+      {
+        "id": "ja-scene-bus-to-library-q3",
+        "kind": "comprehend",
+        "prompt": "Where will B go after getting off?",
+        "answer": "To the library.",
+        "distractors": [
+          "To the bank.",
+          "To the hotel."
+        ],
+        "sourceText": "図書館に行きます。",
+        "sourceTokens": [
+          "図書館",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-bus-to-library-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-hospital-directions",
+    "lang": "ja",
+    "order": 21,
+    "unlockedAfter": {
+      "lex": 228,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "病院はどこですか。",
+        "gloss": "Where is the hospital?",
+        "tokens": [
+          "病院",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-hospital-directions-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "銀行の前です。",
+        "gloss": "It is in front of the bank.",
+        "tokens": [
+          "銀行",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-scene-hospital-directions-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "自転車で行きますか。",
+        "gloss": "Will you go by bicycle?",
+        "tokens": [
+          "自転車",
+          "で",
+          "行く",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-hospital-directions-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。歩いて行きます。",
+        "gloss": "No. I will walk there.",
+        "tokens": [
+          "いいえ",
+          "歩く",
+          "て",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-hospital-directions-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-hospital-directions-q1",
+        "kind": "comprehend",
+        "prompt": "What place does A ask about?",
+        "answer": "The hospital.",
+        "distractors": [
+          "The airport.",
+          "The school."
+        ],
+        "sourceText": "病院はどこですか。",
+        "sourceTokens": [
+          "病院",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-hospital-directions-q1"
+      },
+      {
+        "id": "ja-scene-hospital-directions-q2",
+        "kind": "comprehend",
+        "prompt": "Where is it?",
+        "answer": "In front of the bank.",
+        "distractors": [
+          "Inside the building.",
+          "At the park."
+        ],
+        "sourceText": "銀行の前です。",
+        "sourceTokens": [
+          "銀行",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-scene-hospital-directions-q2"
+      },
+      {
+        "id": "ja-scene-hospital-directions-q3",
+        "kind": "comprehend",
+        "prompt": "How will B go?",
+        "answer": "On foot.",
+        "distractors": [
+          "By bicycle.",
+          "By train."
+        ],
+        "sourceText": "いいえ。歩いて行きます。",
+        "sourceTokens": [
+          "いいえ",
+          "歩く",
+          "て",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-hospital-directions-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-school-schedule",
+    "lang": "ja",
+    "order": 22,
+    "unlockedAfter": {
+      "lex": 250,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "今日は何曜日ですか。",
+        "gloss": "What day of the week is it today?",
+        "tokens": [
+          "今日",
+          "は",
+          "何",
+          "曜日",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-school-schedule-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "月曜日です。",
+        "gloss": "It is Monday.",
+        "tokens": [
+          "月曜日",
+          "~です"
+        ],
+        "audioId": "ja-scene-school-schedule-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "学校は何時に始まりますか。",
+        "gloss": "What time does school start?",
+        "tokens": [
+          "学校",
+          "は",
+          "何",
+          "時",
+          "に",
+          "始まる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-school-schedule-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "午前八時に始まります。",
+        "gloss": "It starts at eight a.m.",
+        "tokens": [
+          "午前",
+          "八",
+          "時",
+          "に",
+          "始まる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-school-schedule-b2"
+      },
+      {
+        "speaker": "A",
+        "text": "何時に終わりますか。",
+        "gloss": "What time does it end?",
+        "tokens": [
+          "何",
+          "時",
+          "に",
+          "終わる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-school-schedule-a3"
+      },
+      {
+        "speaker": "B",
+        "text": "午後三時に終わります。",
+        "gloss": "It ends at three p.m.",
+        "tokens": [
+          "午後",
+          "三",
+          "時",
+          "に",
+          "終わる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-school-schedule-b3"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-school-schedule-q1",
+        "kind": "comprehend",
+        "prompt": "What day is it?",
+        "answer": "Monday.",
+        "distractors": [
+          "Friday.",
+          "Sunday."
+        ],
+        "sourceText": "月曜日です。",
+        "sourceTokens": [
+          "月曜日",
+          "~です"
+        ],
+        "audioId": "ja-scene-school-schedule-q1"
+      },
+      {
+        "id": "ja-scene-school-schedule-q2",
+        "kind": "comprehend",
+        "prompt": "When does school start?",
+        "answer": "At eight a.m.",
+        "distractors": [
+          "At three p.m.",
+          "On the weekend."
+        ],
+        "sourceText": "午前八時に始まります。",
+        "sourceTokens": [
+          "午前",
+          "八",
+          "時",
+          "に",
+          "始まる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-school-schedule-q2"
+      },
+      {
+        "id": "ja-scene-school-schedule-q3",
+        "kind": "comprehend",
+        "prompt": "When does school end?",
+        "answer": "At three p.m.",
+        "distractors": [
+          "At eight a.m.",
+          "On Monday morning."
+        ],
+        "sourceText": "午後三時に終わります。",
+        "sourceTokens": [
+          "午後",
+          "三",
+          "時",
+          "に",
+          "終わる",
+          "~ます"
+        ],
+        "audioId": "ja-scene-school-schedule-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-weekend-plans",
+    "lang": "ja",
+    "order": 23,
+    "unlockedAfter": {
+      "lex": 250,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "週末に予定がありますか。",
+        "gloss": "Do you have plans on the weekend?",
+        "tokens": [
+          "週末",
+          "に",
+          "予定",
+          "が",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-weekend-plans-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。土曜日に公園に行きます。",
+        "gloss": "Yes. On Saturday, I will go to the park.",
+        "tokens": [
+          "はい",
+          "土曜日",
+          "に",
+          "公園",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-weekend-plans-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "日曜日は何をしますか。",
+        "gloss": "What will you do on Sunday?",
+        "tokens": [
+          "日曜日",
+          "は",
+          "何",
+          "を",
+          "する",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-weekend-plans-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "図書館で日本語を読みます。",
+        "gloss": "I will read Japanese at the library.",
+        "tokens": [
+          "図書館",
+          "で",
+          "日本語",
+          "を",
+          "読む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-weekend-plans-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-weekend-plans-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "Whether B has weekend plans.",
+        "distractors": [
+          "What time school starts.",
+          "Whether B is at the library."
+        ],
+        "sourceText": "週末に予定がありますか。",
+        "sourceTokens": [
+          "週末",
+          "に",
+          "予定",
+          "が",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-weekend-plans-q1"
+      },
+      {
+        "id": "ja-scene-weekend-plans-q2",
+        "kind": "comprehend",
+        "prompt": "Where will B go on Saturday?",
+        "answer": "To the park.",
+        "distractors": [
+          "To the hospital.",
+          "To the bank."
+        ],
+        "sourceText": "はい。土曜日に公園に行きます。",
+        "sourceTokens": [
+          "はい",
+          "土曜日",
+          "に",
+          "公園",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-scene-weekend-plans-q2"
+      },
+      {
+        "id": "ja-scene-weekend-plans-q3",
+        "kind": "comprehend",
+        "prompt": "What will B do on Sunday?",
+        "answer": "Read Japanese at the library.",
+        "distractors": [
+          "Ride a bicycle to school.",
+          "Work at the company."
+        ],
+        "sourceText": "図書館で日本語を読みます。",
+        "sourceTokens": [
+          "図書館",
+          "で",
+          "日本語",
+          "を",
+          "読む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-weekend-plans-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINTS:
+[
+  {
+    "id": "ja-checkpoint-10",
+    "lang": "ja",
+    "unitId": "ja-unit-10",
+    "order": 10,
+    "title": "Unit 10 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-10-q1",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I will go to the airport by airplane.",
+        "distractors": [
+          "I will go to the hospital by taxi.",
+          "I got off at the park."
+        ],
+        "sourceText": "飛行機で空港に行きます。",
+        "sourceTokens": [
+          "飛行機",
+          "で",
+          "空港",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-10-q1"
+      },
+      {
+        "id": "ja-checkpoint-10-q2",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I will ride a taxi.",
+        "distractors": [
+          "I will get off a bus.",
+          "I will walk."
+        ],
+        "sourceText": "タクシーに乗ります。",
+        "sourceTokens": [
+          "タクシー",
+          "に",
+          "乗る",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-10-q2"
+      },
+      {
+        "id": "ja-checkpoint-10-q3",
+        "kind": "comprehend",
+        "prompt": "Where is someone?",
+        "answer": "In a school room.",
+        "distractors": [
+          "In a hospital building.",
+          "At the airport."
+        ],
+        "sourceText": "学校の部屋にいます。",
+        "sourceTokens": [
+          "学校",
+          "の",
+          "部屋",
+          "に",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-10-q3"
+      },
+      {
+        "id": "ja-checkpoint-10-q4",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "There is a restroom inside the building.",
+        "distractors": [
+          "There is a map inside the room.",
+          "The restroom is in front of the bank."
+        ],
+        "sourceText": "建物の中にトイレがあります。",
+        "sourceTokens": [
+          "建物",
+          "の",
+          "中",
+          "に",
+          "トイレ",
+          "が",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-10-q4"
+      },
+      {
+        "id": "ja-checkpoint-10-q5",
+        "kind": "comprehend",
+        "prompt": "Where is the police box?",
+        "answer": "In front of the park.",
+        "distractors": [
+          "Inside the hotel.",
+          "At the airport."
+        ],
+        "sourceText": "交番は公園の前です。",
+        "sourceTokens": [
+          "交番",
+          "は",
+          "公園",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-10-q5"
+      },
+      {
+        "id": "ja-checkpoint-10-q6",
+        "kind": "comprehend",
+        "prompt": "What happened?",
+        "answer": "Someone arrived at the restaurant.",
+        "distractors": [
+          "Someone got off at the park.",
+          "Someone rode a bicycle."
+        ],
+        "sourceText": "レストランに着きました。",
+        "sourceTokens": [
+          "レストラン",
+          "に",
+          "着く",
+          "~ました"
+        ],
+        "audioId": "ja-checkpoint-10-q6"
+      }
+    ]
+  },
+  {
+    "id": "ja-checkpoint-11",
+    "lang": "ja",
+    "unitId": "ja-unit-11",
+    "order": 11,
+    "title": "Unit 11 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-11-q1",
+        "kind": "comprehend",
+        "prompt": "What day is it today?",
+        "answer": "Friday.",
+        "distractors": [
+          "Monday.",
+          "Sunday."
+        ],
+        "sourceText": "今日は金曜日です。",
+        "sourceTokens": [
+          "今日",
+          "は",
+          "金曜日",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-11-q1"
+      },
+      {
+        "id": "ja-checkpoint-11-q2",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "School starts at eight a.m.",
+        "distractors": [
+          "School ends at three p.m.",
+          "Work starts next week."
+        ],
+        "sourceText": "学校は午前八時に始まります。",
+        "sourceTokens": [
+          "学校",
+          "は",
+          "午前",
+          "八",
+          "時",
+          "に",
+          "始まる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-11-q2"
+      },
+      {
+        "id": "ja-checkpoint-11-q3",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "Work ends at three p.m.",
+        "distractors": [
+          "Work starts at eight a.m.",
+          "School ends on Friday."
+        ],
+        "sourceText": "仕事は午後三時に終わります。",
+        "sourceTokens": [
+          "仕事",
+          "は",
+          "午後",
+          "三",
+          "時",
+          "に",
+          "終わる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-11-q3"
+      },
+      {
+        "id": "ja-checkpoint-11-q4",
+        "kind": "comprehend",
+        "prompt": "What does this ask?",
+        "answer": "Whether there are weekend plans.",
+        "distractors": [
+          "What day today is.",
+          "What time work ends."
+        ],
+        "sourceText": "週末に予定がありますか。",
+        "sourceTokens": [
+          "週末",
+          "に",
+          "予定",
+          "が",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-checkpoint-11-q4"
+      },
+      {
+        "id": "ja-checkpoint-11-q5",
+        "kind": "comprehend",
+        "prompt": "What happened last week?",
+        "answer": "Someone went to the library.",
+        "distractors": [
+          "Someone will go to the hospital next week.",
+          "Someone read Japanese on Sunday."
+        ],
+        "sourceText": "先週、図書館に行きました。",
+        "sourceTokens": [
+          "先週",
+          "図書館",
+          "に",
+          "行く",
+          "~ました"
+        ],
+        "audioId": "ja-checkpoint-11-q5"
+      },
+      {
+        "id": "ja-checkpoint-11-q6",
+        "kind": "comprehend",
+        "prompt": "What will happen next week?",
+        "answer": "Someone will go to the hospital.",
+        "distractors": [
+          "Someone went to the library last week.",
+          "Someone will go to the park on Saturday."
+        ],
+        "sourceText": "来週、病院に行きます。",
+        "sourceTokens": [
+          "来週",
+          "病院",
+          "に",
+          "行く",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-11-q6"
+      },
+      {
+        "id": "ja-checkpoint-11-q7",
+        "kind": "comprehend",
+        "prompt": "What does this request?",
+        "answer": "Please wait three minutes.",
+        "distractors": [
+          "Please wait three hours.",
+          "Please start at three."
+        ],
+        "sourceText": "三分待ってください。",
+        "sourceTokens": [
+          "三",
+          "分",
+          "待つ",
+          "て",
+          "くださる"
+        ],
+        "audioId": "ja-checkpoint-11-q7"
+      }
+    ]
+  }
+]

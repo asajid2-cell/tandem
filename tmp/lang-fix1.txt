@@ -1,0 +1,20 @@
+CRITICAL FIX (Loop 1 of a multi-loop competency fix). Foreground; resume. Working dir = language repo. Make a SURGICAL, low-regression change.
+
+BUG (verified): grammar gating is broken. src/App.tsx NewWordFlow iterates ONLY the lexicon and calls progress.markGrammarSeen(...) exactly ONCE — at line ~1748, only when nextIndex >= lexicon.length (i.e., after ALL 1501 vocab). Gates (src/engine/unlock.ts getAvailableScenes line 80, getAvailableCheckpoints line 94, and reading unlock) depend on progress.knownGrammar (= knownGrammarOrders). So during normal play knownGrammarOrders stays EMPTY until the end → unit-1 scene needs grammar:18, unit grammarRange [18,19], ja-reading-1 needs grammar:132 → EVERY scene/checkpoint/reading is locked the entire journey, then all unlock at once. The learn path does not flow.
+
+INTENDED DESIGN (already in the engine): resolveUnlocks/getNextNewItems (unlock.ts:47-68) ALREADY interleaves lexicon + grammar sorted by shared `order`. The fix is to make the learn flow TEACH grammar inline in that order and mark each pattern known as the learner completes it.
+
+FIX:
+1. Make NewWordFlow advance through the INTERLEAVED syllabus (lex entries + grammar patterns, sorted by `order` exactly like getNextNewItems: order asc, lex before grammar on tie). Extract the syllabus builder into a small PURE, EXPORTED function (e.g. buildSyllabus(bundle) -> Array<{kind:'lex'|'grammar', order, item}>) so it is unit-testable. The ?index= route now indexes this combined syllabus (keep Previous/Next + resume working).
+2. When the current step is a LEX entry: render exactly as today (word card) and markSeen as today.
+3. When the current step is a GRAMMAR pattern: render a grammar-learning card REUSING existing components (Card, RevealableText, AudioButton) for visual consistency — show pattern.title, pattern.explanation, pattern.formula, and ONE example (example.text + audio + English gloss HIDDEN-by-default via RevealableText like everywhere else). The continue button calls progress.markGrammarSeen([pattern.order]) then advances. Keep dark mode + English-hidden behavior consistent.
+4. Remove the all-at-once markGrammarSeen(bundle.grammar.map(...)) at the end (it is now redundant); when the syllabus is exhausted, navigate to scenes as today. (You may keep a final safety markGrammarSeen of any remaining orders, but normal completion must mark grammar inline.)
+5. Do NOT change unlock.ts gate logic, the SRS, or content. Keep the change contained to App.tsx (+ wherever the syllabus helper lives).
+
+REQUIRED TEST (must FAIL on old behavior, PASS on new): add to src/engine (e.g. a new syllabus.test.ts or extend unlock.test.ts) a test using the real jaSeedContent that:
+  (a) asserts with EMPTY progress, getAvailableScenes/getAvailableCheckpoints do NOT include unit 1's scene/checkpoint;
+  (b) simulates completing unit 1 by walking buildSyllabus and marking lex+grammar known for every syllabus step whose order <= unit1.grammarRange[1] (or <= unit1 lexRange[1] and grammarRange[1]);
+  (c) asserts unit 1's scene AND checkpoint ARE now available, and that knownGrammarOrders covers unit1.grammarRange.
+This proves the path flows. Keep ALL existing tests green.
+
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0, `npm run lint:content` exit 0, `npm test` all pass (incl. new test). Do NOT run vite build, vite PREVIEW (it locks dist), audio, deploy, or commit. Report: tsc rc, lint rc, test summary (count + new test name), the syllabus helper name, and a 3-line description of the grammar card UI.

@@ -1,0 +1,16 @@
+ITERATION 9 (you are the Lead; same Foothold project; iter1-8 committed & LIVE. Core loop + 2 JA units (35 words, 5 scenes, 4 grammar) + real audio all live.)
+
+Watcher committed + redeployed iter8 (Unit 2 verified natural + closed-universe). Continue.
+
+SCOPE — implement UNIT CHECKPOINTS (Flow C from the plan, the proof-of-comprehension gate). Both ja-unit-1 and ja-unit-2 reference checkpointIds (ja-checkpoint-1, ja-checkpoint-2) that don't exist yet. Build the feature end to end:
+1. CONTENT CONTRACT: add a first-class Checkpoint structure (e.g. bundle.checkpoints[] with { id, lang, unitId, order, title, items: QuizItem[] }) to src/content/types.ts, and AUTHOR ja-checkpoint-1 and ja-checkpoint-2 in content/ja/seed.ts. Each checkpoint = a few UNSEEN-but-decodable comprehension items (NEW sentences the learner hasn't seen in scenes, built ONLY from that unit's cumulative learned vocab+grammar) that prove they can read/understand — not just recall the exact scene lines.
+2. LINTER: extend the content linter so checkpoint items are linted for the closed-universe invariant too (every token within the unit's cumulative known set). Add a fixture if useful. This is non-negotiable: checkpoints must be fail-closed like everything else.
+3. ENGINE/UNLOCK: a checkpoint becomes available once its unit's lex+grammar are all learned; passing marks the unit complete (completedUnits in the store); failed items get re-queued into SRS. Wire into engine/unlock.ts + the store (version the schema if you change its shape — preserve existing progress).
+4. UI (ui-craft): a checkpoint view (reuse the comprehension/quiz components), a clear pass/fail summary with a "you can now read everyday X" affirmation on pass, and unit-complete state. Surface available checkpoints from the learn flow / scene hub. Run the ui-craft battery on the new states (checkpoint-intro, checkpoint-question, checkpoint-passed, checkpoint-failed, unit-complete) across viewports → save to .uicraft-shots/iter9-final and TELL ME THE PATH.
+5. AUDIO: give checkpoint sentences audioIds and run `npm run audio:ja` for the new ones.
+
+CORRECTNESS > QUANTITY (hard rule): checkpoint sentences must be natural, correct, and strictly closed-universe. Use your Claude HELPER (SIMPLE invocation: prompt to temp file → node bin/peer.mjs ask - < file from tandem dir) to independently verify the checkpoint Japanese is natural AND genuinely decodable from only that unit's material (not requiring unintroduced words).
+
+VERIFY before reporting: npm run lint:content 0 leaks (incl. checkpoints), npm test green (extend engine/store tests for checkpoint unlock + unit-complete), npm run build green, audio generated. Don't regress.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: the checkpoint contract + content authored, how unlock/pass/fail/re-queue works, schema-migration handling, battery results + screenshot path, helper verdict, exact lint/test/build output, and suggested single next step for iter10 (likely: a 3rd JA unit toward ~100 words, OR begin French parity build-out).

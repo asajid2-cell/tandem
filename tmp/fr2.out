@@ -1,0 +1,119 @@
+tandem: partner turn exceeded 2400s — killing it (likely runaway/stuck). Relaunch with a fresh, tightly-scoped task, or raise maxTurnSec for genuinely long builds.
+
+===== PARTNER VERDICT (codex, 2400s) =====
+
+Implemented French Unit 2 in `content/fr/seed.ts`.
+
+Counts/status:
+- French units: 2
+- Cumulative FR words: 34
+- Unit 2 words: 16
+- Unit 2 grammar patterns: 2
+- Unit 2 scenes: 2
+- Checkpoint 2 items: 5
+- `fr-unit-2`: exists
+- `fr-checkpoint-2`: exists
+
+Helper verdict: Claude said “ship it”; decodability is clean, accents/elisions resolve correctly, agreement is correct. Only note was that `Je veux un thé` is a bit blunt in real café French, but acceptable with the current closed vocabulary.
+
+Verification:
+```text
+npm run lint:content
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+npm test
+
+Test Files 7 passed (7)
+Tests 36 passed (36)
+```
+
+```text
+npm run build
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+✓ 40 modules transformed.
+✓ built in 12.02s
+```
+
+No audio generation, deploy, or git commit was run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$tmp = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\tandem\\tmp\\fr-unit-2-final-review.txt'
+@'
+Final French Unit 2 recheck. Added lex ai/as/vais/où/ici/là/combien/carte/addition/thé/parle/comprends/pardon/deux/euros/beaucoup. Grammar: avoir j'ai/tu as; où/combien questions. Scenes:
+1 A Pardon, où est l'addition ? / B L'addition est là. / A Où est la carte ? / B La carte est ici.
+2 A Bonjour. Je veux un thé. / B Un thé ? Oui. / A C'est combien ? / B C'est deux euros. Merci beaucoup.
+Checkpoint: Où est l'addition ? / J'ai la carte. / Tu as un thé ? / C'est deux euros. / Tu comprends ?
+lint:content passes 0 leaks. Verdict on final French naturalness/register/accents/agreement/decodability? Keep concise.
+'@ | Set-Content -Path "'$tmp -Encoding UTF8
+cmd /c "node bin'"\\peer.mjs ask - < tmp\\fr-unit-2-final-review.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$tmp = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\tandem\\tmp\\fr-unit-2-final-review.txt'
+@'
+Final French Unit 2 recheck. Added lex ai/as/vais/où/ici/là/combien/carte/addition/thé/parle/comprends/pardon/deux/euros/beaucoup. Grammar: avoir j'ai/tu as; où/combien questions. Scenes:
+1 A Pardon, où est l'addition ? / B L'addition est là. / A Où est la carte ? / B La carte est ici.
+2 A Bonjour. Je veux un thé. / B Un thé ? Oui. / A C'est combien ? / B C'est deux euros. Merci beaucoup.
+Checkpoint: Où est l'addition ? / J'ai la carte. / Tu as un thé ? / C'est deux euros. / Tu comprends ?
+lint:content passes 0 leaks. Verdict on final French naturalness/register/accents/agreement/decodability? Keep concise.
+'@ | Set-Content -Path "'$tmp -Encoding UTF8
+cmd /c "node bin'"\\peer.mjs ask - < tmp\\fr-unit-2-final-review.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$script = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\language\\.tmp-fr-u2-counts.mts'
+@'
+import { frSeedContent } from './content/fr/seed.ts';
+const unit2 = frSeedContent.units.find((unit) => unit.id === 'fr-unit-2');
+const checkpoint2 = frSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'fr-checkpoint-2');
+const unit2Words = frSeedContent.lexicon.filter((entry) => entry.order >= 21 && entry.order <= 36);
+const unit2Grammar = frSeedContent.grammar.filter((pattern) => pattern.order >= 37 && pattern.order <= 38);
+const unit2Scenes = frSeedContent.scenes.filter((scene) => unit2?.sceneIds.includes(scene.id));
+console.log(JSON.stringify({
+  units: frSeedContent.units.length,
+  cumulativeFrWords: frSeedContent.lexicon.length,
+  unit2Exists: Boolean(unit2),
+  checkpoint2Exists: Boolean(checkpoint2),
+  unit2Words: unit2Words.length,
+  unit2Grammar: unit2Grammar.length,
+  unit2Scenes: unit2Scenes.length,
+  checkpoint2Items: checkpoint2?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path "'$script -Encoding UTF8
+npx tsx $script
+Remove-Item $script'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$script = '"'z:\\328\\CMPUT328-A2\\codexworks\\301\\language\\.tmp-fr-u2-counts.mts'
+@'
+import { frSeedContent } from './content/fr/seed.ts';
+const unit2 = frSeedContent.units.find((unit) => unit.id === 'fr-unit-2');
+const checkpoint2 = frSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'fr-checkpoint-2');
+const unit2Words = frSeedContent.lexicon.filter((entry) => entry.order >= 21 && entry.order <= 36);
+const unit2Grammar = frSeedContent.grammar.filter((pattern) => pattern.order >= 37 && pattern.order <= 38);
+const unit2Scenes = frSeedContent.scenes.filter((scene) => unit2?.sceneIds.includes(scene.id));
+console.log(JSON.stringify({
+  units: frSeedContent.units.length,
+  cumulativeFrWords: frSeedContent.lexicon.length,
+  unit2Exists: Boolean(unit2),
+  checkpoint2Exists: Boolean(checkpoint2),
+  unit2Words: unit2Words.length,
+  unit2Grammar: unit2Grammar.length,
+  unit2Scenes: unit2Scenes.length,
+  checkpoint2Items: checkpoint2?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path "'$script -Encoding UTF8
+npx tsx $script
+Remove-Item $script'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/fr/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/fr/seed.ts'
+files: 0
+tokens: in 20561773 / out 78294
+

@@ -1,0 +1,17 @@
+FEATURE: Graded Reading — PART B (UI). Foreground; resume. Working dir = language repo. Part A is done: types Reading/ReadingLine exist, ContentBundle.readings, jaSeedContent has 3 readings (ja-reading-1..3), lint+audio cover them. Build is currently green — keep it green.
+
+In src/App.tsx:
+1) View union (line ~28): add 'reading' (hub) and 'passage' (single reader).
+2) toView() (line ~3319): accept 'reading' and 'passage'.
+3) Route parsing: '/ja/reading' -> view 'reading'; '/ja/reading/<id>' -> view 'passage' with that id (reuse the existing route.sceneId slot for the passage id, exactly like 'scene'/'scenes').
+4) Render branches (the big ternary at line ~120, near the 'scenes'/'scene' branches): 
+   route.view === 'reading' -> <ReadingHub bundle={bundle} query={route.query} />
+   route.view === 'passage' -> <PassageReader bundle={bundle} passageId={route.sceneId} query={route.query} />
+5) Build TWO components, REUSING the existing SceneHub + SceneReader patterns (copy their structure/styling/components so it's visually consistent):
+   - ReadingHub: lists bundle.readings (sorted by order), each as a card showing title + level badge + lock state (locked until progress meets reading.unlockedAfter, same gating logic SceneHub uses for scenes). titleGloss is English -> hidden-by-default, reveal on hover/tap + respect the global English toggle (use the SAME DisplayPreferences/hover mechanism SceneReader/scene glosses use). Clicking an unlocked card navigates to /ja/reading/<id>.
+   - PassageReader: renders the passage title (+ hidden titleGloss), each ReadingLine as a paragraph using the SAME token-by-token hover-gloss + per-line audio play button that SceneReader uses for scene lines (no speaker labels — narrative). Below the text, render the comprehension QuizItems using the SAME quiz UI scenes use, and a 'mark complete' affordance consistent with SceneReader. 
+6) Add a navigation entry so users can reach reading: add a 'Reading' card/link on the JA home/learn surface next to where Scenes/Grammar/Kanji are linked (match that styling), pointing to /ja/reading. Only show for bundle.language.code === 'ja' (or when (bundle.readings??[]).length>0).
+
+Keep English-hidden-by-default everywhere (titles, glosses, line glosses) — reveal on hover (tap on touch) + global toggle, identical to the rest of the app. Dark mode must work (reuse existing theme classes).
+
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0 AND `npm run build` exit 0. Do NOT edit vite.config.ts. Do NOT run audio/deploy/commit. Report: tsc rc, build rc, the new component names, and the nav location you added.

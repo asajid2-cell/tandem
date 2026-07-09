@@ -1,0 +1,98 @@
+tandem: codex 019ef3c5 reached 13 turns (limit 12) — auto-compacting to a fresh session
+
+===== PARTNER VERDICT (codex, 754s) =====
+
+Implemented Japanese VOCAB Units 20 and 21 in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:5116).
+
+Unit 20:
+- 20 new everyday verbs, lex orders `419-438`
+- Scenes: `ja-scene-opening-closing`, `ja-scene-helping-desk`
+- Checkpoint: `ja-checkpoint-20`
+- Unit wired at [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:10704)
+
+Unit 21:
+- 20 new adverbs/connectives, lex orders `439-458`
+- Scenes: `ja-scene-quick-plans`, `ja-scene-study-frequency`
+- Checkpoint: `ja-checkpoint-21`
+- Unit wired at [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:10714)
+
+Final counts:
+- Lexicon entries: `426`
+- Units: `21`
+- Checkpoints: `21`
+- Scenes: `43`
+- New lex entries: `40`, no duplicate new headwords
+
+Verification:
+- `npm run lint:content` passed:
+  - `content lint passed: 0 leaks` x3
+- `$env:NODE_OPTIONS='--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1` passed:
+  - `Test Files 7 passed (7)`
+  - `Tests 36 passed (36)`
+  - `0 skipped`
+
+Brief helper check found no blocking issues. It flagged `早く` tokenization, so I replaced that add-on with `たぶん` and reran lint/tests clean. No `audio:ja`, deploy, or git commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: 'たぶん'|headword: '多分'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const samples = ['\\u305f\\u3076\\u3093\\u3002','\\u305f\\u3076\\u3093\\u884c\\u304d\\u307e\\u3059\\u3002'];
+const esc = (s) => [...s].map(ch => "'`'"\\\\u"'${ch.codePointAt(0).toString(16).padStart(4,'"'0')}"'`).join('"'');
+for (const sample of samples) console.log(esc(sample), JSON.stringify(tokenizer.tokenize(sample).map(esc)));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: 'たぶん'|headword: '多分'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const samples = ['\\u305f\\u3076\\u3093\\u3002','\\u305f\\u3076\\u3093\\u884c\\u304d\\u307e\\u3059\\u3002'];
+const esc = (s) => [...s].map(ch => "'`'"\\\\u"'${ch.codePointAt(0).toString(16).padStart(4,'"'0')}"'`).join('"'');
+for (const sample of samples) console.log(esc(sample), JSON.stringify(tokenizer.tokenize(sample).map(esc)));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const newLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 419 && entry.order <= 458);
+const out = {
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  unit20Exists: jaSeedContent.units.some((unit) => unit.id === 'ja-unit-20'),
+  unit21Exists: jaSeedContent.units.some((unit) => unit.id === 'ja-unit-21'),
+  checkpoint20Exists: jaSeedContent.checkpoints.some((checkpoint) => checkpoint.id === 'ja-checkpoint-20'),
+  checkpoint21Exists: jaSeedContent.checkpoints.some((checkpoint) => checkpoint.id === 'ja-checkpoint-21'),
+  newLexCount: newLex.length,
+  newLexOrders: [Math.min(...newLex.map((entry) => entry.order)), Math.max(...newLex.map((entry) => entry.order))],
+  duplicateNewHeadwords: [...new Set(newLex.map((entry) => entry.headword).filter((headword, index, arr) => arr.indexOf(headword) "'!== index))]
+};
+console.log(JSON.stringify(out, null, 2));
+'"'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-akeru'|id: 'ja-mata'|id: 'ja-scene-opening-closing'|id: 'ja-scene-helping-desk'|id: 'ja-scene-quick-plans'|id: 'ja-scene-study-frequency'|id: 'ja-checkpoint-20'|id: 'ja-checkpoint-21'|id: 'ja-unit-20'|id: 'ja-unit-21'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-akeru'|id: 'ja-mata'|id: 'ja-scene-opening-closing'|id: 'ja-scene-helping-desk'|id: 'ja-scene-quick-plans'|id: 'ja-scene-study-frequency'|id: 'ja-checkpoint-20'|id: 'ja-checkpoint-21'|id: 'ja-unit-20'|id: 'ja-unit-21'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const newLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 419 && entry.order <= 458);
+const out = {
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  unit20Exists: jaSeedContent.units.some((unit) => unit.id === 'ja-unit-20'),
+  unit21Exists: jaSeedContent.units.some((unit) => unit.id === 'ja-unit-21'),
+  checkpoint20Exists: jaSeedContent.checkpoints.some((checkpoint) => checkpoint.id === 'ja-checkpoint-20'),
+  checkpoint21Exists: jaSeedContent.checkpoints.some((checkpoint) => checkpoint.id === 'ja-checkpoint-21'),
+  newLexCount: newLex.length,
+  newLexOrders: [Math.min(...newLex.map((entry) => entry.order)), Math.max(...newLex.map((entry) => entry.order))],
+  duplicateNewHeadwords: [...new Set(newLex.map((entry) => entry.headword).filter((headword, index, arr) => arr.indexOf(headword) "'!== index))]
+};
+console.log(JSON.stringify(out, null, 2));
+'"'@ | npx tsx"
+files: 0
+tokens: in 2820663 / out 26849
+

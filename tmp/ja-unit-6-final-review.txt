@@ -1,0 +1,1 @@
+﻿Final corrected Unit 6 recheck. Changed 朝に起きます/晩に寝ます to 朝起きます/晩寝ます. Grammar note now says clock/calendar times use に; relative time words 朝/晩/今日/明日/毎日 usually do not. 時 lex example is 何時に. Checkpoint includes 毎日、朝起きます。 / 何時に寝ますか。 / 今日、先生を待ちます。 / 明日、日本語を書きます。 / とても遅いです。 / 明日、仕事を休みます。 lint:content 0 leaks, tests/build pass. Verdict on final naturalness/decodability/readings?

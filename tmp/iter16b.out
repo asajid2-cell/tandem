@@ -1,0 +1,157 @@
+
+===== PARTNER VERDICT (codex, 649s) =====
+
+Implemented the frontend auth/settings chunk. No commit, no deploy.
+
+Changed:
+- [src/App.tsx](Z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:1)
+  - Added account state/context.
+  - Header now shows `Sign in` when signed out.
+  - Signed-in header shows username menu with key settings + sign out.
+  - Added inline sign-in panel.
+  - Added `#/ja/settings` key settings route.
+- [vite.config.ts](Z:/328/CMPUT328-A2/codexworks/301/language/vite.config.ts:1)
+  - Added dev proxy: `/api -> http://127.0.0.1:4310`.
+
+Login behavior:
+- No redirect for login.
+- `POST /auth/api/login` with `credentials: 'include'`.
+- Reads CSRF cookies like `hl_csrf`, `csrf`, `csrf_token`, `XSRF-TOKEN`.
+- Sends CSRF as `x-csrf-token` header and `_csrf` JSON field when present.
+- Bad creds/service unavailable errors render inline.
+- Signup link goes to `/auth/claim`.
+
+Key settings:
+- Visible only when signed in.
+- Provider select: DeepSeek / OpenAI-compatible / Other.
+- Password API key field, optional base URL + model.
+- Saves via `PUT /api/keys`.
+- Lists masked keys from `GET /api/keys`.
+- Deletes via `DELETE /api/keys/:provider`.
+
+Verification:
+- `npm run build`: green; `content lint passed: 0 leaks` x3; Vite built 40 modules.
+- `npm run lint:content`: green; `content lint passed: 0 leaks` x3.
+- `npm test`: green; `6 passed`, `33 passed`, `0 skipped`.
+- ui-craft battery: all 10 requested light/dark states exit `0`.
+
+Battery artifacts:
+- `.uicraft-shots/iter16b-final`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$outDir = '"'.uicraft-shots\\iter16b-final'
+New-Item -ItemType Directory -Force -Path "'$outDir | Out-Null
+$port = 4310
+$log = Join-Path $env:TEMP '"'foothold-ui-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-ui-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-ui-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'ui-battery-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+$results = @()
+try {
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try { Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2 | Out-Null; break } catch { if ($i -eq 29) { throw } }
+  }
+
+  $states = @(
+    @{ name = '"'signed-out-header-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana" },
+    @{ name = '"'sign-in-panel-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?signin=1" },
+    @{ name = '"'signed-in-header-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?account=demo" },
+    @{ name = '"'key-settings-empty-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo" },
+    @{ name = '"'key-settings-masked-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&keys=demo" },
+    @{ name = '"'signed-out-header-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?theme=dark" },
+    @{ name = '"'sign-in-panel-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?signin=1&theme=dark" },
+    @{ name = '"'signed-in-header-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?account=demo&theme=dark" },
+    @{ name = '"'key-settings-empty-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&theme=dark" },
+    @{ name = '"'key-settings-masked-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&keys=demo&theme=dark" }
+  )
+
+  foreach ($state in $states) {
+    $jsonPath = Join-Path $outDir "$($state.name).json"
+    $txtPath = Join-Path $outDir "$($state.name).txt"
+    $raw = & node C:'"\\Users\\Ahmed\\.codex\\skills\\ui-craft\\scripts\\destruct_check.mjs "'$state.url --json 2>&1
+    $exit = $LASTEXITCODE
+    $raw | Set-Content -Path $jsonPath -Encoding UTF8
+    $raw | Set-Content -Path $txtPath -Encoding UTF8
+    $results += [pscustomobject]@{ state = $state.name; exit = $exit }
+    if ($exit -ne 0) { throw "ui-craft battery failed for $($state.name). See $txtPath" }
+  }
+  $results | ConvertTo-Json -Compress | Set-Content -Path (Join-Path $outDir '"'summary.json') -Encoding UTF8
+  "'$results | ConvertTo-Json -Compress
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$outDir = '"'.uicraft-shots\\iter16b-final'
+New-Item -ItemType Directory -Force -Path "'$outDir | Out-Null
+$port = 4310
+$log = Join-Path $env:TEMP '"'foothold-ui-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-ui-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-ui-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'ui-battery-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+$results = @()
+try {
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try { Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2 | Out-Null; break } catch { if ($i -eq 29) { throw } }
+  }
+
+  $states = @(
+    @{ name = '"'signed-out-header-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana" },
+    @{ name = '"'sign-in-panel-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?signin=1" },
+    @{ name = '"'signed-in-header-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?account=demo" },
+    @{ name = '"'key-settings-empty-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo" },
+    @{ name = '"'key-settings-masked-light'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&keys=demo" },
+    @{ name = '"'signed-out-header-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?theme=dark" },
+    @{ name = '"'sign-in-panel-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?signin=1&theme=dark" },
+    @{ name = '"'signed-in-header-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/hiragana?account=demo&theme=dark" },
+    @{ name = '"'key-settings-empty-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&theme=dark" },
+    @{ name = '"'key-settings-masked-dark'; url = \"http://127.0.0.1:"'$port/language/#/ja/settings?account=demo&keys=demo&theme=dark" }
+  )
+
+  foreach ($state in $states) {
+    $jsonPath = Join-Path $outDir "$($state.name).json"
+    $txtPath = Join-Path $outDir "$($state.name).txt"
+    $raw = & node C:'"\\Users\\Ahmed\\.codex\\skills\\ui-craft\\scripts\\destruct_check.mjs "'$state.url --json 2>&1
+    $exit = $LASTEXITCODE
+    $raw | Set-Content -Path $jsonPath -Encoding UTF8
+    $raw | Set-Content -Path $txtPath -Encoding UTF8
+    $results += [pscustomobject]@{ state = $state.name; exit = $exit }
+    if ($exit -ne 0) { throw "ui-craft battery failed for $($state.name). See $txtPath" }
+  }
+  $results | ConvertTo-Json -Compress | Set-Content -Path (Join-Path $outDir '"'summary.json') -Encoding UTF8
+  "'$results | ConvertTo-Json -Compress
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --stat -- src/App.tsx vite.config.ts .uicraft-shots\\iter16b-final"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -Path .uicraft-shots\\iter16b-final | Select-Object -ExpandProperty Name"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff --stat -- src/App.tsx vite.config.ts .uicraft-shots\\iter16b-final"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -Path .uicraft-shots\\iter16b-final | Select-Object -ExpandProperty Name"
+files: 0
+tokens: in 13015073 / out 62008
+

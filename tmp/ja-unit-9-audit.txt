@@ -1,0 +1,1002 @@
+Audit Japanese VOCAB Unit 9 for correctness. Theme: numbers, counting, money, quantity. Check counter readings, standard headwords, romanization, gloss/pos, scene naturalness, token arrays, and closed-universe decodability. Be strict and concise: list required fixes or say ship. Context: npm run lint:content currently passes 0 leaks. Existing vocabulary through order 182 and grammar through order 132 are available.
+
+UNIT:
+{
+  "id": "ja-unit-9",
+  "lang": "ja",
+  "order": 9,
+  "title": "Numbers, money, and quantity",
+  "lexRange": [
+    183,
+    206
+  ],
+  "grammarRange": [
+    119,
+    132
+  ],
+  "sceneIds": [
+    "ja-scene-price-question",
+    "ja-scene-how-many-shopping"
+  ],
+  "checkpointId": "ja-checkpoint-9"
+}
+
+NEW LEXICON:
+[
+  {
+    "id": "ja-ichi-number",
+    "lang": "ja",
+    "order": 183,
+    "headword": "一",
+    "reading": "いち",
+    "romanization": "ichi",
+    "gloss": "one",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-ichi-number",
+    "examples": [
+      {
+        "text": "一。",
+        "gloss": "one.",
+        "tokens": [
+          "一"
+        ],
+        "audioId": "ja-ex-ichi-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-ni-number",
+    "lang": "ja",
+    "order": 184,
+    "headword": "二",
+    "reading": "に",
+    "romanization": "ni",
+    "gloss": "two",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-ni-number",
+    "examples": [
+      {
+        "text": "二。",
+        "gloss": "two.",
+        "tokens": [
+          "二"
+        ],
+        "audioId": "ja-ex-ni-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-san-number",
+    "lang": "ja",
+    "order": 185,
+    "headword": "三",
+    "reading": "さん",
+    "romanization": "san",
+    "gloss": "three",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-san-number",
+    "examples": [
+      {
+        "text": "三。",
+        "gloss": "three.",
+        "tokens": [
+          "三"
+        ],
+        "audioId": "ja-ex-san-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-hitotsu",
+    "lang": "ja",
+    "order": 186,
+    "headword": "一つ",
+    "reading": "ひとつ",
+    "romanization": "hitotsu",
+    "gloss": "one thing",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-hitotsu",
+    "examples": [
+      {
+        "text": "一つ。",
+        "gloss": "one thing.",
+        "tokens": [
+          "一つ"
+        ],
+        "audioId": "ja-ex-hitotsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-futatsu",
+    "lang": "ja",
+    "order": 187,
+    "headword": "二つ",
+    "reading": "ふたつ",
+    "romanization": "futatsu",
+    "gloss": "two things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-futatsu",
+    "examples": [
+      {
+        "text": "二つ。",
+        "gloss": "two things.",
+        "tokens": [
+          "二つ"
+        ],
+        "audioId": "ja-ex-futatsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-mittsu",
+    "lang": "ja",
+    "order": 188,
+    "headword": "三つ",
+    "reading": "みっつ",
+    "romanization": "mittsu",
+    "gloss": "three things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-mittsu",
+    "examples": [
+      {
+        "text": "三つ。",
+        "gloss": "three things.",
+        "tokens": [
+          "三つ"
+        ],
+        "audioId": "ja-ex-mittsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-yottsu",
+    "lang": "ja",
+    "order": 189,
+    "headword": "四つ",
+    "reading": "よっつ",
+    "romanization": "yottsu",
+    "gloss": "four things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-yottsu",
+    "examples": [
+      {
+        "text": "四つ。",
+        "gloss": "four things.",
+        "tokens": [
+          "四つ"
+        ],
+        "audioId": "ja-ex-yottsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-itsutsu",
+    "lang": "ja",
+    "order": 190,
+    "headword": "五つ",
+    "reading": "いつつ",
+    "romanization": "itsutsu",
+    "gloss": "five things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-itsutsu",
+    "examples": [
+      {
+        "text": "五つ。",
+        "gloss": "five things.",
+        "tokens": [
+          "五つ"
+        ],
+        "audioId": "ja-ex-itsutsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-muttsu",
+    "lang": "ja",
+    "order": 191,
+    "headword": "六つ",
+    "reading": "むっつ",
+    "romanization": "muttsu",
+    "gloss": "six things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-muttsu",
+    "examples": [
+      {
+        "text": "六つ。",
+        "gloss": "six things.",
+        "tokens": [
+          "六つ"
+        ],
+        "audioId": "ja-ex-muttsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-nanatsu",
+    "lang": "ja",
+    "order": 192,
+    "headword": "七つ",
+    "reading": "ななつ",
+    "romanization": "nanatsu",
+    "gloss": "seven things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-nanatsu",
+    "examples": [
+      {
+        "text": "七つ。",
+        "gloss": "seven things.",
+        "tokens": [
+          "七つ"
+        ],
+        "audioId": "ja-ex-nanatsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-yattsu",
+    "lang": "ja",
+    "order": 193,
+    "headword": "八つ",
+    "reading": "やっつ",
+    "romanization": "yattsu",
+    "gloss": "eight things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-yattsu",
+    "examples": [
+      {
+        "text": "八つ。",
+        "gloss": "eight things.",
+        "tokens": [
+          "八つ"
+        ],
+        "audioId": "ja-ex-yattsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-kokonotsu",
+    "lang": "ja",
+    "order": 194,
+    "headword": "九つ",
+    "reading": "ここのつ",
+    "romanization": "kokonotsu",
+    "gloss": "nine things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-kokonotsu",
+    "examples": [
+      {
+        "text": "九つ。",
+        "gloss": "nine things.",
+        "tokens": [
+          "九つ"
+        ],
+        "audioId": "ja-ex-kokonotsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-too",
+    "lang": "ja",
+    "order": 195,
+    "headword": "十",
+    "reading": "とお",
+    "romanization": "too",
+    "gloss": "ten things",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-too",
+    "examples": [
+      {
+        "text": "十。",
+        "gloss": "ten things.",
+        "tokens": [
+          "十"
+        ],
+        "audioId": "ja-ex-too"
+      }
+    ]
+  },
+  {
+    "id": "ja-ikutsu",
+    "lang": "ja",
+    "order": 196,
+    "headword": "いくつ",
+    "reading": "いくつ",
+    "romanization": "ikutsu",
+    "gloss": "how many; how old",
+    "pos": "pronoun",
+    "tags": [
+      "core",
+      "question",
+      "counter"
+    ],
+    "audioId": "ja-lex-ikutsu",
+    "examples": [
+      {
+        "text": "いくつ。",
+        "gloss": "how many.",
+        "tokens": [
+          "いくつ"
+        ],
+        "audioId": "ja-ex-ikutsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-en",
+    "lang": "ja",
+    "order": 197,
+    "headword": "円",
+    "reading": "えん",
+    "romanization": "en",
+    "gloss": "yen",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "money"
+    ],
+    "audioId": "ja-lex-en",
+    "examples": [
+      {
+        "text": "円。",
+        "gloss": "yen.",
+        "tokens": [
+          "円"
+        ],
+        "audioId": "ja-ex-en"
+      }
+    ]
+  },
+  {
+    "id": "ja-hyaku",
+    "lang": "ja",
+    "order": 198,
+    "headword": "百",
+    "reading": "ひゃく",
+    "romanization": "hyaku",
+    "gloss": "hundred",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-hyaku",
+    "examples": [
+      {
+        "text": "百。",
+        "gloss": "hundred.",
+        "tokens": [
+          "百"
+        ],
+        "audioId": "ja-ex-hyaku"
+      }
+    ]
+  },
+  {
+    "id": "ja-sen-number",
+    "lang": "ja",
+    "order": 199,
+    "headword": "千",
+    "reading": "せん",
+    "romanization": "sen",
+    "gloss": "thousand",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-sen-number",
+    "examples": [
+      {
+        "text": "千。",
+        "gloss": "thousand.",
+        "tokens": [
+          "千"
+        ],
+        "audioId": "ja-ex-sen-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-man-number",
+    "lang": "ja",
+    "order": 200,
+    "headword": "万",
+    "reading": "まん",
+    "romanization": "man",
+    "gloss": "ten thousand",
+    "pos": "numeral",
+    "tags": [
+      "core",
+      "number"
+    ],
+    "audioId": "ja-lex-man-number",
+    "examples": [
+      {
+        "text": "万。",
+        "gloss": "ten thousand.",
+        "tokens": [
+          "万"
+        ],
+        "audioId": "ja-ex-man-number"
+      }
+    ]
+  },
+  {
+    "id": "ja-hanbun",
+    "lang": "ja",
+    "order": 201,
+    "headword": "半分",
+    "reading": "はんぶん",
+    "romanization": "hanbun",
+    "gloss": "half",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "quantity"
+    ],
+    "audioId": "ja-lex-hanbun",
+    "examples": [
+      {
+        "text": "半分。",
+        "gloss": "half.",
+        "tokens": [
+          "半分"
+        ],
+        "audioId": "ja-ex-hanbun"
+      }
+    ]
+  },
+  {
+    "id": "ja-zenbu",
+    "lang": "ja",
+    "order": 202,
+    "headword": "全部",
+    "reading": "ぜんぶ",
+    "romanization": "zenbu",
+    "gloss": "all; everything",
+    "pos": "adverb",
+    "tags": [
+      "core",
+      "quantity"
+    ],
+    "audioId": "ja-lex-zenbu",
+    "examples": [
+      {
+        "text": "全部。",
+        "gloss": "all; everything.",
+        "tokens": [
+          "全部"
+        ],
+        "audioId": "ja-ex-zenbu"
+      }
+    ]
+  },
+  {
+    "id": "ja-sukoshi",
+    "lang": "ja",
+    "order": 203,
+    "headword": "少し",
+    "reading": "すこし",
+    "romanization": "sukoshi",
+    "gloss": "a little",
+    "pos": "adverb",
+    "tags": [
+      "core",
+      "quantity"
+    ],
+    "audioId": "ja-lex-sukoshi",
+    "examples": [
+      {
+        "text": "少し。",
+        "gloss": "a little.",
+        "tokens": [
+          "少し"
+        ],
+        "audioId": "ja-ex-sukoshi"
+      }
+    ]
+  },
+  {
+    "id": "ja-takusan",
+    "lang": "ja",
+    "order": 204,
+    "headword": "たくさん",
+    "reading": "たくさん",
+    "romanization": "takusan",
+    "gloss": "many; a lot",
+    "pos": "adverb",
+    "tags": [
+      "core",
+      "quantity"
+    ],
+    "audioId": "ja-lex-takusan",
+    "examples": [
+      {
+        "text": "たくさん。",
+        "gloss": "many; a lot.",
+        "tokens": [
+          "たくさん"
+        ],
+        "audioId": "ja-ex-takusan"
+      }
+    ]
+  },
+  {
+    "id": "ja-ko-counter",
+    "lang": "ja",
+    "order": 205,
+    "headword": "個",
+    "reading": "こ",
+    "romanization": "ko",
+    "gloss": "counter for small objects",
+    "pos": "counter",
+    "tags": [
+      "core",
+      "counter"
+    ],
+    "audioId": "ja-lex-ko-counter",
+    "examples": [
+      {
+        "text": "三個。",
+        "gloss": "three small items.",
+        "tokens": [
+          "三",
+          "個"
+        ],
+        "audioId": "ja-ex-ko-counter"
+      }
+    ]
+  },
+  {
+    "id": "ja-nedan",
+    "lang": "ja",
+    "order": 206,
+    "headword": "値段",
+    "reading": "ねだん",
+    "romanization": "nedan",
+    "gloss": "price",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "shop"
+    ],
+    "audioId": "ja-lex-nedan",
+    "examples": [
+      {
+        "text": "値段。",
+        "gloss": "price.",
+        "tokens": [
+          "値段"
+        ],
+        "audioId": "ja-ex-nedan"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-price-question",
+    "lang": "ja",
+    "order": 18,
+    "unlockedAfter": {
+      "lex": 206,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "これはいくらですか。",
+        "gloss": "How much is this?",
+        "tokens": [
+          "これ",
+          "は",
+          "いくら",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-price-question-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "百円です。",
+        "gloss": "It is one hundred yen.",
+        "tokens": [
+          "百",
+          "円",
+          "~です"
+        ],
+        "audioId": "ja-scene-price-question-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "一つください。",
+        "gloss": "One, please.",
+        "tokens": [
+          "一つ",
+          "くださる"
+        ],
+        "audioId": "ja-scene-price-question-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。値段は安いです。",
+        "gloss": "Yes. The price is cheap.",
+        "tokens": [
+          "はい",
+          "値段",
+          "は",
+          "安い",
+          "~です"
+        ],
+        "audioId": "ja-scene-price-question-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-price-question-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "How much this is.",
+        "distractors": [
+          "How many there are.",
+          "Whether the price is high."
+        ],
+        "sourceText": "これはいくらですか。",
+        "sourceTokens": [
+          "これ",
+          "は",
+          "いくら",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-price-question-q1"
+      },
+      {
+        "id": "ja-scene-price-question-q2",
+        "kind": "comprehend",
+        "prompt": "What is the price?",
+        "answer": "One hundred yen.",
+        "distractors": [
+          "One thousand yen.",
+          "Ten thousand yen."
+        ],
+        "sourceText": "百円です。",
+        "sourceTokens": [
+          "百",
+          "円",
+          "~です"
+        ],
+        "audioId": "ja-scene-price-question-q2"
+      },
+      {
+        "id": "ja-scene-price-question-q3",
+        "kind": "comprehend",
+        "prompt": "How many does A ask for?",
+        "answer": "One.",
+        "distractors": [
+          "Two.",
+          "All of them."
+        ],
+        "sourceText": "一つください。",
+        "sourceTokens": [
+          "一つ",
+          "くださる"
+        ],
+        "audioId": "ja-scene-price-question-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-how-many-shopping",
+    "lang": "ja",
+    "order": 19,
+    "unlockedAfter": {
+      "lex": 206,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "パンはいくつありますか。",
+        "gloss": "How many breads are there?",
+        "tokens": [
+          "パン",
+          "は",
+          "いくつ",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-how-many-shopping-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "三つあります。",
+        "gloss": "There are three.",
+        "tokens": [
+          "三つ",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-how-many-shopping-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "全部買いますか。",
+        "gloss": "Will you buy all of them?",
+        "tokens": [
+          "全部",
+          "買う",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-how-many-shopping-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "いいえ。少し買います。",
+        "gloss": "No. I will buy a little.",
+        "tokens": [
+          "いいえ",
+          "少し",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-how-many-shopping-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-how-many-shopping-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask first?",
+        "answer": "How many breads there are.",
+        "distractors": [
+          "How much the bread costs.",
+          "Whether B will sell bread."
+        ],
+        "sourceText": "パンはいくつありますか。",
+        "sourceTokens": [
+          "パン",
+          "は",
+          "いくつ",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-how-many-shopping-q1"
+      },
+      {
+        "id": "ja-scene-how-many-shopping-q2",
+        "kind": "comprehend",
+        "prompt": "How many are there?",
+        "answer": "Three.",
+        "distractors": [
+          "One.",
+          "Ten."
+        ],
+        "sourceText": "三つあります。",
+        "sourceTokens": [
+          "三つ",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-how-many-shopping-q2"
+      },
+      {
+        "id": "ja-scene-how-many-shopping-q3",
+        "kind": "comprehend",
+        "prompt": "How much will B buy?",
+        "answer": "A little.",
+        "distractors": [
+          "Everything.",
+          "Nothing."
+        ],
+        "sourceText": "いいえ。少し買います。",
+        "sourceTokens": [
+          "いいえ",
+          "少し",
+          "買う",
+          "~ます"
+        ],
+        "audioId": "ja-scene-how-many-shopping-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINT:
+{
+  "id": "ja-checkpoint-9",
+  "lang": "ja",
+  "unitId": "ja-unit-9",
+  "order": 9,
+  "title": "Unit 9 checkpoint",
+  "items": [
+    {
+      "id": "ja-checkpoint-9-q1",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "All together, it is one hundred yen.",
+      "distractors": [
+        "It is one thousand yen.",
+        "There are one hundred items."
+      ],
+      "sourceText": "全部で百円です。",
+      "sourceTokens": [
+        "全部",
+        "で",
+        "百",
+        "円",
+        "~です"
+      ],
+      "audioId": "ja-checkpoint-9-q1"
+    },
+    {
+      "id": "ja-checkpoint-9-q2",
+      "kind": "comprehend",
+      "prompt": "What happened?",
+      "answer": "Someone bought three breads.",
+      "distractors": [
+        "Someone sold three breads.",
+        "Someone bought all the water."
+      ],
+      "sourceText": "パンを三つ買いました。",
+      "sourceTokens": [
+        "パン",
+        "を",
+        "三つ",
+        "買う",
+        "~ました"
+      ],
+      "audioId": "ja-checkpoint-9-q2"
+    },
+    {
+      "id": "ja-checkpoint-9-q3",
+      "kind": "comprehend",
+      "prompt": "What does this sentence mean?",
+      "answer": "There is a lot of money at the shop.",
+      "distractors": [
+        "There is a little money at the shop.",
+        "The shop is expensive."
+      ],
+      "sourceText": "店にお金がたくさんあります。",
+      "sourceTokens": [
+        "店",
+        "に",
+        "お金",
+        "が",
+        "たくさん",
+        "ある",
+        "~ます"
+      ],
+      "audioId": "ja-checkpoint-9-q3"
+    },
+    {
+      "id": "ja-checkpoint-9-q4",
+      "kind": "comprehend",
+      "prompt": "What does this ask?",
+      "answer": "How many small items will be sold?",
+      "distractors": [
+        "How much does it cost?",
+        "How many breads are there?"
+      ],
+      "sourceText": "何個売りますか。",
+      "sourceTokens": [
+        "何",
+        "個",
+        "売る",
+        "~ます",
+        "か"
+      ],
+      "audioId": "ja-checkpoint-9-q4"
+    },
+    {
+      "id": "ja-checkpoint-9-q5",
+      "kind": "comprehend",
+      "prompt": "What does this request?",
+      "answer": "Two small items, please.",
+      "distractors": [
+        "One thing, please.",
+        "Half, please."
+      ],
+      "sourceText": "二個ください。",
+      "sourceTokens": [
+        "二",
+        "個",
+        "くださる"
+      ],
+      "audioId": "ja-checkpoint-9-q5"
+    },
+    {
+      "id": "ja-checkpoint-9-q6",
+      "kind": "comprehend",
+      "prompt": "What does this ask?",
+      "answer": "Whether the price is high.",
+      "distractors": [
+        "Whether the price is cheap.",
+        "Whether there is a lot of money."
+      ],
+      "sourceText": "値段は高いですか。",
+      "sourceTokens": [
+        "値段",
+        "は",
+        "高い",
+        "~です",
+        "か"
+      ],
+      "audioId": "ja-checkpoint-9-q6"
+    },
+    {
+      "id": "ja-checkpoint-9-q7",
+      "kind": "comprehend",
+      "prompt": "What does this request?",
+      "answer": "Half, please.",
+      "distractors": [
+        "All of it, please.",
+        "A little, please."
+      ],
+      "sourceText": "半分ください。",
+      "sourceTokens": [
+        "半分",
+        "くださる"
+      ],
+      "audioId": "ja-checkpoint-9-q7"
+    }
+  ]
+}

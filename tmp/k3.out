@@ -1,0 +1,24 @@
+
+===== PARTNER VERDICT (codex, 185s) =====
+
+Added 40 new kanji entries, orders `278..317`.
+
+New total: `317` glyph entries.
+
+Skipped duplicates: `待`, `動`, `世`, `注`, `転`, `族`, `題`, `送`, `真`, `代`.
+
+No build/test/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\kanji.ts -Encoding UTF8 | Select-Object -Last 20"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '昭'\",\"glyph: '消'\",\"glyph: '商'\",\"glyph: '章'\",\"glyph: '勝'\",\"glyph: '乗'\",\"glyph: '植'\",\"glyph: '申'\",\"glyph: '身'\",\"glyph: '神'\",\"glyph: '真'\",\"glyph: '深'\",\"glyph: '進'\",\"glyph: '世'\",\"glyph: '整'\",\"glyph: '昔'\",\"glyph: '全'\",\"glyph: '相'\",\"glyph: '送'\",\"glyph: '想'\",\"glyph: '息'\",\"glyph: '速'\",\"glyph: '族'\",\"glyph: '他'\",\"glyph: '打'\",\"glyph: '対'\",\"glyph: '待'\",\"glyph: '代'\",\"glyph: '第'\",\"glyph: '題'\",\"glyph: '短'\",\"glyph: '談'\",\"glyph: '着'\",\"glyph: '注'\",\"glyph: '柱'\",\"glyph: '帳'\",\"glyph: '調'\",\"glyph: '追'\",\"glyph: '定'\",\"glyph: '庭'\",\"glyph: '鉄'\",\"glyph: '転'\",\"glyph: '都'\",\"glyph: '度'\",\"glyph: '投'\",\"glyph: '島'\",\"glyph: '湯'\",\"glyph: '登'\",\"glyph: '等'\",\"glyph: '動'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '昭'\",\"glyph: '消'\",\"glyph: '商'\",\"glyph: '章'\",\"glyph: '勝'\",\"glyph: '乗'\",\"glyph: '植'\",\"glyph: '申'\",\"glyph: '身'\",\"glyph: '神'\",\"glyph: '真'\",\"glyph: '深'\",\"glyph: '進'\",\"glyph: '世'\",\"glyph: '整'\",\"glyph: '昔'\",\"glyph: '全'\",\"glyph: '相'\",\"glyph: '送'\",\"glyph: '想'\",\"glyph: '息'\",\"glyph: '速'\",\"glyph: '族'\",\"glyph: '他'\",\"glyph: '打'\",\"glyph: '対'\",\"glyph: '待'\",\"glyph: '代'\",\"glyph: '第'\",\"glyph: '題'\",\"glyph: '短'\",\"glyph: '談'\",\"glyph: '着'\",\"glyph: '注'\",\"glyph: '柱'\",\"glyph: '帳'\",\"glyph: '調'\",\"glyph: '追'\",\"glyph: '定'\",\"glyph: '庭'\",\"glyph: '鉄'\",\"glyph: '転'\",\"glyph: '都'\",\"glyph: '度'\",\"glyph: '投'\",\"glyph: '島'\",\"glyph: '湯'\",\"glyph: '登'\",\"glyph: '等'\",\"glyph: '動'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\kanji.ts -Encoding UTF8 | Select-Object -Last 20"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+files: 0
+tokens: in 18512886 / out 135455
+

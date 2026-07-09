@@ -1,0 +1,74 @@
+
+===== PARTNER VERDICT (codex, 346s) =====
+
+Implemented in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+Verification:
+- `npm run lint:content`: rc `0`
+- `npx tsc -b`: rc `0`
+- Grammar count: `80`
+
+Added particle headwords:
+- `や`
+- `ね`
+- `よ`
+
+Added grammar patterns:
+- `180` — Quotation と with 言う and 思う
+- `181` — Negative requests with ないでください
+- `182` — な-adjective noun modification
+- `183` — Noun-modifying relative clauses
+- `184` — Nominalizing clauses with の
+- `185` — When clauses with 時`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+for (const tok of ['\\u3066','\\u3067']) {
+ const lex = jaSeedContent.lexicon.filter(e=>e.headword===tok || e.reading===tok).map(e=>"'`${e.order}:${e.id}`);
+ const gs = jaSeedContent.grammar.filter(g=>g.licenses?.some(l=>l.tokens.includes(tok))).map(g=>`${g.order}:${g.id}`);
+ console.log(JSON.stringify(tok),'"'lex',lex.join(','),'grammar',gs.join(','));
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+for (const tok of ['\\u3066','\\u3067']) {
+ const lex = jaSeedContent.lexicon.filter(e=>e.headword===tok || e.reading===tok).map(e=>"'`${e.order}:${e.id}`);
+ const gs = jaSeedContent.grammar.filter(g=>g.licenses?.some(l=>l.tokens.includes(tok))).map(g=>`${g.order}:${g.id}`);
+ console.log(JSON.stringify(tok),'"'lex',lex.join(','),'grammar',gs.join(','));
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+console.log(JSON.stringify({
+  lexCount: jaSeedContent.lexicon.length,
+  maxLex: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  grammarCount: jaSeedContent.grammar.length,
+  maxGrammar: Math.max(...jaSeedContent.grammar.map((pattern) => pattern.order)),
+  particles: jaSeedContent.lexicon.slice(-3).map((entry) => ({ order: entry.order, headword: entry.headword })),
+  newGrammar: jaSeedContent.grammar.filter((pattern) => pattern.order >= 180).map((pattern) => ({ order: pattern.order, title: pattern.title }))
+}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+console.log(JSON.stringify({
+  lexCount: jaSeedContent.lexicon.length,
+  maxLex: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  grammarCount: jaSeedContent.grammar.length,
+  maxGrammar: Math.max(...jaSeedContent.grammar.map((pattern) => pattern.order)),
+  particles: jaSeedContent.lexicon.slice(-3).map((entry) => ({ order: entry.order, headword: entry.headword })),
+  newGrammar: jaSeedContent.grammar.filter((pattern) => pattern.order >= 180).map((pattern) => ({ order: pattern.order, title: pattern.title }))
+}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-Object -First 260'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-Object -First 260'
+files: 0
+tokens: in 884152 / out 11081
+

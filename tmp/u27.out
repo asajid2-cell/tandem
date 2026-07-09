@@ -1,0 +1,121 @@
+
+===== PARTNER VERDICT (codex, 280s) =====
+
+Implemented Japanese VOCAB Unit 27 in [content/ja/seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Added:
+- 20 lex entries, orders `559-578`
+- 2 scenes: `ja-scene-plans-memory` order `54`, `ja-scene-finding-wallet` order `55`
+- `ja-checkpoint-27`, 12 items
+- `ja-unit-27`: `More common verbs`
+
+Final counts:
+- Lexicon: `546`
+- Units: `27`
+- Checkpoints: `27`
+- Scenes: `55`
+- `ja-unit-27`: exists
+- `ja-checkpoint-27`: exists
+- Duplicate scene IDs: none
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks` x3
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7 passed`, `36 passed`, `0 skipped`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '(思う|知る|作る|運ぶ|戻る|調べる|入れる|出す|動く|働く|休む|座る|立つ|開く|閉まる|消す|消える|助ける|拾う|捨てる|選ぶ|探す|教える|送る|借りる|貸す|返す|呼ぶ|置く|取る|持つ|渡す)'\" | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '(思う|知る|作る|運ぶ|戻る|調べる|入れる|出す|動く|働く|休む|座る|立つ|開く|閉まる|消す|消える|助ける|拾う|捨てる|選ぶ|探す|教える|送る|借りる|貸す|返す|呼ぶ|置く|取る|持つ|渡す)'\" | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const t = await createJapaneseTokenizer();
+const samples = [
+'\\u4f1a\\u3046\\u3002','\\u8003\\u3048\\u308b\\u3002','\\u899a\\u3048\\u308b\\u3002','\\u5fd8\\u308c\\u308b\\u3002','\\u898b\\u3064\\u3051\\u308b\\u3002','\\u6c7a\\u3081\\u308b\\u3002','\\u5909\\u308f\\u308b\\u3002','\\u7d9a\\u3051\\u308b\\u3002','\\u6b62\\u3081\\u308b\\u3002','\\u6b62\\u307e\\u308b\\u3002','\\u6025\\u3050\\u3002','\\u56f0\\u308b\\u3002','\\u623b\\u308b\\u3002','\\u8abf\\u3079\\u308b\\u3002','\\u52d5\\u304f\\u3002','\\u904b\\u3076\\u3002','\\u52a9\\u3051\\u308b\\u3002','\\u62fe\\u3046\\u3002','\\u6368\\u3066\\u308b\\u3002','\\u6d88\\u3059\\u3002',
+'\\u660e\\u65e5\\u3001\\u53cb\\u9054\\u306b\\u4f1a\\u3044\\u307e\\u3059\\u304b\\u3002',
+'\\u306f\\u3044\\u3002\\u4e88\\u5b9a\\u3092\\u899a\\u3048\\u307e\\u3059\\u3002',
+'\\u6642\\u9593\\u3092\\u5fd8\\u308c\\u307e\\u3059\\u304b\\u3002',
+'\\u3044\\u3044\\u3048\\u3002\\u554f\\u984c\\u3092\\u8003\\u3048\\u307e\\u3059\\u3002',
+'\\u8ca1\\u5e03\\u3092\\u898b\\u3064\\u3051\\u307e\\u3059\\u304b\\u3002',
+'\\u306f\\u3044\\u3002\\u90e8\\u5c4b\\u3092\\u8abf\\u3079\\u307e\\u3059\\u3002',
+'\\u4ed5\\u4e8b\\u3092\\u7d9a\\u3051\\u307e\\u3059\\u304b\\u3002',
+'\\u3044\\u3044\\u3048\\u3002\\u3053\\u3053\\u3067\\u6b62\\u3081\\u307e\\u3059\\u3002',
+'\\u65b9\\u6cd5\\u3092\\u6c7a\\u3081\\u307e\\u3059\\u3002','\\u4e88\\u5b9a\\u304c\\u5909\\u308f\\u308a\\u307e\\u3059\\u3002','\\u30d0\\u30b9\\u304c\\u6b62\\u307e\\u308a\\u307e\\u3059\\u3002','\\u6025\\u304e\\u307e\\u3059\\u3002','\\u56f0\\u308a\\u307e\\u3059\\u3002','\\u5bb6\\u306b\\u623b\\u308a\\u307e\\u3059\\u3002','\\u8eca\\u304c\\u52d5\\u304d\\u307e\\u3059\\u3002','\\u304b\\u3070\\u3093\\u3092\\u904b\\u3073\\u307e\\u3059\\u3002','\\u4eba\\u3092\\u52a9\\u3051\\u307e\\u3059\\u3002','\\u30b7\\u30e3\\u30c4\\u3092\\u62fe\\u3044\\u307e\\u3059\\u3002','\\u30b7\\u30e3\\u30c4\\u3092\\u6368\\u3066\\u307e\\u3059\\u3002','\\u96fb\\u6c17\\u3092\\u6d88\\u3057\\u307e\\u3059\\u3002'
+];
+for (const s of samples) console.log(JSON.stringify({s, tokens: t.tokenize(s)}));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const t = await createJapaneseTokenizer();
+const samples = [
+'\\u4f1a\\u3046\\u3002','\\u8003\\u3048\\u308b\\u3002','\\u899a\\u3048\\u308b\\u3002','\\u5fd8\\u308c\\u308b\\u3002','\\u898b\\u3064\\u3051\\u308b\\u3002','\\u6c7a\\u3081\\u308b\\u3002','\\u5909\\u308f\\u308b\\u3002','\\u7d9a\\u3051\\u308b\\u3002','\\u6b62\\u3081\\u308b\\u3002','\\u6b62\\u307e\\u308b\\u3002','\\u6025\\u3050\\u3002','\\u56f0\\u308b\\u3002','\\u623b\\u308b\\u3002','\\u8abf\\u3079\\u308b\\u3002','\\u52d5\\u304f\\u3002','\\u904b\\u3076\\u3002','\\u52a9\\u3051\\u308b\\u3002','\\u62fe\\u3046\\u3002','\\u6368\\u3066\\u308b\\u3002','\\u6d88\\u3059\\u3002',
+'\\u660e\\u65e5\\u3001\\u53cb\\u9054\\u306b\\u4f1a\\u3044\\u307e\\u3059\\u304b\\u3002',
+'\\u306f\\u3044\\u3002\\u4e88\\u5b9a\\u3092\\u899a\\u3048\\u307e\\u3059\\u3002',
+'\\u6642\\u9593\\u3092\\u5fd8\\u308c\\u307e\\u3059\\u304b\\u3002',
+'\\u3044\\u3044\\u3048\\u3002\\u554f\\u984c\\u3092\\u8003\\u3048\\u307e\\u3059\\u3002',
+'\\u8ca1\\u5e03\\u3092\\u898b\\u3064\\u3051\\u307e\\u3059\\u304b\\u3002',
+'\\u306f\\u3044\\u3002\\u90e8\\u5c4b\\u3092\\u8abf\\u3079\\u307e\\u3059\\u3002',
+'\\u4ed5\\u4e8b\\u3092\\u7d9a\\u3051\\u307e\\u3059\\u304b\\u3002',
+'\\u3044\\u3044\\u3048\\u3002\\u3053\\u3053\\u3067\\u6b62\\u3081\\u307e\\u3059\\u3002',
+'\\u65b9\\u6cd5\\u3092\\u6c7a\\u3081\\u307e\\u3059\\u3002','\\u4e88\\u5b9a\\u304c\\u5909\\u308f\\u308a\\u307e\\u3059\\u3002','\\u30d0\\u30b9\\u304c\\u6b62\\u307e\\u308a\\u307e\\u3059\\u3002','\\u6025\\u304e\\u307e\\u3059\\u3002','\\u56f0\\u308a\\u307e\\u3059\\u3002','\\u5bb6\\u306b\\u623b\\u308a\\u307e\\u3059\\u3002','\\u8eca\\u304c\\u52d5\\u304d\\u307e\\u3059\\u3002','\\u304b\\u3070\\u3093\\u3092\\u904b\\u3073\\u307e\\u3059\\u3002','\\u4eba\\u3092\\u52a9\\u3051\\u307e\\u3059\\u3002','\\u30b7\\u30e3\\u30c4\\u3092\\u62fe\\u3044\\u307e\\u3059\\u3002','\\u30b7\\u30e3\\u30c4\\u3092\\u6368\\u3066\\u307e\\u3059\\u3002','\\u96fb\\u6c17\\u3092\\u6d88\\u3057\\u307e\\u3059\\u3002'
+];
+for (const s of samples) console.log(JSON.stringify({s, tokens: t.tokenize(s)}));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit = jaSeedContent.units.find((u) => u.id === 'ja-unit-27');
+const checkpoint = jaSeedContent.checkpoints.find((c) => c.id === 'ja-checkpoint-27');
+const unitLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 559 && entry.order <= 578);
+const scenes = unit ? jaSeedContent.scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+const sceneIds = jaSeedContent.scenes.map((scene) => scene.id);
+const duplicateSceneIds = [...new Set(sceneIds.filter((id, index) => sceneIds.indexOf(id) "'!== index))];
+console.log(JSON.stringify({
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  maxLexOrder: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  unit27Exists: Boolean(unit),
+  checkpoint27Exists: Boolean(checkpoint),
+  duplicateSceneIds,
+  unit27: unit && { order: unit.order, title: unit.title, lexRange: unit.lexRange, grammarRange: unit.grammarRange, sceneIds: unit.sceneIds, checkpointId: unit.checkpointId },
+  checkpoint27: checkpoint && { order: checkpoint.order, unitId: checkpoint.unitId, items: checkpoint.items.length },
+  unit27LexCount: unitLex.length,
+  unit27SceneCount: scenes.length,
+  unit27SceneOrders: scenes.map((scene) => ({ id: scene.id, order: scene.order, lines: scene.lines.length, comprehension: scene.comprehension.length }))
+}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit = jaSeedContent.units.find((u) => u.id === 'ja-unit-27');
+const checkpoint = jaSeedContent.checkpoints.find((c) => c.id === 'ja-checkpoint-27');
+const unitLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 559 && entry.order <= 578);
+const scenes = unit ? jaSeedContent.scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+const sceneIds = jaSeedContent.scenes.map((scene) => scene.id);
+const duplicateSceneIds = [...new Set(sceneIds.filter((id, index) => sceneIds.indexOf(id) "'!== index))];
+console.log(JSON.stringify({
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  maxLexOrder: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  unit27Exists: Boolean(unit),
+  checkpoint27Exists: Boolean(checkpoint),
+  duplicateSceneIds,
+  unit27: unit && { order: unit.order, title: unit.title, lexRange: unit.lexRange, grammarRange: unit.grammarRange, sceneIds: unit.sceneIds, checkpointId: unit.checkpointId },
+  checkpoint27: checkpoint && { order: checkpoint.order, unitId: checkpoint.unitId, items: checkpoint.items.length },
+  unit27LexCount: unitLex.length,
+  unit27SceneCount: scenes.length,
+  unit27SceneOrders: scenes.map((scene) => ({ id: scene.id, order: scene.order, lines: scene.lines.length, comprehension: scene.comprehension.length }))
+}, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 13941227 / out 116902
+

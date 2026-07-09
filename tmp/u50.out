@@ -1,0 +1,38 @@
+
+===== PARTNER VERDICT (codex, 235s) =====
+
+Implemented Japanese VOCAB Unit 50 in [seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Final counts:
+- Lexicon: `1006`
+- Scenes: `101`
+- Checkpoints: `50`
+- Units: `50`
+- Max lex order: `1038`
+- Max scene order: `101`
+- `ja-unit-50`: exists, lexRange `[1019, 1038]`
+- `ja-checkpoint-50`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7` files passed, `36` tests passed, `0` skipped
+
+Skipped duplicates included `気温`, `湿度`, `台風`, `霧`, `虹`, `曇る`, plus already-present base weather words. No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; Select-String -Path 'content/ja/seed.ts' -Pattern \"pos: 'adjective'\" | Select-Object -First 5"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['嵐は怖いです。','予報は当たりますか。','はい。警報があります。','大雨は止みますか。','服が濡れます。','午後に乾きます。','氷は溶けます。','水が凍ります。','蒸し暑いです。','雨が降ります。','梅雨です。','稲妻が見えます。','洪水は危ないです。','乾燥します。','霜があります。','露があります。','温度は高いです。','気圧は低いです。','夕立があります。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; Select-String -Path 'content/ja/seed.ts' -Pattern \"pos: 'adjective'\" | Select-Object -First 5"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['嵐は怖いです。','予報は当たりますか。','はい。警報があります。','大雨は止みますか。','服が濡れます。','午後に乾きます。','氷は溶けます。','水が凍ります。','蒸し暑いです。','雨が降ります。','梅雨です。','稲妻が見えます。','洪水は危ないです。','乾燥します。','霜があります。','露があります。','温度は高いです。','気圧は低いです。','夕立があります。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-50'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-50'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit50:"'!!unit,checkpoint50:!!cp,unit50LexRange:unit?.lexRange,unit50SceneIds:unit?.sceneIds,checkpoint50Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['嵐','凍る','溶ける','蒸し暑い','濡れる','乾く','降る','止む','予報','警報','梅雨','稲妻','洪水','乾燥','霜','露','温度','気圧','夕立','大雨']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['嵐','凍る','溶ける','蒸し暑い','濡れる','乾く','降る','止む','予報','警報','梅雨','稲妻','洪水','乾燥','霜','露','温度','気圧','夕立','大雨']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-50'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-50'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit50:"'!!unit,checkpoint50:!!cp,unit50LexRange:unit?.lexRange,unit50SceneIds:unit?.sceneIds,checkpoint50Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+files: 0
+tokens: in 22558520 / out 175016
+

@@ -1,0 +1,27 @@
+﻿Please cross-check planned Japanese Unit 5 content for a closed-universe beginner course. Existing cumulative vocab includes Units 1-4, notably 私, は, も, か, はい/いいえ, を/に/の/が/へ/から/まで, 日本, 何, 食べる/飲む/行く/来る/見る/買う/ある/いる/帰る, いい/近い/遠い/おいしい/高い/安い/新しい/古い/多い/少ない, 食べ物/飲み物/パン/好き, etc. Grammar includes ~です, ~ます, ~ました, へ/から/まで, i-adjectives, 好きです, ~たい.
+
+Planned Unit 5 lex 80-95:
+名前(なまえ namae name), 田中(たなか Tanaka common family name), 先生(せんせい sensei teacher), 母(はは haha my mother/humble mother), お母さん(おかあさん okaasan mother/someone's mother), 父(ちち chichi my father/humble father), お父さん(おとうさん otousan father/someone's father), 誰(だれ dare who), 言う(いう iu say), 話す(はなす hanasu speak), 聞く(きく kiku listen/ask), 読む(よむ yomu read), 書く(かく kaku write), 分かる(わかる wakaru understand), 知る(しる shiru know), 日本語(にほんご nihongo Japanese language).
+
+Planned grammar:
+1. 誰 questions: 誰ですか。 / 誰が話しますか。 / 先生が話します。
+2. Understanding and language actions: 日本語が分かります。 / 日本語を話します。 / 名前を書きます。 Explanation: 分かる commonly takes が for what is understood; 話す/読む/書く use を for the language/text object.
+
+Scene introductions/name:
+A こんにちは。名前は何ですか。
+B 私の名前は田中です。
+A 先生ですか。
+B はい、日本語の先生です。
+
+Scene reading/writing Japanese:
+A 日本語が分かりますか。
+B はい、分かります。
+A 日本語を読みますか。
+B はい、読みます。日本語を書きます。
+
+Checkpoint:
+1 田中先生は日本語を話します。 = Teacher Tanaka speaks Japanese.
+2 母は日本語が分かります。 = My mother understands Japanese.
+3 お母さんは何を書きますか。名前を書きます。 = What does the mother write? She writes a name.
+
+Please flag unnatural Japanese, particle/readings issues, family-term register issues, proper-name concerns, or closed-universe decodability problems. Keep concise.

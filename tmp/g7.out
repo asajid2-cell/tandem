@@ -1,0 +1,76 @@
+
+===== PARTNER VERDICT (codex, 241s) =====
+
+Updated [content/ja/seed.ts](z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts) inside `grammar[]`.
+
+`npm run lint:content` exit code: `0`
+
+Added IDs:
+- `ja-favor-te-auxiliaries`
+- `ja-reason-node`
+- `ja-contrast-noni`
+- `ja-listing-shi`
+
+New Japanese grammar count: `70`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content -Encoding UTF8 content\\ja\\seed.ts | Select-Object -Skip 21090 -First 130"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content\\ja\\seed.ts -Pattern \"あげる|上げる|ag[e]*ru|ageru\" -Context 2,8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content\\ja\\seed.ts -Pattern \"ので|から|because|reason\" -Context 2,8 | Select-Object -First 80"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content\\ja\\seed.ts -Pattern \"あげる|上げる|ag[e]*ru|ageru\" -Context 2,8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content\\ja\\seed.ts -Pattern \"ので|から|because|reason\" -Context 2,8 | Select-Object -First 80"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content -Encoding UTF8 content\\ja\\seed.ts | Select-Object -Skip 21090 -First 130"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tok = await createJapaneseTokenizer();
+const samples = [
+  '先生が本を読んでくれます。',
+  '友達に水を買ってあげます。',
+  '先生に日本語を教えてもらいます。',
+  '忙しいので休みます。',
+  '高いので買いません。',
+  '雨なので行きません。',
+  '安いのにおいしいです。',
+  '忙しいのに来ます。',
+  '高いのに買います。',
+  'おいしいし安いです。',
+  '先生も来るし友達も来ます。',
+  '日本語を読むし書きます。'
+];
+for (const s of samples) console.log(s, JSON.stringify(tok.tokenize(s)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tok = await createJapaneseTokenizer();
+const samples = [
+  '先生が本を読んでくれます。',
+  '友達に水を買ってあげます。',
+  '先生に日本語を教えてもらいます。',
+  '忙しいので休みます。',
+  '高いので買いません。',
+  '雨なので行きません。',
+  '安いのにおいしいです。',
+  '忙しいのに来ます。',
+  '高いのに買います。',
+  'おいしいし安いです。',
+  '先生も来るし友達も来ます。',
+  '日本語を読むし書きます。'
+];
+for (const s of samples) console.log(s, JSON.stringify(tok.tokenize(s)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { allContent } from './content/index.ts';
+const ja = allContent.find((bundle) => bundle.language.code === 'ja');
+console.log(ja?.grammar.length ?? 0);
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { allContent } from './content/index.ts';
+const ja = allContent.find((bundle) => bundle.language.code === 'ja');
+console.log(ja?.grammar.length ?? 0);
+'@ | npx tsx -"
+files: 0
+tokens: in 1393891 / out 8956
+

@@ -1,0 +1,32 @@
+
+===== PARTNER VERDICT (codex, 201s) =====
+
+Added the Japanese kanji batch in `content/ja/kanji.ts`.
+
+- Added 21 new non-duplicate candidate kanji, orders `226..246`
+- Skipped existing glyphs from the candidate list
+- `grep -c "glyph: '"` equivalent count: `246`
+
+Verification:
+- `npm run build`: exit code `0`
+- `npm test`: 36 passed, 0 skipped
+
+No audio generation, deploy, or commit performed.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '院'\",\"glyph: '員'\",\"glyph: '運'\",\"glyph: '飲'\",\"glyph: '央'\",\"glyph: '横'\",\"glyph: '屋'\",\"glyph: '温'\",\"glyph: '化'\",\"glyph: '界'\",\"glyph: '開'\",\"glyph: '階'\",\"glyph: '寒'\",\"glyph: '館'\",\"glyph: '起'\",\"glyph: '期'\",\"glyph: '客'\",\"glyph: '究'\",\"glyph: '急'\",\"glyph: '級'\",\"glyph: '球'\",\"glyph: '去'\",\"glyph: '橋'\",\"glyph: '業'\",\"glyph: '局'\",\"glyph: '銀'\",\"glyph: '区'\",\"glyph: '苦'\",\"glyph: '具'\",\"glyph: '君'\",\"glyph: '係'\",\"glyph: '軽'\",\"glyph: '血'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '院'\",\"glyph: '員'\",\"glyph: '運'\",\"glyph: '飲'\",\"glyph: '央'\",\"glyph: '横'\",\"glyph: '屋'\",\"glyph: '温'\",\"glyph: '化'\",\"glyph: '界'\",\"glyph: '開'\",\"glyph: '階'\",\"glyph: '寒'\",\"glyph: '館'\",\"glyph: '起'\",\"glyph: '期'\",\"glyph: '客'\",\"glyph: '究'\",\"glyph: '急'\",\"glyph: '級'\",\"glyph: '球'\",\"glyph: '去'\",\"glyph: '橋'\",\"glyph: '業'\",\"glyph: '局'\",\"glyph: '銀'\",\"glyph: '区'\",\"glyph: '苦'\",\"glyph: '具'\",\"glyph: '君'\",\"glyph: '係'\",\"glyph: '軽'\",\"glyph: '血'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\kanji.ts -Encoding UTF8 | Select-Object -Last 80"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"ja-kanji-ou-center\",\"ja-kanji-yoko\",\"ja-kanji-atatakai\",\"ja-kanji-ka-change\",\"ja-kanji-kai-floor\",\"ja-kanji-kan-building\",\"ja-kanji-okiru\",\"ja-kanji-ki-period\",\"ja-kanji-kyaku-guest\",\"ja-kanji-kyuu-research\",\"ja-kanji-kyuu-level\",\"ja-kanji-kyuu-ball\",\"ja-kanji-hashi-bridge\",\"ja-kanji-kyoku-office\",\"ja-kanji-ku-district\",\"ja-kanji-kurushii\",\"ja-kanji-gu-tool\",\"ja-kanji-kimi\",\"ja-kanji-kakari\",\"ja-kanji-karui\",\"ja-kanji-chi-blood\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"ja-kanji-ou-center\",\"ja-kanji-yoko\",\"ja-kanji-atatakai\",\"ja-kanji-ka-change\",\"ja-kanji-kai-floor\",\"ja-kanji-kan-building\",\"ja-kanji-okiru\",\"ja-kanji-ki-period\",\"ja-kanji-kyaku-guest\",\"ja-kanji-kyuu-research\",\"ja-kanji-kyuu-level\",\"ja-kanji-kyuu-ball\",\"ja-kanji-hashi-bridge\",\"ja-kanji-kyoku-office\",\"ja-kanji-ku-district\",\"ja-kanji-kurushii\",\"ja-kanji-gu-tool\",\"ja-kanji-kimi\",\"ja-kanji-kakari\",\"ja-kanji-karui\",\"ja-kanji-chi-blood\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+files: 0
+tokens: in 17543707 / out 118409
+

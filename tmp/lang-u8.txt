@@ -1,0 +1,9 @@
+DEEP PUSH — Japanese VOCAB Unit 8 (foreground; efficient; resume). content/ja/seed.ts has 7 units / ~125 words; closed-universe (keep 0 leaks). We have 103 N5 kanji + full core N5 grammar. Move toward N5 (~600-800). FAST but correct.
+
+ADD Unit 8 (~22-26 NEW high-frequency words) — theme: descriptions & daily life — colors (白/黒/赤/青 leveraging kanji), body (頭/手(have?)/目(have?)/口(have?)/足), weather/nature (天気/暑い/寒い/雨(have?)/雪), more common adjectives (難しい/easy 易しい・簡単/楽しい/面白い/忙しい/早い・速い/遅い/長い(have?)/短い), and a few common nouns (天気/色/名前(have?)). Pick correct, useful, NON-duplicate (check what's there). Headwords in standard kanji+kana where appropriate. Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example.
+- 1-2 grammar patterns only if needed (e.g. い-adj past 〜かった / な-adj past).
+- 2 natural SCENES (describing weather/things/feelings) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer.
+- ja-unit-8 + ja-checkpoint-8; wire EARLY. audioIds on everything new.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report counts + cumulative + ja-unit-8/checkpoint-8 exist + helper verdict + lint/test output.

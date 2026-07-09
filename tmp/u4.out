@@ -1,0 +1,98 @@
+
+===== PARTNER VERDICT (codex, 902s) =====
+
+Added Japanese Unit 4 in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts): 16 new words, 3 grammar patterns, 2 scenes, `ja-checkpoint-4`, and `ja-unit-4`. No audio generation, deploy, or commit.
+
+Counts: 4 JA units, 67 cumulative JA lexicon entries, Unit 4 has 16 words, 3 grammar patterns, 2 scenes, 8 scene lines, 5 scene quiz items, 3 checkpoint items.
+
+Helper verdict: Claude confirmed tokenization/licensing/readings/particles were mechanically clean. It flagged `飲み物を飲みたいですか` as tautological; I applied its fix to `何を飲みたいですか。` / `水を飲みたいです。`.
+
+`npm run lint:content`:
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+`npm test`:
+```text
+Test Files  7 passed (7)
+Tests       34 passed (34)
+Duration    1.79s
+```
+0 skipped.
+
+`npm run build`:
+```text
+> foothold-language@0.1.0 build
+> npm run lint:content && tsc -b && vite build
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+vite v6.4.3 building for production...
+40 modules transformed.
+dist/index.html                  0.41 kB │ gzip:  0.27 kB
+dist/assets/index-BZIQDe5f.css  15.47 kB │ gzip:  3.98 kB
+dist/assets/index-BhPQL4Sq.js  358.02 kB │ gzip: 96.73 kB
+built in 2.52s
+```
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit4 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-4');
+const lexInUnit4 = jaSeedContent.lexicon.filter((entry) => entry.order >= 60 && entry.order <= 75);
+const grammarInUnit4 = jaSeedContent.grammar.filter((entry) => entry.order >= 76 && entry.order <= 78);
+const scenesInUnit4 = jaSeedContent.scenes.filter((scene) => unit4?.sceneIds.includes(scene.id));
+const checkpoint4 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-4');
+console.log(JSON.stringify({
+  units: jaSeedContent.units.length,
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit4Words: lexInUnit4.length,
+  unit4Grammar: grammarInUnit4.length,
+  unit4Scenes: scenesInUnit4.length,
+  unit4SceneLines: scenesInUnit4.reduce((sum, scene) => sum + scene.lines.length, 0),
+  unit4SceneQuizItems: scenesInUnit4.reduce((sum, scene) => sum + scene.comprehension.length, 0),
+  checkpoint4Items: checkpoint4?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path .\\tmp-counts.mts -Encoding UTF8
+npx tsx .\\tmp-counts.mts
+Remove-Item -Path .\\tmp-counts.mts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit4 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-4');
+const lexInUnit4 = jaSeedContent.lexicon.filter((entry) => entry.order >= 60 && entry.order <= 75);
+const grammarInUnit4 = jaSeedContent.grammar.filter((entry) => entry.order >= 76 && entry.order <= 78);
+const scenesInUnit4 = jaSeedContent.scenes.filter((scene) => unit4?.sceneIds.includes(scene.id));
+const checkpoint4 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-4');
+console.log(JSON.stringify({
+  units: jaSeedContent.units.length,
+  cumulativeJaWords: jaSeedContent.lexicon.length,
+  unit4Words: lexInUnit4.length,
+  unit4Grammar: grammarInUnit4.length,
+  unit4Scenes: scenesInUnit4.length,
+  unit4SceneLines: scenesInUnit4.reduce((sum, scene) => sum + scene.lines.length, 0),
+  unit4SceneQuizItems: scenesInUnit4.reduce((sum, scene) => sum + scene.comprehension.length, 0),
+  checkpoint4Items: checkpoint4?.items.length ?? 0
+}, null, 2));
+'@ | Set-Content -Path .\\tmp-counts.mts -Encoding UTF8
+npx tsx .\\tmp-counts.mts
+Remove-Item -Path .\\tmp-counts.mts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-String -Pattern "ja-unit-4|ja-checkpoint-4|ja-scene-ordering-food|ja-scene-preferences|ja-asa|ja-i-adjective-predicate|ja-tai-desu" -Context 0,2'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/seed.ts | Select-String -Pattern "ja-unit-4|ja-checkpoint-4|ja-scene-ordering-food|ja-scene-preferences|ja-asa|ja-i-adjective-predicate|ja-tai-desu" -Context 0,2'
+files: 0
+tokens: in 1650081 / out 16094
+

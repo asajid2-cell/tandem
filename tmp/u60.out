@@ -1,0 +1,43 @@
+
+===== PARTNER VERDICT (codex, 233s) =====
+
+Implemented Japanese VOCAB Unit 60 in [seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Final counts:
+- Lexicon: `1206`
+- Scenes: `121`
+- Checkpoints: `60`
+- Units: `60`
+- Max lex order: `1238`
+- Max scene order: `121`
+- `ja-unit-60`: exists, lexRange `[1219, 1238]`
+- `ja-checkpoint-60`: exists, `10` items
+
+Verification:
+- Unit 60 new lexicon audioIds: all globally unique, count `1` each
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7` files passed, `36` tests passed, `0` skipped
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['量は多いですか。','いいえ。数は少ないです。','平均は高いですか。','はい。割合も高いです。','全体は増加しますか。','いいえ。一部は減少します。','数字を計算しますか。','はい。目安です。','倍です。','以上です。','以下です。','以内です。','程度です。','最大です。','最小です。','約です。','総数です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['量は多いですか。','いいえ。数は少ないです。','平均は高いですか。','はい。割合も高いです。','全体は増加しますか。','いいえ。一部は減少します。','数字を計算しますか。','はい。目安です。','倍です。','以上です。','以下です。','以内です。','程度です。','最大です。','最小です。','約です。','総数です。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['量','数','倍','以上','以下','以内','程度','割合','平均','最大','最小','増加','減少','全体','一部','約','数字','目安','総数','計算']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-60'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-60'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit60:"'!!unit,checkpoint60:!!cp,unit60LexRange:unit?.lexRange,unit60SceneIds:unit?.sceneIds,checkpoint60Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const newEntries=s.lexicon.filter(x=>x.order>=1219&&x.order<=1238); const all=new Map(); for (const x of s.lexicon) all.set(x.audioId,(all.get(x.audioId)||0)+1); console.log(JSON.stringify(newEntries.map(x=>({id:x.id,audioId:x.audioId,count:all.get(x.audioId)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-60'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-60'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit60:"'!!unit,checkpoint60:!!cp,unit60LexRange:unit?.lexRange,unit60SceneIds:unit?.sceneIds,checkpoint60Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const newEntries=s.lexicon.filter(x=>x.order>=1219&&x.order<=1238); const all=new Map(); for (const x of s.lexicon) all.set(x.audioId,(all.get(x.audioId)||0)+1); console.log(JSON.stringify(newEntries.map(x=>({id:x.id,audioId:x.audioId,count:all.get(x.audioId)})), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['量','数','倍','以上','以下','以内','程度','割合','平均','最大','最小','増加','減少','全体','一部','約','数字','目安','総数','計算']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+files: 0
+tokens: in 39361694 / out 263832
+
+
+⚠ tandem: codex 019effde has run 12 turns (compaction threshold 12).
+   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.
+   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"

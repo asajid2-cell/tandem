@@ -1,0 +1,4 @@
+FOCUSED: Japanese KANJI batch 2 (foreground; FAST; resume; N4). File: content/ja/kanji.ts (currently 246 entries). ADD ~27 NEW N4 kanji continuing the order sequence (next order after the current max). 
+KanjiEntry shape (copy EXACTLY): { id, glyph, meanings:[...], onyomi:[katakana...], kunyomi:[hiragana w/ okurigana dots], examples:[{ word, reading(hiragana), gloss, audioId }], strokeCount, group, order, audioId }. UNIQUE id + audioId each (suffix on collision). 1-2 example words each. Append before closing `];`.
+Candidates (SKIP glyphs already present; net ~27 NEW): 君 係 軽 血 決 研 県 庫 湖 向 幸 港 号 根 祭 皿 仕 死 使 始 指 歯 詩 次 事 持 式 実 写 者 主 守 取 酒 受 州 拾 終 習 集 住 重 宿 所 暑 助.
+SPEED: just add the entries with correct readings. Do NOT run npm build/test/audio/deploy/commit yourself — the watcher verifies. Report only: how many NEW added + new total + any glyphs skipped as dups.

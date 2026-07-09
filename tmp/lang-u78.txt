@@ -1,0 +1,8 @@
+FOCUSED: Japanese VOCAB Unit 78 ONLY (foreground; resume). content/ja/seed.ts has 77 units / ~1521 words. STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[]. Wire ja-unit-78 + ja-checkpoint-78 LAST. Valid TS.
+THEME = EVERYDAY EXPRESSIONS, TRANSIT & QUESTION WORDS (the review found these MISSING and they block reading simple messages). ADD ~20-22 entries, grouped:
+- courtesy/messages: ありがとう(thank you)/すみません(excuse me; sorry)/ごめん(sorry, casual)/お願いします(please)/どういたしまして(you're welcome)/おはよう(good morning, if not present)
+- transit: ホーム(platform)/乗り場(boarding area)/遅延(delay)/各駅(each station/local)/急行(express)
+- payment: レシート(receipt)/領収書(receipt, formal)
+- question/function words: いつ(when)/どれ(which one)/どちら(which/where, polite)/どうして(why)/だけ(only)/しか(only, w/ negative)/もう一度(once more)
+Check each isn't a duplicate (grep headword). Each LexEntry: headword, reading, romanization, gloss, pos, audioId (UNIQUE), ONE closed-universe example. 2 SCENES (scenes[]): a short chat message exchange + a station-delay scene, using only cumulative vocab+grammar, QuizItems + tokens[]. audioIds on all. Natural Japanese.
+VERIFY (iterate to green, EXIT CODE): `npm run lint:content` exit 0. NO vite/tests/audio/deploy/commit. Report: lint rc + ja-unit-78 + ja-checkpoint-78 + new word count.

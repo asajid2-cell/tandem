@@ -1,0 +1,5 @@
+﻿Final French Unit 2 recheck. Added lex ai/as/vais/où/ici/là/combien/carte/addition/thé/parle/comprends/pardon/deux/euros/beaucoup. Grammar: avoir j'ai/tu as; où/combien questions. Scenes:
+1 A Pardon, où est l'addition ? / B L'addition est là. / A Où est la carte ? / B La carte est ici.
+2 A Bonjour. Je veux un thé. / B Un thé ? Oui. / A C'est combien ? / B C'est deux euros. Merci beaucoup.
+Checkpoint: Où est l'addition ? / J'ai la carte. / Tu as un thé ? / C'est deux euros. / Tu comprends ?
+lint:content passes 0 leaks. Verdict on final French naturalness/register/accents/agreement/decodability? Keep concise.

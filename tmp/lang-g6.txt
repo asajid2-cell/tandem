@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 6 — て-form AUXILIARIES (foreground; resume; N4). seed.ts grammar[] has 62 patterns. ADD 4 NEW, order after current max. Inside grammar[].
+Shape: copy existing GrammarPattern EXACTLY; build on the already-licensed て-form; license any new surface.
+ADD:
+21. ～ておく (do in advance / for future) — て-form + おく — id ja-prep-teoku.
+22. ～てしまう (do completely / end up / regret) — て-form + しまう — id ja-completion-teshimau.
+23. ～てみる (try doing and see) — て-form + みる — id ja-attempt-temiru.
+24. ～ていく／～てくる (go on / come to do, over time) — id ja-aspect-teiku-tekuru.
+Each: 3 examples + 1-2 drills, closed-universe, tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE 0 (trust exit code). NO vite/tests/audio/deploy/commit. Report: lint exit code + 4 ids + new grammar count.

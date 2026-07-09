@@ -1,0 +1,6 @@
+DEEP PUSH — Japanese VOCAB Units 22 AND 23 (foreground; efficient; resume). content/ja/seed.ts has 21 units / ~426 words; closed-universe (0 leaks). STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[] — never mix; wire each unit EARLY.
+UNIT 22 (~18-22) — common abstract nouns: 時間/問題/意味/理由/方法/予定(have?)/約束/用事/世界/文化/質問(have?)/答え(have?)/話(noun)/言葉/気持ち. 
+UNIT 23 (~18-22) — communication & tech: 電話/携帯/メール/インターネット/パソコン/ニュース/連絡/写真(have)/動画/番号/住所/名前(have)/手紙(have?). 
+Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. For EACH unit: 2 SCENES using only cumulative vocab+grammar, QuizItems, tokens[] via tokenizer; audioIds on all.
+CORRECTNESS: natural correct Japanese, closed-universe. Brief helper check. No audio:ja/deploy/commit.
+VERIFY: lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + units/checkpoints 22/23 + lint/test.

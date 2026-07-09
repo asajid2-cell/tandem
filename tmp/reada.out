@@ -1,0 +1,39 @@
+
+===== PARTNER VERDICT (codex, 288s) =====
+
+Implemented Part A.
+
+Changed:
+- Added `ReadingLine`, `Reading`, and optional `ContentBundle.readings?: Reading[]` in [types.ts](z:/328/CMPUT328-A2/codexworks/301/language/src/content/types.ts:181).
+- Added `lintReading()` and wired `bundle.readings ?? []` into content lint in [lint.ts](z:/328/CMPUT328-A2/codexworks/301/language/src/engine/lint.ts:76).
+- Added reading line/question audio collection in [gen-audio.mjs](z:/328/CMPUT328-A2/codexworks/301/language/scripts/gen-audio.mjs:126).
+- Added 3 Japanese graded readings in [seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:26394).
+
+Verification:
+- `npm run lint:content` rc `0`
+- `npx tsc -b` rc `0`
+
+Reading ids:
+- `ja-reading-1`
+- `ja-reading-2`
+- `ja-reading-3`
+
+Confirmed: `ContentBundle.readings` was added as optional. No UI, Vite, tests, audio generation, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as c } from './content/ja/seed.ts'; const terms=['着る','着替える','スーツ','仕事','会社','会議','メール','電話','疲れる','少し']; console.log(c.lexicon.filter(e=>terms.includes(e.headword)).map(e=>String(e.order)+':'+e.headword+'='+e.gloss).join('\\n'));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['朝、服を着替えます。','スーツを着ます。会社に行きます。','会社の部屋で仕事をします。','昼に会議があります。','午後、メールを読みます。','机の上で電話を使います。','夜、家に帰ります。少し疲れます。']; for (const line of lines) console.log(line+' => '+t.tokenize(line).join('|')); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- src/content/types.ts src/engine/lint.ts scripts/gen-audio.mjs content/ja/seed.ts --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as c } from './content/ja/seed.ts'; console.log(JSON.stringify({readings:c.readings?.map(r=>({id:r.id,lines:r.lines.length,questions:r.comprehension.length,gate:r.unlockedAfter})), count:c.readings?.length}, null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/content/types.ts -Pattern \"readings\\?: Reading\\[\\]|interface Reading\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src/content/types.ts -Pattern \"readings\\?: Reading\\[\\]|interface Reading\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- src/content/types.ts src/engine/lint.ts scripts/gen-audio.mjs content/ja/seed.ts --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent as c } from './content/ja/seed.ts'; console.log(JSON.stringify({readings:c.readings?.map(r=>({id:r.id,lines:r.lines.length,questions:r.comprehension.length,gate:r.unlockedAfter})), count:c.readings?.length}, null, 2));\""
+files: 0
+tokens: in 953734 / out 10661
+

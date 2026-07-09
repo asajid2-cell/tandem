@@ -1,0 +1,66 @@
+
+===== PARTNER VERDICT (codex, 381s) =====
+
+Implemented sentence reading hints for Japanese sentences.
+
+Changed:
+- Added `scripts/gen-readings.mjs`
+- Added `npm run readings:ja`
+- Generated `content/ja/readings.generated.ts`
+- Wired `SentenceText` into scene lines, passage lines, grammar reference examples, and NewWordFlow grammar examples
+- Left gloss/showGuides behavior unchanged
+- Did not run vite build/preview, audio, deploy, or git commit
+
+Verification:
+- `npm run readings:ja`: rc 0, generated 907 entries
+- Coverage audit: 907 expected, 907 generated, 0 missing, 0 extra, 0 mismatches
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npm test`: rc 0, 37 tests passed across 7 files
+
+Note: `docs/japanese-curriculum-review.md` was already untracked/unrelated and I left it alone.
+
+Sample generated entries:
+
+```json
+{
+  "ja-scene-students-b1": [
+    { "text": "学生", "reading": "がくせい" },
+    { "text": "です" },
+    { "text": "か" },
+    { "text": "。" }
+  ],
+  "ja-read-first-day-l1": [
+    { "text": "私", "reading": "わたし" },
+    { "text": "は" },
+    { "text": "学生", "reading": "がくせい" },
+    { "text": "です" },
+    { "text": "。" }
+  ],
+  "ja-ex-desu-watashi-gakusei": [
+    { "text": "私", "reading": "わたし" },
+    { "text": "は" },
+    { "text": "学生", "reading": "がくせい" },
+    { "text": "です" },
+    { "text": "。" }
+  ]
+}
+```
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run readings:ja'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run readings:ja'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; npx tsx -e \"import { jaSeedContent } from './content/ja/seed.ts'; import { jaSentenceReadings } from './content/ja/readings.generated.ts'; const expected=[]; const add=(kind,id,text)=>{ if("'!id) throw new Error(kind+'"' missing audioId'); expected.push([kind,id,text]); }; for (const scene of jaSeedContent.scenes) for (const line of scene.lines) add('scene', line.audioId, line.text); for (const reading of jaSeedContent.readings ?? []) for (const line of reading.lines) add('reading', line.audioId, line.text); for (const grammar of jaSeedContent.grammar) for (const example of grammar.examples) add('grammar', example.audioId, example.text); const ids = new Set(expected.map(([,id])=>id)); const generated = new Set(Object.keys(jaSentenceReadings)); const missing=[...ids].filter(id=>"'!generated.has(id)); const extra=[...generated].filter(id=>!ids.has(id)); const mismatches=expected.filter(([,id,text])=>jaSentenceReadings[id]?.map(segment=>segment.text).join('"'') "'!== text); const samples={}; for (const [kind,id] of expected) { if (!samples[kind] && jaSentenceReadings[id]?.some(segment=>segment.reading)) samples[kind] = [id, jaSentenceReadings[id]]; } console.log(JSON.stringify({expected: ids.size, generated: generated.size, missing: missing.length, extra: extra.length, mismatches: mismatches.length, samples}, null, 2)); if (missing.length || extra.length || mismatches.length) process.exit(1);"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; npx tsx -e \"import { jaSeedContent } from './content/ja/seed.ts'; import { jaSentenceReadings } from './content/ja/readings.generated.ts'; const expected=[]; const add=(kind,id,text)=>{ if("'!id) throw new Error(kind+'"' missing audioId'); expected.push([kind,id,text]); }; for (const scene of jaSeedContent.scenes) for (const line of scene.lines) add('scene', line.audioId, line.text); for (const reading of jaSeedContent.readings ?? []) for (const line of reading.lines) add('reading', line.audioId, line.text); for (const grammar of jaSeedContent.grammar) for (const example of grammar.examples) add('grammar', example.audioId, example.text); const ids = new Set(expected.map(([,id])=>id)); const generated = new Set(Object.keys(jaSentenceReadings)); const missing=[...ids].filter(id=>"'!generated.has(id)); const extra=[...generated].filter(id=>!ids.has(id)); const mismatches=expected.filter(([,id,text])=>jaSentenceReadings[id]?.map(segment=>segment.text).join('"'') "'!== text); const samples={}; for (const [kind,id] of expected) { if (!samples[kind] && jaSentenceReadings[id]?.some(segment=>segment.reading)) samples[kind] = [id, jaSentenceReadings[id]]; } console.log(JSON.stringify({expected: ids.size, generated: generated.size, missing: missing.length, extra: extra.length, mismatches: mismatches.length, samples}, null, 2)); if (missing.length || extra.length || mismatches.length) process.exit(1);"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+files: 0, 1
+tokens: in 2460721 / out 12783
+

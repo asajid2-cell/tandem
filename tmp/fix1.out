@@ -1,0 +1,40 @@
+
+===== PARTNER VERDICT (codex, 498s) =====
+
+Implemented the surgical grammar-gating fix.
+
+Changed:
+- Exported `buildSyllabus(content)` from [src/engine/unlock.ts](z:/328/CMPUT328-A2/codexworks/301/language/src/engine/unlock.ts:69).
+- Updated [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:1594) so `/learn?index=` walks the combined lex+grammar syllabus.
+- Removed the end-of-course all-at-once grammar marking; grammar now marks inline via `progress.markGrammarSeen([pattern.order])`.
+- Added regression test in [src/engine/unlock.test.ts](z:/328/CMPUT328-A2/codexworks/301/language/src/engine/unlock.test.ts:173): `interleaves grammar in the syllabus so Japanese unit 1 can unlock during learn`.
+
+Verification:
+- `npx tsc -b`: exit 0
+- `npm run lint:content`: exit 0
+- `npm test`: 7 files passed, 37 tests passed
+
+Grammar card UI:
+- Shows pattern order, title, formula, and explanation in the existing card styling.
+- Shows one example with `AudioButton`.
+- English gloss is hidden by default with `RevealableText`, respecting guide visibility/dark mode styling.
+
+I did not run Vite build, preview, audio, deploy, or commit. The pre-existing untracked `docs/japanese-curriculum-review.md` was left untouched.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\unlock.test.ts -Pattern 'interleaves grammar in the syllabus' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\unlock.ts -Pattern 'export function buildSyllabus|export type SyllabusItem' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }; Select-String -Path src'"\\App.tsx -Pattern 'New grammar pattern|function isSyllabusStepSeen|buildSyllabus\\(bundle\\)|markGrammarSeen\\(\\[pattern.order\\]\\)' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\unlock.test.ts -Pattern 'interleaves grammar in the syllabus' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path src\\engine\\unlock.ts -Pattern 'export function buildSyllabus|export type SyllabusItem' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }; Select-String -Path src'"\\App.tsx -Pattern 'New grammar pattern|function isSyllabusStepSeen|buildSyllabus\\(bundle\\)|markGrammarSeen\\(\\[pattern.order\\]\\)' | ForEach-Object { \""'$($_.LineNumber):$($_.Line)" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+files: 0
+tokens: in 1203169 / out 11512
+

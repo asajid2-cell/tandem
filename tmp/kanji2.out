@@ -1,0 +1,34 @@
+
+===== PARTNER VERDICT (codex, 369s) =====
+
+Added 48 kanji entries to [content/ja/kanji.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/kanji.ts:5295), orders `364` through `411`. New `allKanji` count is `411`.
+
+Verification:
+- `npx tsc -b`: rc `0`
+- `npm run lint:content`: rc `0`
+- `npx tsx scan-audio.tmp.mjs`: `AUDIO OK: no conflicts`
+
+Samples:
+- `値` order `364`: `値段 / ねだん / price`, `値上げ / ねあげ / price increase`
+- `法` order `372`: `方法 / ほうほう / method; way`, `法律 / ほうりつ / law`
+- `豆` order `411`: `豆腐 / とうふ / tofu`, `納豆 / なっとう / natto; fermented soybeans`
+
+Only `content/ja/kanji.ts` was modified by this work.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji.ts'; for (const g of ['値','法','豆']) { const k=allKanji.find(x=>x.glyph===g)"'!; console.log(JSON.stringify({glyph:k.glyph,order:k.order,meanings:k.meanings,onyomi:k.onyomi,kunyomi:k.kunyomi,examples:k.examples},null,2)); }"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts --stat; git diff -- content/ja/kanji.ts | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"glyph: '値'|glyph: '法'|glyph: '豆'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"glyph: '値'|glyph: '法'|glyph: '豆'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts --stat; git diff -- content/ja/kanji.ts | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji.ts'; for (const g of ['値','法','豆']) { const k=allKanji.find(x=>x.glyph===g)"'!; console.log(JSON.stringify({glyph:k.glyph,order:k.order,meanings:k.meanings,onyomi:k.onyomi,kunyomi:k.kunyomi,examples:k.examples},null,2)); }"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+files: 0
+tokens: in 455634 / out 15869
+

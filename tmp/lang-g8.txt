@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 8 — VERB FORMS (foreground; resume; N4). seed.ts grammar[] has 70 patterns. ADD 4 NEW, order after current max. Inside grammar[]. These introduce NEW verb inflections — you MUST add a licenses[] entry (kind:'inflection') for each new surface so the closed-universe linter accepts them.
+Shape: copy existing GrammarPattern EXACTLY.
+ADD:
+29. Potential form ～(ら)れる／～える (be able to do): 食べられる, 読める, 来られる, できる. id ja-potential-form. License the potential surfaces.
+30. Passive ～(ら)れる (passive voice): 言われる, 見られる. id ja-passive-form. License passive surfaces.
+31. ～ために (in order to / for the purpose of) — id ja-purpose-tameni.
+32. ～という (called / named ~) — id ja-named-toiu.
+Each: 3 examples + 1-2 drills, closed-universe (only known vocab + licensed inflections), tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE 0 (trust exit code, not "0 leaks" text). NO vite/tests/audio/deploy/commit. Report: lint exit code + 4 ids + new grammar count.

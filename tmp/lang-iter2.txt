@@ -1,0 +1,15 @@
+ITERATION 2 (you are the Lead; same Foothold project; iter1 foundation is committed and green).
+
+Watcher verified iter1 (11/11 tests, lint 0 leaks, build green) and committed it. Good work — the fail-closed re-tokenizing linter is exactly right.
+
+SCOPE (build order step 4, Japanese first — the hardest case that proves the model): implement the build-time JAPANESE tokenizer and wire it into the existing linter contract, plus make inflection-licensing real. Concretely:
+1. Add a JA TokenizerAdapter (kuromoji or an equivalent build-time morphological tokenizer). It must tokenize Japanese (no spaces) to the granularity the lexicon is keyed at: content words as their BASE/dictionary form, and particles (は を に へ で と が の も か, etc.) as their OWN tokens. The point: the linter's known-set check must see particles and inflections as first-class.
+2. Make the inflection-licensing model real (plan §13 + §20 #3): an inflected surface token (e.g. 食べます / 食べました from 食べる) counts as KNOWN iff (its lemma is a known LexEntry) AND (the grammar pattern that licenses that inflection — e.g. polite 〜ます — is known). Use the GrammarPattern.licenses you added in iter1. Decide and document the exact data representation (how a pattern declares which endings/forms it licenses for which lemma classes).
+3. Decide whether tokens[] are precomputed at build time (a script that fills Example.tokens from text) or computed in the linter — the plan favors precompute-at-build so the browser carries no NLP. Implement whichever you choose cleanly; the linter must still RE-tokenize and reject declared≠actual (keep it fail-closed).
+4. Add JA fixtures to the linter tests: (a) a clean JA example with particles + an inflected verb that PASSES because lemma+particles+grammar-pattern are known; (b) a planted JA leak (an unintroduced content word) that MUST be caught; (c) an inflection that MUST be caught because its licensing grammar pattern is NOT yet known.
+
+USE YOUR CLAUDE HELPER as an independent second mind here — Japanese tokenization + particle/inflection correctness is exactly the kind of thing to cross-check. Ask it to independently judge: does this tokenization granularity + licensing model correctly enforce the closed-universe invariant for Japanese? Don't tell it your answer first.
+
+VERIFY before reporting: npm test green (incl. new JA fixtures), npm run lint:content 0 leaks, npm run build green. Don't break the FR path.
+
+DO NOT git commit (Watcher commits). REPORT: what you built, the inflection-licensing representation you chose, helper convergence/divergence, exact test/build output, and your suggested single next step (likely: begin JA content authoring — script primer + first lexicon batch — against the now-failing-closed JA linter).

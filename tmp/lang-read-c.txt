@@ -1,0 +1,9 @@
+FOCUSED: add graded READING passages (foreground; resume; N4). content/ja/seed.ts already has readings[] with ja-reading-1..3. ADD 4 MORE passages (ja-reading-4..7), continuing the order. Each is a SHORT connected narrative (not dialogue), CLOSED-UNIVERSE.
+Reading shape: { id, lang:'ja', order, title, titleGloss, level, unlockedAfter:{lex,grammar}, lines:[{text,gloss,tokens,audioId}], comprehension:[QuizItem] }. UNIQUE audioIds (ja-read-<slug>-l<N> / -q<N>).
+ADD (pick unlockedAfter.lex/grammar from REAL unit lexRange/grammarRange so the closed-universe set is correct for that level):
+4. ja-reading-4 '自己紹介' (self-introduction) level N5, gate ~unit 6, 4-5 lines, 3 questions.
+5. ja-reading-5 '週末' (the weekend) level N5+, gate ~unit 20, 5-6 lines, 3 questions.
+6. ja-reading-6 '買い物' (shopping trip) level N5+, gate ~unit 35, 6 lines, 3 questions.
+7. ja-reading-7 '電車の中で' (on the train) level N4, gate ~unit 55, 6-7 lines, 4 questions.
+Rules: only vocab+grammar known at the gate; declared tokens EXACTLY = kuromoji output; natural Japanese only.
+VERIFY (iterate to green, EXIT CODE): `npm run lint:content` exit 0 (trust exit code, not the "0 leaks" text). NO vite/tests/audio/deploy/commit. Report: lint rc + the 4 new ids + total readings count.

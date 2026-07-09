@@ -1,0 +1,92 @@
+
+===== PARTNER VERDICT (codex, 681s) =====
+
+Implemented Japanese Unit 78 in [content/ja/seed.ts](z:\328\CMPUT328-A2\codexworks\301\language\content/ja/seed.ts).
+
+Added:
+- `ja-unit-78` last, lexRange `[1551, 1572]`
+- `ja-checkpoint-78` last
+- 2 scenes: `ja-scene-chat-message-exchange`, `ja-scene-station-delay`
+- 22 new lexicon entries; requested headwords each appear exactly once
+- New Unit 78 audio IDs checked unique for the new material
+
+Verification:
+- `npm run lint:content` exit code `0`
+- Output: `content lint passed: 0 leaks` for all bundles
+
+New counts:
+- Japanese units: `78`
+- Japanese lexicon entries: `1543`
+- Max lexical order / range endpoint: `1572`
+
+No vite/tests/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-shika'|audioId: 'ja-lex-shika'|headword: 'しか'\" -Context 2,2"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"audioId: 'ja-lex-["'^'"']+'\" | Where-Object { "'$_.Line -match "ja-lex-shika" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"audioId: 'ja-lex-["'^'"']+'\" | Where-Object { "'$_.Line -match "ja-lex-shika" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-shika'|audioId: 'ja-lex-shika'|headword: 'しか'\" -Context 2,2"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const maxOrder = Math.max(...jaSeedContent.lexicon.map((entry) => entry.order));
+const refs = [];
+const collect = (id, owner) => { if (id) refs.push({ id, owner }); };
+for (const entry of jaSeedContent.lexicon) { collect(entry.id, "'`lex-id:${entry.id}`); collect(entry.audioId, `lex:${entry.id}`); for (const example of entry.examples) collect(example.audioId, `ex:${entry.id}`); }
+for (const scene of jaSeedContent.scenes) { collect(scene.id, `scene-id:${scene.id}`); for (const line of scene.lines) collect(line.audioId, `scene:${scene.id}`); for (const item of scene.comprehension) { collect(item.id, `sceneq-id:${item.id}`); collect(item.audioId, `sceneq:${item.id}`); } }
+for (const checkpoint of jaSeedContent.checkpoints) { collect(checkpoint.id, `checkpoint-id:${checkpoint.id}`); for (const item of checkpoint.items) { collect(item.id, `checkpoint-item-id:${item.id}`); collect(item.audioId, `checkpoint:${item.id}`); } }
+for (const unit of jaSeedContent.units) collect(unit.id, `unit-id:${unit.id}`);
+const byId = new Map();
+for (const ref of refs) { const arr = byId.get(ref.id) ?? []; arr.push(ref.owner); byId.set(ref.id, arr); }
+const newMarkers = ['"'arigatou','sumimasen','gomen','onegaishimasu','douitashimashite','ohayou','home-platform','noriba','chien','kakueki','kyuukou','receipt','sho-document','ryoushuu','ryoushuusho','itsu','dore','dochira','doushite','dake','shika-only','mouichido','chat-message-exchange','station-delay','checkpoint-78','unit-78'];
+const newProblems = [...byId].filter(([id, owners]) => newMarkers.some((marker) => id.includes(marker)) && owners.length "'!== 1);
+console.log(JSON.stringify({ lexiconCount: jaSeedContent.lexicon.length, maxLexOrder: maxOrder, unitCount: jaSeedContent.units.length, lastUnitId: jaSeedContent.units.at(-1)?.id, lastCheckpointId: jaSeedContent.checkpoints.at(-1)?.id, newDuplicateIdOrAudioProblems: newProblems }, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$words = @('"'ありがとう','すみません','ごめん','お願いします','どういたしまして','おはよう','ホーム','乗り場','遅延','各駅','急行','レシート','領収書','いつ','どれ','どちら','どうして','だけ','しか','もう一度'); foreach ("'$word in $words) { $count = (Select-String -Path content/ja/seed.ts -Pattern "headword: '"'"'$word'"'\" -AllMatches).Count; \""'$word`t$count" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$words = @('"'ありがとう','すみません','ごめん','お願いします','どういたしまして','おはよう','ホーム','乗り場','遅延','各駅','急行','レシート','領収書','いつ','どれ','どちら','どうして','だけ','しか','もう一度'); foreach ("'$word in $words) { $count = (Select-String -Path content/ja/seed.ts -Pattern "headword: '"'"'$word'"'\" -AllMatches).Count; \""'$word`t$count" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const maxOrder = Math.max(...jaSeedContent.lexicon.map((entry) => entry.order));
+const refs = [];
+const collect = (id, owner) => { if (id) refs.push({ id, owner }); };
+for (const entry of jaSeedContent.lexicon) { collect(entry.id, "'`lex-id:${entry.id}`); collect(entry.audioId, `lex:${entry.id}`); for (const example of entry.examples) collect(example.audioId, `ex:${entry.id}`); }
+for (const scene of jaSeedContent.scenes) { collect(scene.id, `scene-id:${scene.id}`); for (const line of scene.lines) collect(line.audioId, `scene:${scene.id}`); for (const item of scene.comprehension) { collect(item.id, `sceneq-id:${item.id}`); collect(item.audioId, `sceneq:${item.id}`); } }
+for (const checkpoint of jaSeedContent.checkpoints) { collect(checkpoint.id, `checkpoint-id:${checkpoint.id}`); for (const item of checkpoint.items) { collect(item.id, `checkpoint-item-id:${item.id}`); collect(item.audioId, `checkpoint:${item.id}`); } }
+for (const unit of jaSeedContent.units) collect(unit.id, `unit-id:${unit.id}`);
+const byId = new Map();
+for (const ref of refs) { const arr = byId.get(ref.id) ?? []; arr.push(ref.owner); byId.set(ref.id, arr); }
+const newMarkers = ['"'arigatou','sumimasen','gomen','onegaishimasu','douitashimashite','ohayou','home-platform','noriba','chien','kakueki','kyuukou','receipt','sho-document','ryoushuu','ryoushuusho','itsu','dore','dochira','doushite','dake','shika-only','mouichido','chat-message-exchange','station-delay','checkpoint-78','unit-78'];
+const newProblems = [...byId].filter(([id, owners]) => newMarkers.some((marker) => id.includes(marker)) && owners.length "'!== 1);
+console.log(JSON.stringify({ lexiconCount: jaSeedContent.lexicon.length, maxLexOrder: maxOrder, unitCount: jaSeedContent.units.length, lastUnitId: jaSeedContent.units.at(-1)?.id, lastCheckpointId: jaSeedContent.checkpoints.at(-1)?.id, newDuplicateIdOrAudioProblems: newProblems }, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const audioRefs = [];
+const collect = (id, owner) => { if (id) audioRefs.push({ id, owner }); };
+for (const entry of jaSeedContent.lexicon) { collect(entry.audioId, "'`lex:${entry.id}`); for (const example of entry.examples) collect(example.audioId, `ex:${entry.id}`); }
+for (const scene of jaSeedContent.scenes) { for (const line of scene.lines) collect(line.audioId, `scene:${scene.id}`); for (const item of scene.comprehension) collect(item.audioId, `sceneq:${item.id}`); }
+for (const checkpoint of jaSeedContent.checkpoints) { for (const item of checkpoint.items) collect(item.audioId, `checkpoint:${item.id}`); }
+const byId = new Map();
+for (const ref of audioRefs) { const arr = byId.get(ref.id) ?? []; arr.push(ref.owner); byId.set(ref.id, arr); }
+const newMarkers = ['"'arigatou','sumimasen','gomen','onegaishimasu','douitashimashite','ohayou','home-platform','noriba','chien','kakueki','kyuukou','receipt','sho-document','ryoushuu','ryoushuusho','itsu','dore','dochira','doushite','dake','shika-only','mouichido','chat-message-exchange','station-delay','checkpoint-78'];
+const newAudioProblems = [...byId].filter(([id, owners]) => newMarkers.some((marker) => id.includes(marker)) && owners.length "'!== 1);
+console.log(JSON.stringify({ newAudioProblems }, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const audioRefs = [];
+const collect = (id, owner) => { if (id) audioRefs.push({ id, owner }); };
+for (const entry of jaSeedContent.lexicon) { collect(entry.audioId, "'`lex:${entry.id}`); for (const example of entry.examples) collect(example.audioId, `ex:${entry.id}`); }
+for (const scene of jaSeedContent.scenes) { for (const line of scene.lines) collect(line.audioId, `scene:${scene.id}`); for (const item of scene.comprehension) collect(item.audioId, `sceneq:${item.id}`); }
+for (const checkpoint of jaSeedContent.checkpoints) { for (const item of checkpoint.items) collect(item.audioId, `checkpoint:${item.id}`); }
+const byId = new Map();
+for (const ref of audioRefs) { const arr = byId.get(ref.id) ?? []; arr.push(ref.owner); byId.set(ref.id, arr); }
+const newMarkers = ['"'arigatou','sumimasen','gomen','onegaishimasu','douitashimashite','ohayou','home-platform','noriba','chien','kakueki','kyuukou','receipt','sho-document','ryoushuu','ryoushuusho','itsu','dore','dochira','doushite','dake','shika-only','mouichido','chat-message-exchange','station-delay','checkpoint-78'];
+const newAudioProblems = [...byId].filter(([id, owners]) => newMarkers.some((marker) => id.includes(marker)) && owners.length "'!== 1);
+console.log(JSON.stringify({ newAudioProblems }, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 2249586 / out 23890
+

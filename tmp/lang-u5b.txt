@@ -1,0 +1,11 @@
+FOCUSED COMPLETION (foreground; efficient; resume). A prior turn added 16 Unit-5 lexicon words to content/ja/seed.ts (people & communication: 名前 先生 母 お母さん 父 お父さん 田中 誰 言う 話す 聞く 読む 書く 分かる 知る 日本語) but was CUT before wiring them — there is NO ja-unit-5, no Unit-5 scenes, and no ja-checkpoint-5. Finish Unit 5 now.
+
+DO THIS (closed-universe; 0 leaks):
+1. Add ja-unit-5 to units[] grouping the new Unit-5 lex order range (+ any grammar orders added with them), with sensible title (e.g. "People and talking"), sceneIds, checkpointId 'ja-checkpoint-5'.
+2. Add 2 natural SCENES using ONLY cumulative introduced vocab+grammar (e.g. asking someone's name 名前 / introducing 田中 / "can you read Japanese?" 日本語を読みますか / "I understand" 分かります). Speaker-labelled lines + comprehension QuizItems. Precompute tokens[] with the tokenizer.
+3. Add ja-checkpoint-5 with unseen-but-decodable comprehension items for Unit 5's cumulative range.
+4. Give new scene/checkpoint items audioIds.
+5. If any of the 16 new words lack a clean closed-universe example or correct reading, fix them.
+
+CORRECTNESS: natural correct Japanese (family-term register: 母/父 = humble own-family, お母さん/お父さん = others'/polite — use correctly in scenes), closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to verify naturalness/register/decodability. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped), npm run build green. Report counts + helper verdict + exact lint/test/build output. Be quick.

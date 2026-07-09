@@ -1,0 +1,10 @@
+DEEP PUSH — Japanese VOCAB Units 14 AND 15 (foreground; efficient; resume). content/ja/seed.ts has 13 units / ~262 words; closed-universe (keep 0 leaks). 103 N5 kanji + full core grammar. Add TWO units this turn.
+
+CRITICAL STRUCTURE RULE: new LexEntry objects go ONLY in the `lexicon` array; new Scene objects go ONLY in the `scenes` array; new Checkpoint objects in `checkpoints`; new Unit in `units`. Do NOT put scenes/checkpoints inside the lexicon array. WIRE EACH UNIT EARLY (add ja-unit-14 + ja-checkpoint-14 right after Unit 14's words+scenes, then do Unit 15) so an interruption never leaves a unit unwired.
+
+UNIT 14 (~20-24) — family & people: 家族/兄/姉/弟/妹/両親/おじ/おば/夫/妻/赤ちゃん/みんな/大人/子供 (skip dups: 母/父/お母さん/お父さん/友達 exist).
+UNIT 15 (~20-24) — body & health: 体/頭/顔/髪/耳/鼻/歯/お腹/病気/薬/元気/痛い/医者/風邪/熱/喉/指/首 (skip dups: 手/足/目/口 if present).
+Pick correct, useful, NON-duplicate. Headwords standard kanji+kana. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. For EACH unit: 2 natural SCENES (family talk / at the doctor) using ONLY cumulative vocab+grammar, comprehension QuizItems, tokens[] via tokenizer. audioIds on everything.
+
+CORRECTNESS > QUANTITY: natural correct Japanese (family register; 痛い/元気 usage), closed-universe. Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir). Do NOT run audio:ja, deploy, or git commit.
+VERIFY (MUST run before reporting): npm run lint:content → must print "0 leaks" (NOT crash); npm test → 36+ pass / 0 skipped. If lint crashes, you misplaced a scene/checkpoint into lexicon — fix it. Report counts + cumulative + units/checkpoints 14/15 exist + helper verdict + lint/test output.

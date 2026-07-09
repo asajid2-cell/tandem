@@ -1,0 +1,9 @@
+FOCUSED CHUNK (you are the Lead; foreground-supervised; be FAST and do ONLY this). Foothold app, working dir z:\328\CMPUT328-A2\codexworks\301\language. Japanese already has hiragana + katakana courses (content/ja/hiragana.ts, content/ja/katakana.ts) using a ScriptCourse shape, plus vocab units; SRS engine in src/engine/srs.ts; types in src/content/types.ts.
+
+DO ONLY THIS (no UI, no audio, no tests this turn):
+1. Add a KanjiEntry type to src/content/types.ts: { id; glyph; meanings: string[]; onyomi: string[] (katakana); kunyomi: string[] (hiragana, may include okurigana after a dot e.g. "た.べる"); examples: { word; reading; gloss }[]; strokeCount?: number; group: string; order: number; audioId: string }.
+2. Create content/ja/kanji.ts exporting `allKanji: KanjiEntry[]` — ~24 high-frequency BEGINNER kanji: 一二三四五六七八九十百千, 日月火水木金土, 人大小, 本. Each with correct on'yomi (katakana) + kun'yomi (hiragana), accurate English meanings, and 1-2 real example words with correct readings + gloss. group by theme (numbers/nature/people/basics), sequential order, ids like "ja-kanji-ichi", audioId like "ja-kanji-ichi".
+
+CORRECTNESS IS CRITICAL (kanji readings are error-prone) — every reading/meaning/example must be correct.
+
+VERIFY: `npm run build` passes (tsc type-checks the new type+data), `npm run lint:content` still 0 leaks. Do NOT git commit. Report: count + the file paths, and confirm build/lint green. Keep it tight — this should be quick.

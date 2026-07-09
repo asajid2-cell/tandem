@@ -1,0 +1,10 @@
+FOCUSED CHUNK 2 (continue; foreground-supervised; be efficient). You just authored content/ja/kanji.ts (23 kanji) + KanjiEntry type. Now build the KANJI COURSE UI, reusing the existing hiragana/katakana course patterns in src/App.tsx (reference grid + recognition SRS + reveal primitive + light/dark).
+
+DO THIS (no audio this turn — the Watcher will generate audio after):
+1. Add a #/ja/kanji track in the Japanese nav (next to Hiragana/Katakana).
+2. Kanji REFERENCE view: list/grid of allKanji grouped by group; GLYPH primary (large); meanings + onyomi + kunyomi + example words HIDDEN by default via the existing reveal primitive (hover/tap reveal + the global readings toggle); consistent light/dark.
+3. Kanji RECOGNITION (SRS) flow: show glyph → recall → reveal meaning+readings → grade buttons (Again/Good) that appear AFTER reveal → drive the existing SRS scheduler. Reuse the kana recognition flow/components.
+4. Store: persist kanji progress (e.g. seenKanjiIds + kanji SRS cards), schema-version the progress blob if you change its shape, with migration-safe defaults (preserve ALL existing progress: units, kana, etc.).
+5. Add/adjust tests for kanji SRS seeding if trivial.
+
+VERIFY: npm run build green, npm run lint:content 0 leaks, npm test green (0 SKIPPED). Do NOT git commit. Do NOT run the ui-craft battery or audio (Watcher does those). Report concisely: files changed, routes added, and confirm build/lint/test green. Keep it tight to finish quickly.

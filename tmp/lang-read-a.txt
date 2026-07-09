@@ -1,0 +1,18 @@
+FEATURE: Graded Reading — PART A (data model + lint + audio + seed passages; NO UI yet). Foreground; resume. Working dir = language repo.
+
+1) src/content/types.ts — ADD:
+   export interface ReadingLine { text: string; gloss: string; tokens: string[]; audioId?: AudioId; }
+   export interface Reading { id: EntityId; lang: LanguageCode; order: number; title: string; titleGloss: string; level: string; unlockedAfter: UnlockGate; lines: ReadingLine[]; comprehension: QuizItem[]; }
+   Add OPTIONAL field to ContentBundle: `readings?: Reading[];` (optional so fr/ko bundles need no change).
+
+2) src/engine/lint.ts — ADD lintReading(), mirroring lintScene() (line ~195): build known set from reading.unlockedAfter (lex+grammar), lint each line as an Example (text+tokens via lintExample) AND each comprehension QuizItem (lintQuizItem). Call it in the main lint runner for every reading in `bundle.readings ?? []`. Readings must obey the SAME closed-universe + declared-tokens-match-tokenizer rules as scenes.
+
+3) scripts/gen-audio.mjs — in collectAudioItems, after scenes loop add: for (const r of bundle.readings ?? []) { for (const line of r.lines) add(seen, line.audioId, line.text); for (const item of r.comprehension) add(seen, item.audioId, item.sourceText); }
+
+4) content/ja/seed.ts — ADD `readings: [ ... ]` to jaSeedContent (place the field in the bundle object; if there's a builder, add there). Author 3 graded passages, each a short connected narrative (NOT dialogue), CLOSED-UNIVERSE (only vocab+grammar known at its unlockedAfter point; tokens EXACTLY = kuromoji output; UNIQUE audioIds ja-read-<slug>-l<N> and ja-read-<slug>-q<N>):
+   - ja-reading-1 'はじめての一日' level 'N5', unlockedAfter ~ end of unit 10 (use a real cumulative lex/grammar order), 4-6 short lines, 3 comprehension QuizItems.
+   - ja-reading-2 'わたしの町' level 'N5+', unlockedAfter ~ unit 30, 5-7 lines, 3 questions.
+   - ja-reading-3 '仕事のいちにち' level 'N4', unlockedAfter ~ unit 50, 6-8 lines, 4 questions.
+   Pick unlockedAfter.lex/grammar from actual unit lexRange/grammarRange values so the closed-universe set is correct.
+
+VERIFY (iterate to green, EXIT CODES): `npm run lint:content` exit 0 AND `npx tsc -b` exit 0. Do NOT run vite/tests/audio/deploy/commit. Report: lint rc, tsc rc, the 3 reading ids, and confirm ContentBundle.readings added.

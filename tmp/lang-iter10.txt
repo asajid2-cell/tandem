@@ -1,0 +1,18 @@
+ITERATION 10 (you are the Lead; same Foothold project; iter1-9 committed & LIVE. Japanese is now a complete experience: 2 units, 35 words, 5 scenes, 4 grammar patterns, 2 checkpoints, real audio, full learn→read→review→checkpoint loop. The engine/UI/linter/audio pipeline are all language-agnostic.)
+
+Watcher committed + redeployed iter9. Now deliver on the brief's MULTI-LANGUAGE promise: build FRENCH to real usability (it currently only has a tiny seed). This also proves the architecture is genuinely language-agnostic — reuse ALL the existing engine/UI/linter/audio machinery; only content + the FR audio voice are new.
+
+SCOPE — French Unit 1 (mirror the JA Unit 1 depth/structure) in content/fr/seed.ts:
+1. PRONUNCIATION PRIMER (French analog of the kana primer): a handful of the highest-value French spelling→sound rules a beginner needs to read the words in this unit (e.g. silent final consonants, é/è/ê, ç, ou vs u, nasal on/an/in, liaison basics). Recognition-level; use the existing script/primer structures (adapt as needed — these are "ScriptUnit"-like reading aids).
+2. ~16-18 genuinely high-frequency, everyday French words (orders starting at 1 for FR): include core function words (je, tu, le/la, un/une, ne...pas, est) and useful content words (bonjour, merci, oui, non, eau, manger, vouloir, être, etc. — your judgment, high-frequency + useful for daily reading). Each with reading aid/romanization-equivalent (IPA-ish or pronunciation hint), gloss, pos, audioId, and a closed-universe example.
+3. 1-2 grammar patterns (e.g. être conjugation je suis/tu es/c'est; negation ne...pas; basic SVO) with licenses[] as needed for the FR tokenizer.
+4. 2-3 everyday SCENES (greeting/self-intro, a simple café/shop exchange) built ONLY from introduced FR vocab+patterns, with comprehension QuizItems. Precompute tokens[] using the existing French tokenizer (it handles elision/contractions).
+5. A French checkpoint (fr-checkpoint-1) with unseen-but-decodable comprehension items, gated to FR Unit 1's cumulative material. Define fr-unit-1.
+6. AUDIO: extend the audio pipeline for French (e.g. `npm run audio:fr` using an edge-tts fr-FR voice like fr-FR-DeniseNeural), give every FR item an audioId, generate public/audio/fr/*.mp3. (Same gitignore+deploy approach as JA.)
+7. Make the language picker route into French properly (French becomes a real, learnable language, not "seed only").
+
+CORRECTNESS > QUANTITY (hard rule): natural, correct French (accents, agreement, elision, register) and STRICTLY closed-universe (linter 0 leaks). Use your Claude HELPER (SIMPLE invocation: prompt to temp file → node bin/peer.mjs ask - < file from tandem dir) to independently cross-check the French cold (naturalness, accents, agreement, gloss accuracy, decodability).
+
+VERIFY before reporting: npm run lint:content 0 leaks (FR + JA both), npm test green, npm run build green, FR audio generated. Run the ui-craft battery on the French picker→learn→scene→checkpoint path (save to .uicraft-shots/iter10-final, give me the path). Don't regress Japanese.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: FR content authored (counts), how you extended the audio pipeline for FR, helper verdict on the French, battery results + path, exact lint/test/build output, and suggested single next step for iter11 (likely: French Unit 2, or begin Korean — which needs the KO tokenizer decision from plan section 20#2).

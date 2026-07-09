@@ -1,0 +1,17 @@
+﻿Please cross-check planned French Unit 2 for closed-universe beginner content. Existing Unit 1 vocab: je, tu, ce, est, suis, es, un, une, le, la, bonjour, merci, oui, non, eau, pain, café, veux. Existing grammar: c'est + noun, je/tu veux + noun.
+
+Planned new lex 21-36:
+ai (j'ai, have), as (tu as, have), vais (go/am going), où (where), ici (here), là (there), combien (how much), carte (menu/card), addition (bill/check), thé (tea), parle (speak), comprends (understand), pardon (excuse me/sorry), deux (two), euros (euros), beaucoup (a lot/much).
+
+Grammar 37-38:
+1 Avoir with j'ai/tu as: J'ai un café. / Tu as le pain ? / J'ai l'addition.
+2 Où and combien questions: Où est la carte ? / Le thé, c'est combien ? / C'est deux euros.
+
+Scenes:
+1 A Pardon, où est la carte ? / B La carte est ici. / A Le thé, c'est combien ? / B C'est deux euros.
+2 A Bonjour. Je veux un thé. / B Un thé ? Oui. / A C'est combien ? / B C'est deux euros. Merci.
+
+Checkpoint:
+Où est l'addition ?; J'ai la carte.; Tu as un thé ?; C'est deux euros.; Tu comprends ?
+
+French tokenizer prechecked: j'ai -> je ai; l'addition -> le addition. Please flag unnatural French, register issues, accents/agreement, closed-universe issues. Keep concise.

@@ -1,0 +1,662 @@
+Audit this Japanese kanji batch for a JLPT N5 study reference. Check every glyph, meaning, on-yomi (katakana), kun-yomi with okurigana dots, example word reading/gloss, stroke count if you notice errors, and duplicate/id concerns. Use standard Joyo readings only. Be strict and concise: list fixes needed or say ship. Context: previous orders 1-59 already exist; this batch is orders 60-103.
+
+{
+    id: 'ja-kanji-deru',
+    glyph: '出',
+    meanings: ['exit', 'go out', 'put out'],
+    onyomi: ['シュツ', 'スイ'],
+    kunyomi: ['で.る', 'だ.す'],
+    examples: [
+      { word: '出る', reading: 'でる', gloss: 'to go out', audioId: 'ja-kanji-deru-ex0' },
+      { word: '出口', reading: 'でぐち', gloss: 'exit', audioId: 'ja-kanji-deru-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'verbs',
+    order: 60,
+    audioId: 'ja-kanji-deru'
+  },
+  {
+    id: 'ja-kanji-hairu',
+    glyph: '入',
+    meanings: ['enter', 'put in'],
+    onyomi: ['ニュウ'],
+    kunyomi: ['い.る', 'い.れる', 'はい.る'],
+    examples: [
+      { word: '入る', reading: 'はいる', gloss: 'to enter', audioId: 'ja-kanji-hairu-ex0' },
+      { word: '入り口', reading: 'いりぐち', gloss: 'entrance', audioId: 'ja-kanji-hairu-ex1' }
+    ],
+    strokeCount: 2,
+    group: 'verbs',
+    order: 61,
+    audioId: 'ja-kanji-hairu'
+  },
+  {
+    id: 'ja-kanji-tatsu',
+    glyph: '立',
+    meanings: ['stand', 'rise'],
+    onyomi: ['リツ', 'リュウ'],
+    kunyomi: ['た.つ', 'た.てる'],
+    examples: [
+      { word: '立つ', reading: 'たつ', gloss: 'to stand', audioId: 'ja-kanji-tatsu-ex0' },
+      { word: '国立', reading: 'こくりつ', gloss: 'national', audioId: 'ja-kanji-tatsu-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'verbs',
+    order: 62,
+    audioId: 'ja-kanji-tatsu'
+  },
+  {
+    id: 'ja-kanji-yasumu',
+    glyph: '休',
+    meanings: ['rest', 'holiday'],
+    onyomi: ['キュウ'],
+    kunyomi: ['やす.む', 'やす.まる', 'やす.める'],
+    examples: [
+      { word: '休む', reading: 'やすむ', gloss: 'to rest', audioId: 'ja-kanji-yasumu-ex0' },
+      { word: '休日', reading: 'きゅうじつ', gloss: 'holiday', audioId: 'ja-kanji-yasumu-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'verbs',
+    order: 63,
+    audioId: 'ja-kanji-yasumu'
+  },
+  {
+    id: 'ja-kanji-chikara',
+    glyph: '力',
+    meanings: ['power', 'strength'],
+    onyomi: ['リョク', 'リキ'],
+    kunyomi: ['ちから'],
+    examples: [
+      { word: '力', reading: 'ちから', gloss: 'strength', audioId: 'ja-kanji-chikara-ex0' },
+      { word: '力士', reading: 'りきし', gloss: 'sumo wrestler', audioId: 'ja-kanji-chikara-ex1' }
+    ],
+    strokeCount: 2,
+    group: 'people-school',
+    order: 64,
+    audioId: 'ja-kanji-chikara'
+  },
+  {
+    id: 'ja-kanji-en',
+    glyph: '円',
+    meanings: ['yen', 'circle'],
+    onyomi: ['エン'],
+    kunyomi: ['まる.い'],
+    examples: [
+      { word: '円', reading: 'えん', gloss: 'yen', audioId: 'ja-kanji-en-ex0' },
+      { word: '百円', reading: 'ひゃくえん', gloss: 'one hundred yen', audioId: 'ja-kanji-en-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'numbers',
+    order: 65,
+    audioId: 'ja-kanji-en'
+  },
+  {
+    id: 'ja-kanji-man',
+    glyph: '万',
+    meanings: ['ten thousand'],
+    onyomi: ['マン', 'バン'],
+    kunyomi: [],
+    examples: [
+      { word: '一万', reading: 'いちまん', gloss: 'ten thousand', audioId: 'ja-kanji-man-ex0' },
+      { word: '万年', reading: 'まんねん', gloss: 'ten thousand years; all ages', audioId: 'ja-kanji-man-ex1' }
+    ],
+    strokeCount: 3,
+    group: 'numbers',
+    order: 66,
+    audioId: 'ja-kanji-man'
+  },
+  {
+    id: 'ja-kanji-na',
+    glyph: '名',
+    meanings: ['name', 'famous'],
+    onyomi: ['メイ', 'ミョウ'],
+    kunyomi: ['な'],
+    examples: [
+      { word: '名前', reading: 'なまえ', gloss: 'name', audioId: 'ja-kanji-na-ex0' },
+      { word: '有名', reading: 'ゆうめい', gloss: 'famous', audioId: 'ja-kanji-na-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'people-school',
+    order: 67,
+    audioId: 'ja-kanji-na'
+  },
+  {
+    id: 'ja-kanji-tomo',
+    glyph: '友',
+    meanings: ['friend'],
+    onyomi: ['ユウ'],
+    kunyomi: ['とも'],
+    examples: [
+      { word: '友だち', reading: 'ともだち', gloss: 'friend', audioId: 'ja-kanji-tomo-ex0' },
+      { word: '友人', reading: 'ゆうじん', gloss: 'friend', audioId: 'ja-kanji-tomo-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'people-school',
+    order: 68,
+    audioId: 'ja-kanji-tomo'
+  },
+  {
+    id: 'ja-kanji-chichi',
+    glyph: '父',
+    meanings: ['father'],
+    onyomi: ['フ'],
+    kunyomi: ['ちち'],
+    examples: [
+      { word: '父', reading: 'ちち', gloss: 'father', audioId: 'ja-kanji-chichi-ex0' },
+      { word: 'お父さん', reading: 'おとうさん', gloss: 'father; dad', audioId: 'ja-kanji-chichi-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'people-school',
+    order: 69,
+    audioId: 'ja-kanji-chichi'
+  },
+  {
+    id: 'ja-kanji-haha',
+    glyph: '母',
+    meanings: ['mother'],
+    onyomi: ['ボ'],
+    kunyomi: ['はは'],
+    examples: [
+      { word: '母', reading: 'はは', gloss: 'mother', audioId: 'ja-kanji-haha-ex0' },
+      { word: 'お母さん', reading: 'おかあさん', gloss: 'mother; mom', audioId: 'ja-kanji-haha-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'people-school',
+    order: 70,
+    audioId: 'ja-kanji-haha'
+  },
+  {
+    id: 'ja-kanji-mai',
+    glyph: '毎',
+    meanings: ['every'],
+    onyomi: ['マイ'],
+    kunyomi: [],
+    examples: [
+      { word: '毎日', reading: 'まいにち', gloss: 'every day', audioId: 'ja-kanji-mai-ex0' },
+      { word: '毎週', reading: 'まいしゅう', gloss: 'every week', audioId: 'ja-kanji-mai-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'time',
+    order: 71,
+    audioId: 'ja-kanji-mai'
+  },
+  {
+    id: 'ja-kanji-shuu',
+    glyph: '週',
+    meanings: ['week'],
+    onyomi: ['シュウ'],
+    kunyomi: [],
+    examples: [
+      { word: '週', reading: 'しゅう', gloss: 'week', audioId: 'ja-kanji-shuu-ex0' },
+      { word: '毎週', reading: 'まいしゅう', gloss: 'every week', audioId: 'ja-kanji-shuu-ex1' }
+    ],
+    strokeCount: 11,
+    group: 'time',
+    order: 72,
+    audioId: 'ja-kanji-shuu'
+  },
+  {
+    id: 'ja-kanji-han',
+    glyph: '半',
+    meanings: ['half'],
+    onyomi: ['ハン'],
+    kunyomi: ['なか.ば'],
+    examples: [
+      { word: '半分', reading: 'はんぶん', gloss: 'half', audioId: 'ja-kanji-han-ex0' },
+      { word: '半年', reading: 'はんとし', gloss: 'half a year', audioId: 'ja-kanji-han-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'time',
+    order: 73,
+    audioId: 'ja-kanji-han'
+  },
+  {
+    id: 'ja-kanji-wakaru',
+    glyph: '分',
+    meanings: ['part', 'minute', 'understand'],
+    onyomi: ['ブン', 'フン', 'ブ'],
+    kunyomi: ['わ.ける', 'わ.かれる', 'わ.かる', 'わ.かつ'],
+    examples: [
+      { word: '分かる', reading: 'わかる', gloss: 'to understand', audioId: 'ja-kanji-wakaru-ex0' },
+      { word: '五分', reading: 'ごふん', gloss: 'five minutes', audioId: 'ja-kanji-wakaru-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'time',
+    order: 74,
+    audioId: 'ja-kanji-wakaru'
+  },
+  {
+    id: 'ja-kanji-gozen',
+    glyph: '午',
+    meanings: ['noon'],
+    onyomi: ['ゴ'],
+    kunyomi: [],
+    examples: [
+      { word: '午前', reading: 'ごぜん', gloss: 'morning; a.m.', audioId: 'ja-kanji-gozen-ex0' },
+      { word: '午後', reading: 'ごご', gloss: 'afternoon; p.m.', audioId: 'ja-kanji-gozen-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'time',
+    order: 75,
+    audioId: 'ja-kanji-gozen'
+  },
+  {
+    id: 'ja-kanji-michi',
+    glyph: '道',
+    meanings: ['road', 'way'],
+    onyomi: ['ドウ', 'トウ'],
+    kunyomi: ['みち'],
+    examples: [
+      { word: '道', reading: 'みち', gloss: 'road; way', audioId: 'ja-kanji-michi-ex0' },
+      { word: '水道', reading: 'すいどう', gloss: 'water supply', audioId: 'ja-kanji-michi-ex1' }
+    ],
+    strokeCount: 12,
+    group: 'places',
+    order: 76,
+    audioId: 'ja-kanji-michi'
+  },
+  {
+    id: 'ja-kanji-kuni',
+    glyph: '国',
+    meanings: ['country'],
+    onyomi: ['コク'],
+    kunyomi: ['くに'],
+    examples: [
+      { word: '国', reading: 'くに', gloss: 'country', audioId: 'ja-kanji-kuni-ex0' },
+      { word: '中国', reading: 'ちゅうごく', gloss: 'China', audioId: 'ja-kanji-kuni-ex1' }
+    ],
+    strokeCount: 8,
+    group: 'places',
+    order: 77,
+    audioId: 'ja-kanji-kuni'
+  },
+  {
+    id: 'ja-kanji-au',
+    glyph: '会',
+    meanings: ['meet', 'association'],
+    onyomi: ['カイ', 'エ'],
+    kunyomi: ['あ.う'],
+    examples: [
+      { word: '会う', reading: 'あう', gloss: 'to meet', audioId: 'ja-kanji-au-ex0' },
+      { word: '会社', reading: 'かいしゃ', gloss: 'company', audioId: 'ja-kanji-au-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'people-school',
+    order: 78,
+    audioId: 'ja-kanji-au'
+  },
+  {
+    id: 'ja-kanji-sha',
+    glyph: '社',
+    meanings: ['company', 'shrine'],
+    onyomi: ['シャ'],
+    kunyomi: ['やしろ'],
+    examples: [
+      { word: '会社', reading: 'かいしゃ', gloss: 'company', audioId: 'ja-kanji-sha-ex0' },
+      { word: '神社', reading: 'じんじゃ', gloss: 'Shinto shrine', audioId: 'ja-kanji-sha-ex1' }
+    ],
+    strokeCount: 7,
+    group: 'people-school',
+    order: 79,
+    audioId: 'ja-kanji-sha'
+  },
+  {
+    id: 'ja-kanji-den',
+    glyph: '電',
+    meanings: ['electricity'],
+    onyomi: ['デン'],
+    kunyomi: [],
+    examples: [
+      { word: '電気', reading: 'でんき', gloss: 'electricity; light', audioId: 'ja-kanji-den-ex0' },
+      { word: '電車', reading: 'でんしゃ', gloss: 'train', audioId: 'ja-kanji-den-ex1' }
+    ],
+    strokeCount: 13,
+    group: 'places',
+    order: 80,
+    audioId: 'ja-kanji-den'
+  },
+  {
+    id: 'ja-kanji-kuruma',
+    glyph: '車',
+    meanings: ['car', 'vehicle'],
+    onyomi: ['シャ'],
+    kunyomi: ['くるま'],
+    examples: [
+      { word: '車', reading: 'くるま', gloss: 'car', audioId: 'ja-kanji-kuruma-ex0' },
+      { word: '電車', reading: 'でんしゃ', gloss: 'train', audioId: 'ja-kanji-kuruma-ex1' }
+    ],
+    strokeCount: 7,
+    group: 'places',
+    order: 81,
+    audioId: 'ja-kanji-kuruma'
+  },
+  {
+    id: 'ja-kanji-eki',
+    glyph: '駅',
+    meanings: ['station'],
+    onyomi: ['エキ'],
+    kunyomi: [],
+    examples: [
+      { word: '駅', reading: 'えき', gloss: 'station', audioId: 'ja-kanji-eki-ex0' },
+      { word: '駅前', reading: 'えきまえ', gloss: 'in front of the station', audioId: 'ja-kanji-eki-ex1' }
+    ],
+    strokeCount: 14,
+    group: 'places',
+    order: 82,
+    audioId: 'ja-kanji-eki'
+  },
+  {
+    id: 'ja-kanji-mise',
+    glyph: '店',
+    meanings: ['shop', 'store'],
+    onyomi: ['テン'],
+    kunyomi: ['みせ'],
+    examples: [
+      { word: '店', reading: 'みせ', gloss: 'shop', audioId: 'ja-kanji-mise-ex0' },
+      { word: '店員', reading: 'てんいん', gloss: 'shop clerk', audioId: 'ja-kanji-mise-ex1' }
+    ],
+    strokeCount: 8,
+    group: 'places',
+    order: 83,
+    audioId: 'ja-kanji-mise'
+  },
+  {
+    id: 'ja-kanji-go',
+    glyph: '語',
+    meanings: ['language', 'word'],
+    onyomi: ['ゴ'],
+    kunyomi: ['かた.る', 'かた.らう'],
+    examples: [
+      { word: '日本語', reading: 'にほんご', gloss: 'Japanese language', audioId: 'ja-kanji-go-language-ex0' },
+      { word: '言語', reading: 'げんご', gloss: 'language', audioId: 'ja-kanji-go-language-ex1' }
+    ],
+    strokeCount: 14,
+    group: 'verbs',
+    order: 84,
+    audioId: 'ja-kanji-go-language'
+  },
+  {
+    id: 'ja-kanji-yomu',
+    glyph: '読',
+    meanings: ['read'],
+    onyomi: ['ドク', 'トク', 'トウ'],
+    kunyomi: ['よ.む'],
+    examples: [
+      { word: '読む', reading: 'よむ', gloss: 'to read', audioId: 'ja-kanji-yomu-ex0' },
+      { word: '読書', reading: 'どくしょ', gloss: 'reading', audioId: 'ja-kanji-yomu-ex1' }
+    ],
+    strokeCount: 14,
+    group: 'verbs',
+    order: 85,
+    audioId: 'ja-kanji-yomu'
+  },
+  {
+    id: 'ja-kanji-kaku',
+    glyph: '書',
+    meanings: ['write'],
+    onyomi: ['ショ'],
+    kunyomi: ['か.く'],
+    examples: [
+      { word: '書く', reading: 'かく', gloss: 'to write', audioId: 'ja-kanji-kaku-ex0' },
+      { word: '読書', reading: 'どくしょ', gloss: 'reading', audioId: 'ja-kanji-kaku-ex1' }
+    ],
+    strokeCount: 10,
+    group: 'verbs',
+    order: 86,
+    audioId: 'ja-kanji-kaku'
+  },
+  {
+    id: 'ja-kanji-hanasu',
+    glyph: '話',
+    meanings: ['talk', 'story'],
+    onyomi: ['ワ'],
+    kunyomi: ['はな.す', 'はなし'],
+    examples: [
+      { word: '話す', reading: 'はなす', gloss: 'to speak', audioId: 'ja-kanji-hanasu-ex0' },
+      { word: '会話', reading: 'かいわ', gloss: 'conversation', audioId: 'ja-kanji-hanasu-ex1' }
+    ],
+    strokeCount: 13,
+    group: 'verbs',
+    order: 87,
+    audioId: 'ja-kanji-hanasu'
+  },
+  {
+    id: 'ja-kanji-kiku',
+    glyph: '聞',
+    meanings: ['hear', 'listen', 'ask'],
+    onyomi: ['ブン', 'モン'],
+    kunyomi: ['き.く', 'き.こえる'],
+    examples: [
+      { word: '聞く', reading: 'きく', gloss: 'to hear; to ask', audioId: 'ja-kanji-kiku-ex0' },
+      { word: '新聞', reading: 'しんぶん', gloss: 'newspaper', audioId: 'ja-kanji-kiku-ex1' }
+    ],
+    strokeCount: 14,
+    group: 'verbs',
+    order: 88,
+    audioId: 'ja-kanji-kiku'
+  },
+  {
+    id: 'ja-kanji-takai',
+    glyph: '高',
+    meanings: ['high', 'expensive'],
+    onyomi: ['コウ'],
+    kunyomi: ['たか.い', 'たか', 'たか.まる', 'たか.める'],
+    examples: [
+      { word: '高い', reading: 'たかい', gloss: 'high; expensive', audioId: 'ja-kanji-takai-ex0' },
+      { word: '高校', reading: 'こうこう', gloss: 'high school', audioId: 'ja-kanji-takai-ex1' }
+    ],
+    strokeCount: 10,
+    group: 'adjectives',
+    order: 89,
+    audioId: 'ja-kanji-takai'
+  },
+  {
+    id: 'ja-kanji-yasui',
+    glyph: '安',
+    meanings: ['cheap', 'peaceful', 'safe'],
+    onyomi: ['アン'],
+    kunyomi: ['やす.い'],
+    examples: [
+      { word: '安い', reading: 'やすい', gloss: 'cheap', audioId: 'ja-kanji-yasui-ex0' },
+      { word: '安心', reading: 'あんしん', gloss: 'relief; peace of mind', audioId: 'ja-kanji-yasui-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'adjectives',
+    order: 90,
+    audioId: 'ja-kanji-yasui'
+  },
+  {
+    id: 'ja-kanji-atarashii',
+    glyph: '新',
+    meanings: ['new'],
+    onyomi: ['シン'],
+    kunyomi: ['あたら.しい', 'あら.た', 'にい'],
+    examples: [
+      { word: '新しい', reading: 'あたらしい', gloss: 'new', audioId: 'ja-kanji-atarashii-ex0' },
+      { word: '新聞', reading: 'しんぶん', gloss: 'newspaper', audioId: 'ja-kanji-atarashii-ex1' }
+    ],
+    strokeCount: 13,
+    group: 'adjectives',
+    order: 91,
+    audioId: 'ja-kanji-atarashii'
+  },
+  {
+    id: 'ja-kanji-furui',
+    glyph: '古',
+    meanings: ['old'],
+    onyomi: ['コ'],
+    kunyomi: ['ふる.い', 'ふる.す'],
+    examples: [
+      { word: '古い', reading: 'ふるい', gloss: 'old', audioId: 'ja-kanji-furui-ex0' },
+      { word: '中古', reading: 'ちゅうこ', gloss: 'used; secondhand', audioId: 'ja-kanji-furui-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'adjectives',
+    order: 92,
+    audioId: 'ja-kanji-furui'
+  },
+  {
+    id: 'ja-kanji-ooi',
+    glyph: '多',
+    meanings: ['many', 'much'],
+    onyomi: ['タ'],
+    kunyomi: ['おお.い'],
+    examples: [
+      { word: '多い', reading: 'おおい', gloss: 'many; much', audioId: 'ja-kanji-ooi-ex0' },
+      { word: '多少', reading: 'たしょう', gloss: 'more or less; some', audioId: 'ja-kanji-ooi-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'adjectives',
+    order: 93,
+    audioId: 'ja-kanji-ooi'
+  },
+  {
+    id: 'ja-kanji-sukunai',
+    glyph: '少',
+    meanings: ['few', 'little'],
+    onyomi: ['ショウ'],
+    kunyomi: ['すく.ない', 'すこ.し'],
+    examples: [
+      { word: '少ない', reading: 'すくない', gloss: 'few; little', audioId: 'ja-kanji-sukunai-ex0' },
+      { word: '少し', reading: 'すこし', gloss: 'a little', audioId: 'ja-kanji-sukunai-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'adjectives',
+    order: 94,
+    audioId: 'ja-kanji-sukunai'
+  },
+  {
+    id: 'ja-kanji-nagai',
+    glyph: '長',
+    meanings: ['long', 'leader'],
+    onyomi: ['チョウ'],
+    kunyomi: ['なが.い'],
+    examples: [
+      { word: '長い', reading: 'ながい', gloss: 'long', audioId: 'ja-kanji-nagai-ex0' },
+      { word: '校長', reading: 'こうちょう', gloss: 'principal', audioId: 'ja-kanji-nagai-ex1' }
+    ],
+    strokeCount: 8,
+    group: 'adjectives',
+    order: 95,
+    audioId: 'ja-kanji-nagai'
+  },
+  {
+    id: 'ja-kanji-shiro',
+    glyph: '白',
+    meanings: ['white'],
+    onyomi: ['ハク', 'ビャク'],
+    kunyomi: ['しろ', 'しら', 'しろ.い'],
+    examples: [
+      { word: '白', reading: 'しろ', gloss: 'white', audioId: 'ja-kanji-shiro-ex0' },
+      { word: '白い', reading: 'しろい', gloss: 'white', audioId: 'ja-kanji-shiro-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'adjectives',
+    order: 96,
+    audioId: 'ja-kanji-shiro'
+  },
+  {
+    id: 'ja-kanji-hana',
+    glyph: '花',
+    meanings: ['flower'],
+    onyomi: ['カ'],
+    kunyomi: ['はな'],
+    examples: [
+      { word: '花', reading: 'はな', gloss: 'flower', audioId: 'ja-kanji-hana-ex0' },
+      { word: '花見', reading: 'はなみ', gloss: 'flower viewing', audioId: 'ja-kanji-hana-ex1' }
+    ],
+    strokeCount: 7,
+    group: 'nature-weather',
+    order: 97,
+    audioId: 'ja-kanji-hana'
+  },
+  {
+    id: 'ja-kanji-sakana',
+    glyph: '魚',
+    meanings: ['fish'],
+    onyomi: ['ギョ'],
+    kunyomi: ['うお', 'さかな'],
+    examples: [
+      { word: '魚', reading: 'さかな', gloss: 'fish', audioId: 'ja-kanji-sakana-ex0' },
+      { word: '金魚', reading: 'きんぎょ', gloss: 'goldfish', audioId: 'ja-kanji-sakana-ex1' }
+    ],
+    strokeCount: 11,
+    group: 'nature-weather',
+    order: 98,
+    audioId: 'ja-kanji-sakana'
+  },
+  {
+    id: 'ja-kanji-inu',
+    glyph: '犬',
+    meanings: ['dog'],
+    onyomi: ['ケン'],
+    kunyomi: ['いぬ'],
+    examples: [
+      { word: '犬', reading: 'いぬ', gloss: 'dog', audioId: 'ja-kanji-inu-ex0' },
+      { word: '子犬', reading: 'こいぬ', gloss: 'puppy', audioId: 'ja-kanji-inu-ex1' }
+    ],
+    strokeCount: 4,
+    group: 'nature-weather',
+    order: 99,
+    audioId: 'ja-kanji-inu'
+  },
+  {
+    id: 'ja-kanji-kuchi',
+    glyph: '口',
+    meanings: ['mouth', 'opening'],
+    onyomi: ['コウ', 'ク'],
+    kunyomi: ['くち'],
+    examples: [
+      { word: '口', reading: 'くち', gloss: 'mouth', audioId: 'ja-kanji-kuchi-ex0' },
+      { word: '出口', reading: 'でぐち', gloss: 'exit', audioId: 'ja-kanji-kuchi-ex1' }
+    ],
+    strokeCount: 3,
+    group: 'people-school',
+    order: 100,
+    audioId: 'ja-kanji-kuchi'
+  },
+  {
+    id: 'ja-kanji-me',
+    glyph: '目',
+    meanings: ['eye'],
+    onyomi: ['モク', 'ボク'],
+    kunyomi: ['め', 'ま'],
+    examples: [
+      { word: '目', reading: 'め', gloss: 'eye', audioId: 'ja-kanji-me-ex0' },
+      { word: '目的', reading: 'もくてき', gloss: 'purpose', audioId: 'ja-kanji-me-ex1' }
+    ],
+    strokeCount: 5,
+    group: 'people-school',
+    order: 101,
+    audioId: 'ja-kanji-me'
+  },
+  {
+    id: 'ja-kanji-mimi',
+    glyph: '耳',
+    meanings: ['ear'],
+    onyomi: ['ジ'],
+    kunyomi: ['みみ'],
+    examples: [
+      { word: '耳', reading: 'みみ', gloss: 'ear', audioId: 'ja-kanji-mimi-ex0' },
+      { word: '耳元', reading: 'みみもと', gloss: 'near the ear', audioId: 'ja-kanji-mimi-ex1' }
+    ],
+    strokeCount: 6,
+    group: 'people-school',
+    order: 102,
+    audioId: 'ja-kanji-mimi'
+  },
+  {
+    id: 'ja-kanji-ashi',
+    glyph: '足',
+    meanings: ['foot', 'leg', 'sufficient'],
+    onyomi: ['ソク'],
+    kunyomi: ['あし', 'た.りる', 'た.る', 'た.す'],
+    examples: [
+      { word: '足', reading: 'あし', gloss: 'foot; leg', audioId: 'ja-kanji-ashi-ex0' },
+      { word: '足りる', reading: 'たりる', gloss: 'to be enough', audioId: 'ja-kanji-ashi-ex1' }
+    ],
+    strokeCount: 7,
+    group: 'people-school',
+    order: 103,
+    audioId: 'ja-kanji-ashi'
+  }

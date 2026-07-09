@@ -1,0 +1,45 @@
+
+===== PARTNER VERDICT (codex, 975s) =====
+
+Implemented S2 interactive drills in [src/App.tsx](z:/328/CMPUT328-A2/codexworks/301/language/src/App.tsx:1042) and updated `ja-lesson-1` in [content/ja/lessons.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/lessons.ts:34). Roadmap lesson nodes now show `N steps` instead of `0 of 1 lessons`.
+
+Components added:
+- `MatchActivity`
+- `ListenActivity`
+- `BuildActivity`
+- `FillActivity`
+
+`ja-lesson-1` step order is now:
+`intro → vocab → match → grammar → grammar → listen → build → scene → reading → fill → check`
+
+Activity sourcing:
+- `match`: uses `step.lexOrders`, falling back to `lesson.newLexOrders`; shuffles English gloss column.
+- `listen`: uses `step.lexOrders` for audio target; distractors come from lesson/nearby lexicon glosses. It also supports sentence-backed `sceneId` fallback.
+- `build`: uses the referenced `sceneId` first eligible scene line, shuffles its `tokens[]`, checks against original token order.
+- `fill`: uses the referenced `sceneId` line, blanks one non-particle lexical token, distractors from other non-particle lexicon headwords.
+
+Verification:
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npm run build`: rc 0, with existing Vite chunk-size warning
+- `npm test`: rc 0, 38 tests passed
+
+I did not edit `vite.config.ts`, run preview, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -Path src\\App.tsx,content\\ja\\lessons.ts | Select-String -Pattern 'function MatchActivity|function ListenActivity|function BuildActivity|function FillActivity|lesson.steps.length|kind: ''match''|kind: ''listen''|kind: ''build''|kind: ''fill''' | Select-Object Path,LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-ChildItem -Path src\\App.tsx,content\\ja\\lessons.ts | Select-String -Pattern 'function MatchActivity|function ListenActivity|function BuildActivity|function FillActivity|lesson.steps.length|kind: ''match''|kind: ''listen''|kind: ''build''|kind: ''fill''' | Select-Object Path,LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+files: 0
+tokens: in 1535980 / out 15645
+

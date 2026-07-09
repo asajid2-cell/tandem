@@ -1,0 +1,6 @@
+DEEP PUSH — Japanese VOCAB Units 39 AND 40 (foreground; resume; N4). 38 units / 766 words; closed-universe (0 leaks). STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[] — NEVER mix; wire each unit (unit+checkpoint) right after its words+scenes. Valid TS.
+UNIT 39 (~18-22) — arts & culture: 音楽(have?)/絵(have?)/映画(have?)/小説/漫画/雑誌/芸術/伝統/祭り/文化(have?)/歴史(have?)/作品/作家/俳優/描く. 
+UNIT 40 (~18-22) — emotions & reactions: 心配/安心/緊張/興味/驚く/泣く/笑う/怒る/感動/satisfied満足/楽しむ/嫌(な)/怖い(have?)/恥ずかしい/うれしい(have?). 
+Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. For EACH unit: 2 SCENES (in scenes[]) using only cumulative vocab+grammar, QuizItems, tokens[]. audioIds on all.
+CORRECTNESS: natural correct Japanese, closed-universe. Brief helper check. No audio:ja/deploy/commit.
+VERIFY: npm run lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + units/checkpoints 39/40 + lint/test.

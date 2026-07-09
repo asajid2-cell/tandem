@@ -1,0 +1,18 @@
+INDEPENDENT CURRICULUM REVIEW (you are the reviewer; be critical and honest, not a cheerleader). Working dir = the Foothold language repo.
+
+CONTEXT: Foothold teaches English speakers to read JAPANESE. The GOAL IS COMPETENCY, NOT FLUENCY: a learner who finishes the whole path should be able to READ and UNDERSTAND simple, everyday written Japanese at a basic level (signs, simple messages, children's-book / graded-reader level sentences, basic daily-life text). The core design law is the CLOSED-UNIVERSE INVARIANT: nothing shown ever contains a word/grammar point not already taught.
+
+Current JA content (counts only — your job is to judge QUALITY/COVERAGE, not recount): ~1501 vocab across 76 themed units; 317 kanji; 74 grammar patterns; 15 graded reading passages (ja-reading-1..15, N5→N4); full hiragana + katakana courses; per-unit scenes + checkpoints; SRS (Leitner); kanji recognition SRS; grammar drill SRS.
+
+FILES to actually open and inspect (ground EVERY claim in real content — quote specifics, don't hand-wave): content/ja/seed.ts (lexicon[], grammar[], scenes[], units[], checkpoints[], readings[]), content/ja/kanji.ts, content/ja/hiragana.ts, content/ja/katakana.ts, src/engine/unlock.ts + srs.ts (the gating + review engine), src/engine/lint.ts (closed-universe enforcement), src/App.tsx (the actual learner flow/order). Use grep to sample broadly.
+
+ASSESS, end to end, AS A LONG-TERM LEARNING PROCESS:
+1. Scripts: is kana taught completely and BEFORE it's needed? Any gaps (combos, small tsu, long vowels, dakuten)?
+2. Kanji (317): is this enough for BASIC reading? Are the highest-FREQUENCY everyday kanji actually covered (sample against what you'd expect in daily text)? Do readings/examples support real recognition, or just isolated glyphs?
+3. Vocabulary (1501): does it cover the high-frequency core needed to understand everyday text? Name concrete DOMAIN GAPS (everyday words a basic reader needs that appear missing). Is it frequency-sensible?
+4. Grammar (74): does it cover the structures needed to PARSE basic sentences — all core particles (は/が/を/に/で/へ/と/も/から/まで/の/や/か/ね/よ etc.), copula, polite + plain forms, past/negation, questions, て-form, modifiers, common connectors, potential/passive? Name concrete MISSING or under-taught structures. (Note: と "and" was found missing earlier and added — check whether other core particles/structures have the same hole.)
+5. Sequencing & pedagogy: does difficulty ramp coherently? Does the closed-universe ordering actually hold up as a teaching sequence (prereqs before use)? Is there enough REINFORCEMENT (SRS + checkpoints + scenes + graded reading) to build retention and reading ability, not just exposure?
+6. THE REAL TEST: pick 3-4 short REAL simple Japanese texts you'd want a basic reader to handle (e.g., a simple sign, a short everyday message, a children's-book / graded sentence). For each, judge whether a Foothold graduate would understand it given ONLY what Foothold teaches. Be specific about what would block comprehension.
+7. VERDICT: Is Japanese ROBUST ENOUGH for the basic-reading-competency goal, or not yet? If not, give a PRIORITIZED, concrete list of what to add/fix (highest-impact first), each tied to the competency goal — not "add more for completeness," but "needed because without it a basic reader cannot X."
+
+OUTPUT: write the full review to docs/japanese-curriculum-review.md (clear sections matching the 7 points above; specifics + quotes + concrete examples; honest about weaknesses). Then print a ~12-line summary to stdout: the verdict + the top 5 prioritized gaps. Do NOT edit any content/code — review only. No build/deploy/commit.

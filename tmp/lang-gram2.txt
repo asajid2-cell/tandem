@@ -1,0 +1,16 @@
+DEEP PUSH — expand the Japanese GRAMMAR toward N5/N4 (foreground; efficient; resume). Working dir z:\328\CMPUT328-A2\codexworks\301\language. content/ja/seed.ts has ~11 GrammarPattern entries + the inflection-LICENSING system (GrammarPattern.licenses lets the content linter validate inflected surface forms; kuromoji tokenizes to base form + classed tokens like ~ます). The grammar TRACK (#/ja/grammar) renders these. Everything stays CLOSED-UNIVERSE (linter 0 leaks): examples may use only already-introduced vocab (we have ~99 words + 103 kanji-as-reference). If a pattern strictly needs a new word (e.g. giving/receiving verbs あげる/くれる/もらう), add that LexEntry too (with audioId) so it's introduced.
+
+ADD the core beginner grammar patterns that unlock real sentences — pick the highest-value ones NOT already present, e.g.:
+- て-form (connecting/requesting): 〜て / 〜てください
+- plain (casual) non-past + plain PAST 〜た + plain negative 〜ない / 〜なかった
+- progressive 〜ている
+- past polite negative etc. as needed
+- potential 〜られる/〜できる (or できます)
+- 〜たい (have? skip if present) ; 〜ましょう let's ; 〜てもいい permission ; 〜てはいけない prohibition ; 〜なければならない must
+- giving/receiving あげる・くれる・もらう (add the verbs)
+- comparison 〜より / 〜のほうが ; because 〜から / 〜ので ; but 〜が・〜けど
+Add ~10-14 patterns. EACH GrammarPattern: title, clear beginner explanation, formula, 2 closed-universe examples (Japanese + hidden gloss + precomputed tokens[]), drills, AND the licenses[] needed so the content linter accepts the new inflected surface forms (te/ta/nai/teiru etc.). Group sensibly so the grammar track stays organized.
+
+CORRECTNESS CRITICAL: conjugations must be correct (ichidan vs godan: 食べる→食べて/食べた; 飲む→飲んで/飲んだ; 行く→行って/行った [irregular]; する→して; 来る→来て). USE YOUR CLAUDE HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to audit every conjugation + that examples are closed-universe + natural.
+
+DO NOT run audio:ja, deploy, or git commit. VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report: patterns added + any new vocab + helper verdict (conjugation errors caught) + lint/test output. Correctness over count.

@@ -1,0 +1,77 @@
+
+===== PARTNER VERDICT (codex, 395s) =====
+
+Implemented Japanese Unit 17 only.
+
+Added:
+- 20 new Unit 17 words, orders `359-378`
+- `ja-unit-17` exists, lexRange `[359, 378]`
+- `ja-checkpoint-17` exists with 9 items
+- 2 scenes: hobbies/music and weekend hobbies
+- Cumulative JA words: `346`
+- Total JA units: `17`
+
+Verification:
+
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+> foothold-language@0.1.0 test
+> vitest run --minWorkers=1 --maxWorkers=1
+
+ Test Files  7 passed (7)
+      Tests  36 passed (36)
+```
+
+No audio, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short; @'
+import { lexicon, units, checkpoints } from './content/ja/seed';
+const unit = units.find((u) => u.id === 'ja-unit-17');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-17');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit17WordCount: unitWords.length, totalUnits: units.length, unit17Exists: Boolean(unit), checkpoint17Exists: Boolean(checkpoint), checkpoint17Items: checkpoint?.items.length ?? 0, unit17LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short; @'
+import { lexicon, units, checkpoints } from './content/ja/seed';
+const unit = units.find((u) => u.id === 'ja-unit-17');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-17');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit17WordCount: unitWords.length, totalUnits: units.length, unit17Exists: Boolean(unit), checkpoint17Exists: Boolean(checkpoint), checkpoint17Items: checkpoint?.items.length ?? 0, unit17LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'rg "export const|export default|const checkpoints|const units|const lexicon" content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'rg "export const|export default|const checkpoints|const units|const lexicon" content/ja/seed.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content content/ja/seed.ts -Tail 80 | Select-String -Pattern "export|checkpoints|units|lexicon|const"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content content/ja/seed.ts -Tail 80 | Select-String -Pattern "export|checkpoints|units|lexicon|const"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "export |const checkpoints|const units|const lexicon|lexicon:"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "export |const checkpoints|const units|const lexicon|lexicon:"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short; @'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-17');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-17');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit17WordCount: unitWords.length, totalUnits: units.length, unit17Exists: Boolean(unit), checkpoint17Exists: Boolean(checkpoint), checkpoint17Items: checkpoint?.items.length ?? 0, unit17LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git status --short; @'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-17');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-17');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit17WordCount: unitWords.length, totalUnits: units.length, unit17Exists: Boolean(unit), checkpoint17Exists: Boolean(checkpoint), checkpoint17Items: checkpoint?.items.length ?? 0, unit17LexRange: unit?.lexRange ?? null }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 57914896 / out 286482
+

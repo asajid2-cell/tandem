@@ -1,0 +1,3 @@
+﻿Focused review only. Implemented #/ja/grammar for JA: reference groups existing 9 GrammarPattern entries into Basics/Verbs/Adjectives/Particles; cards show title/formula/explanation + Japanese examples, English gloss and romanized token guides hidden behind reveal. Drill flow uses existing GrammarPattern.drills, answer+distractors, reveal grade after attempt, schedules correct=good/wrong=again through SRS, persists seenGrammarDrillIds (progress schema v6), marks parent grammar order known. Shared review recognizes due grammar drill IDs. No new grammar patterns.
+
+Please verdict: any Japanese formula/explanation correctness issues, grouping/UX concerns, or SRS wiring concerns? Keep concise.

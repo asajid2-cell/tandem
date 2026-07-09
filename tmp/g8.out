@@ -1,0 +1,96 @@
+
+===== PARTNER VERDICT (codex, 303s) =====
+
+Implemented in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+`npm run lint:content` exit code: `0`
+
+Added grammar IDs:
+- `ja-potential-form`
+- `ja-passive-form`
+- `ja-purpose-tameni`
+- `ja-named-toiu`
+
+New Japanese grammar count: `74`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['\\u79c1','\\u5b66\\u751f','\\u65e5\\u672c','\\u3054\\u98ef','\\u98df\\u3079\\u308b','\\u8aad\\u3080','\\u6765\\u308b','\\u3067\\u304d\\u308b','\\u8a00\\u3046','\\u898b\\u308b','\\u5148\\u751f','\\u7530\\u4e2d','\\u98df\\u3079\\u7269','\\u30d1\\u30f3','\\u4ed5\\u4e8b','\\u65e5\\u672c\\u8a9e','\\u5e97','\\u53cb\\u9054','\\u52c9\\u5f37','\\u3059\\u308b','\\u884c\\u304f','\\u65e9\\u304f','\\u8d77\\u304d\\u308b','\\u6c34','\\u8cb7\\u3046','\\u56fd','\\u8a00\\u8449','\\u540d\\u524d','\\u6620\\u753b','\\u672c','\\u5b66\\u6821','\\u4eba'];
+for (const w of words) {
+ const e = jaSeedContent.lexicon.find(x => x.headword === w || x.reading === w);
+ console.log(JSON.stringify(w), e ? "'`${e.order} ${e.headword} ${e.pos}` : '"'MISSING');
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['\\u79c1','\\u5b66\\u751f','\\u65e5\\u672c','\\u3054\\u98ef','\\u98df\\u3079\\u308b','\\u8aad\\u3080','\\u6765\\u308b','\\u3067\\u304d\\u308b','\\u8a00\\u3046','\\u898b\\u308b','\\u5148\\u751f','\\u7530\\u4e2d','\\u98df\\u3079\\u7269','\\u30d1\\u30f3','\\u4ed5\\u4e8b','\\u65e5\\u672c\\u8a9e','\\u5e97','\\u53cb\\u9054','\\u52c9\\u5f37','\\u3059\\u308b','\\u884c\\u304f','\\u65e9\\u304f','\\u8d77\\u304d\\u308b','\\u6c34','\\u8cb7\\u3046','\\u56fd','\\u8a00\\u8449','\\u540d\\u524d','\\u6620\\u753b','\\u672c','\\u5b66\\u6821','\\u4eba'];
+for (const w of words) {
+ const e = jaSeedContent.lexicon.find(x => x.headword === w || x.reading === w);
+ console.log(JSON.stringify(w), e ? "'`${e.order} ${e.headword} ${e.pos}` : '"'MISSING');
+}
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const t = await createJapaneseTokenizer();
+const samples = [
+'\\u3054\\u98ef\\u3092\\u98df\\u3079\\u3089\\u308c\\u307e\\u3059\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u3081\\u307e\\u3059\\u3002',
+'\\u5e97\\u306b\\u6765\\u3089\\u308c\\u307e\\u3059\\u3057\\u4ed5\\u4e8b\\u304c\\u3067\\u304d\\u307e\\u3059\\u3002',
+'\\u53cb\\u9054\\u306b\\u8a00\\u308f\\u308c\\u307e\\u3059\\u3002',
+'\\u5148\\u751f\\u306b\\u898b\\u3089\\u308c\\u307e\\u3059\\u3002',
+'\\u7530\\u4e2d\\u306b\\u8a00\\u308f\\u308c\\u307e\\u3057\\u305f\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u3080\\u305f\\u3081\\u306b\\u8d77\\u304d\\u307e\\u3059\\u3002',
+'\\u4ed5\\u4e8b\\u306b\\u884c\\u304f\\u305f\\u3081\\u306b\\u6c34\\u3092\\u98f2\\u307f\\u307e\\u3059\\u3002',
+'\\u6c34\\u3092\\u8cb7\\u3046\\u305f\\u3081\\u306b\\u5e97\\u306b\\u884c\\u304d\\u307e\\u3059\\u3002',
+'\\u7530\\u4e2d\\u3068\\u3044\\u3046\\u5148\\u751f\\u3067\\u3059\\u3002',
+'\\u30d1\\u30f3\\u3068\\u3044\\u3046\\u98df\\u3079\\u7269\\u3067\\u3059\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3068\\u3044\\u3046\\u540d\\u524d\\u3067\\u3059\\u3002'
+];
+for (const s of samples) console.log(s+'\\t'+JSON.stringify(t.tokenize(s)));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const t = await createJapaneseTokenizer();
+const samples = [
+'\\u3054\\u98ef\\u3092\\u98df\\u3079\\u3089\\u308c\\u307e\\u3059\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u3081\\u307e\\u3059\\u3002',
+'\\u5e97\\u306b\\u6765\\u3089\\u308c\\u307e\\u3059\\u3057\\u4ed5\\u4e8b\\u304c\\u3067\\u304d\\u307e\\u3059\\u3002',
+'\\u53cb\\u9054\\u306b\\u8a00\\u308f\\u308c\\u307e\\u3059\\u3002',
+'\\u5148\\u751f\\u306b\\u898b\\u3089\\u308c\\u307e\\u3059\\u3002',
+'\\u7530\\u4e2d\\u306b\\u8a00\\u308f\\u308c\\u307e\\u3057\\u305f\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u3080\\u305f\\u3081\\u306b\\u8d77\\u304d\\u307e\\u3059\\u3002',
+'\\u4ed5\\u4e8b\\u306b\\u884c\\u304f\\u305f\\u3081\\u306b\\u6c34\\u3092\\u98f2\\u307f\\u307e\\u3059\\u3002',
+'\\u6c34\\u3092\\u8cb7\\u3046\\u305f\\u3081\\u306b\\u5e97\\u306b\\u884c\\u304d\\u307e\\u3059\\u3002',
+'\\u7530\\u4e2d\\u3068\\u3044\\u3046\\u5148\\u751f\\u3067\\u3059\\u3002',
+'\\u30d1\\u30f3\\u3068\\u3044\\u3046\\u98df\\u3079\\u7269\\u3067\\u3059\\u3002',
+'\\u65e5\\u672c\\u8a9e\\u3068\\u3044\\u3046\\u540d\\u524d\\u3067\\u3059\\u3002'
+];
+for (const s of samples) console.log(s+'\\t'+JSON.stringify(t.tokenize(s)));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs=require('fs'); const s=fs.readFileSync('content/ja/seed.ts','utf8');
+const idx=s.indexOf(\"id: 'ja-listing-shi'\"); const after=s.indexOf('\\n  ],', idx); console.log(s.slice(idx-20, after+8));
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs=require('fs'); const s=fs.readFileSync('content/ja/seed.ts','utf8');
+const idx=s.indexOf(\"id: 'ja-listing-shi'\"); const after=s.indexOf('\\n  ],', idx); console.log(s.slice(idx-20, after+8));
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log('grammar count', jaSeedContent.grammar.length);
+console.log('last four', jaSeedContent.grammar.slice(-4).map(g => "'`${g.order}:${g.id}`).join('"'\\n'));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "git diff -- content\\ja\\seed.ts"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log('grammar count', jaSeedContent.grammar.length);
+console.log('last four', jaSeedContent.grammar.slice(-4).map(g => "'`${g.order}:${g.id}`).join('"'\\n'));
+'@ | npx tsx"
+files: 0
+tokens: in 1079572 / out 12126
+

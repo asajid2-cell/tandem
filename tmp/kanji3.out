@@ -1,0 +1,35 @@
+
+===== PARTNER VERDICT (codex, 708s) =====
+
+Added the full requested batch to [content/ja/kanji.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/kanji.ts:6020): 64 new kanji, orders `412` through `475`. The supplied glyph list contained 64 glyphs, all missing, so `allKanji.length` is now `475`.
+
+Verification:
+- `npx tsc -b`: rc `0`
+- `npm run lint:content`: rc `0`
+- `npx tsx scan-audio.tmp.mjs`: rc `0`, `AUDIO OK: no conflicts`
+- Runtime import count: `475`
+
+Samples:
+- `412 買`: `買う`, `買い物`
+- `436 経`: `経験`, `経済`
+- `475 競`: `競争`, `競技`
+
+I did not run vite, `audio:ja`, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji'; console.log(allKanji.length); console.log(allKanji.slice(-3).map(k => "'`${k.order}:${k.glyph}:${k.examples.map(e=>e.word).join('"'/')}"'`).join('"'\\n'));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts --stat'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"id: 'ja-kanji-kau'|id: 'ja-kanji-keiken'|id: 'ja-kanji-kisou'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"id: 'ja-kanji-kau'|id: 'ja-kanji-keiken'|id: 'ja-kanji-kisou'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji'; console.log(allKanji.length); console.log(allKanji.slice(-3).map(k => "'`${k.order}:${k.glyph}:${k.examples.map(e=>e.word).join('"'/')}"'`).join('"'\\n'));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e 'import { allKanji } from \"./content/ja/kanji\"; console.log(allKanji.length); for (const k of allKanji.slice(-3)) console.log(k.order + \":\" + k.glyph + \":\" + k.examples.map(e => e.word).join(\"/\"));'"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e 'import { allKanji } from \"./content/ja/kanji\"; console.log(allKanji.length); for (const k of allKanji.slice(-3)) console.log(k.order + \":\" + k.glyph + \":\" + k.examples.map(e => e.word).join(\"/\"));'"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji'; console.log(allKanji.length); for (const k of allKanji.slice(-3)) console.log(k.order + ':' + k.glyph + ':' + k.examples.map(e => e.word).join('/'));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { allKanji } from './content/ja/kanji'; console.log(allKanji.length); for (const k of allKanji.slice(-3)) console.log(k.order + ':' + k.glyph + ':' + k.examples.map(e => e.word).join('/'));\""
+files: 0
+tokens: in 546653 / out 21926
+

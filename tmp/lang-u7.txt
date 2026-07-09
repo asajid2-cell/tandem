@@ -1,0 +1,9 @@
+DEEP PUSH — Japanese VOCAB Unit 7 (foreground; efficient; resume). content/ja/seed.ts has 6 units / ~100 words; closed-universe (keep 0 leaks). We now also have 103 N5 kanji (content/ja/kanji.ts) and full core N5 grammar (te-form, plain/past, etc.). Goal: grow toward N5 (~600-800 words). Move FAST but correct.
+
+ADD Unit 7 (~22-26 NEW high-frequency words, continue order indices) — theme: everyday verbs & objects, leveraging the N5 kanji we now teach so learners read kanji in context. Write headwords in their normal KANJI form where standard (with kana reading). Candidates NOT already present: 出る/出かける, 入る, 立つ, 座る, 休む, 使う, 作る, 持つ, 待つ, 買う(if absent), 売る, 働く, 住む, 思う, 知る(have?), 物, 事, 所, 人(kanji), 車, 電車, 会社, お金, 手, 目, 口, 道(have?), 今日/明日(have?). Pick correct, useful, NON-duplicate. Each: headword, reading, romanization, gloss, pos, audioId, closed-universe example.
+- 1-2 grammar patterns only if needed.
+- 2 natural SCENES (daily activity: going out / shopping / at work) using ONLY cumulative vocab+grammar (you can now use te-form, past, etc.!), with comprehension QuizItems; precompute tokens[] with the tokenizer.
+- ja-unit-7 + ja-checkpoint-7. audioIds on everything new. COMPLETE the unit wiring EARLY so an interruption doesn't leave it half-done.
+
+CORRECTNESS > QUANTITY: natural correct Japanese, closed-universe (0 leaks). Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check readings/conjugations/naturalness/decodability. Do NOT run audio:ja, deploy, or git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped). Report: counts + cumulative JA words + that ja-unit-7 AND ja-checkpoint-7 exist + helper verdict + lint/test output. Be efficient.

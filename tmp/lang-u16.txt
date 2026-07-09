@@ -1,0 +1,5 @@
+FOCUSED: Japanese VOCAB Unit 16 ONLY (foreground; FAST; resume). content/ja/seed.ts has 15 units / ~306 words; closed-universe (keep 0 leaks). STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[] (never mix). Wire ja-unit-16 + ja-checkpoint-16.
+
+ADD Unit 16 (~18-22) — work & school: 会議/授業/宿題/試験/質問/答え/勉強/教える/習う/卒業/会社員/店員/英語/数学/医者(have?)/работа no — 仕事/銀行/写真 ALREADY EXIST, skip. Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. 2 SCENES (school/work) using only cumulative vocab+grammar, QuizItems, tokens[] via tokenizer. audioIds on all.
+Be FAST (single unit). Helper-check briefly if time. Do NOT run audio:ja/deploy/commit.
+VERIFY: npm run lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + ja-unit-16/checkpoint-16 exist + lint/test.

@@ -1,0 +1,74 @@
+
+===== PARTNER VERDICT (codex, 985s) =====
+
+Implemented Japanese Unit 7 in `content/ja/seed.ts`.
+
+Counts:
+- Added Unit 7 words: 25
+- Cumulative JA words: 125
+- JA units: 7
+- Unit 7 scenes: 2
+- `ja-unit-7`: exists
+- `ja-checkpoint-7`: exists
+- Checkpoint 7 items: 7
+- New Unit 7 grammar patterns: 0, reused grammar through order `132`
+
+Helper verdict: Claude said “ship.” It checked readings, conjugation classes, naturalness, token arrays, and closed-universe decodability. It found `0` token mismatches and `0` leaks. Non-blocking note: `思う` is safe as passive vocab but should not be drilled until `〜と思う` is taught.
+
+Verification:
+
+```text
+npm run lint:content
+
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+`npm test` initially hit a Node heap OOM in Vitest workers, then passed with a larger heap:
+
+```text
+$env:NODE_OPTIONS='--max-old-space-size=4096'; npm test
+
+> foothold-language@0.1.0 test
+> vitest run
+
+Test Files 7 passed (7)
+Tests 36 passed (36)
+Duration 16.06s
+```
+
+No audio generation, deploy, or git commit was run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-unit-7-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-unit-7-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-unit-7-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "cmd /c \"node bin\\peer.mjs ask - < tmp\\ja-unit-7-audit.txt\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit7 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-7');
+const checkpoint7 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-7');
+const unit7Words = jaSeedContent.lexicon.filter((entry) => entry.order >= 133 && entry.order <= 157);
+console.log(JSON.stringify({unitCount:jaSeedContent.units.length,cumulativeJaWords:jaSeedContent.lexicon.length,unit7Words:unit7Words.length,grammarPatterns:jaSeedContent.grammar.length,unit7Exists:"'!!unit7,checkpoint7Exists:!!checkpoint7,unit7Scenes:unit7?.sceneIds.length ?? 0,checkpoint7Items:checkpoint7?.items.length ?? 0}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit7 = jaSeedContent.units.find((unit) => unit.id === 'ja-unit-7');
+const checkpoint7 = jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-7');
+const unit7Words = jaSeedContent.lexicon.filter((entry) => entry.order >= 133 && entry.order <= 157);
+console.log(JSON.stringify({unitCount:jaSeedContent.units.length,cumulativeJaWords:jaSeedContent.lexicon.length,unit7Words:unit7Words.length,grammarPatterns:jaSeedContent.grammar.length,unit7Exists:"'!!unit7,checkpoint7Exists:!!checkpoint7,unit7Scenes:unit7?.sceneIds.length ?? 0,checkpoint7Items:checkpoint7?.items.length ?? 0}, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 26066315 / out 135129
+

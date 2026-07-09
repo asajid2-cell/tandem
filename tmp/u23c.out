@@ -1,0 +1,119 @@
+
+===== PARTNER VERDICT (codex, 464s) =====
+
+Implemented Japanese VOCAB Unit 23 in [content/ja/seed.ts](Z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts:5896).
+
+Added:
+- 20 non-duplicate lexicon entries, orders `479-498`
+- Scenes in `scenes[]`: `ja-scene-phone-messages`, `ja-scene-online-news`
+- Checkpoint: `ja-checkpoint-23`
+- Unit: `ja-unit-23`, wired to both scenes and checkpoint
+
+Skipped duplicates from the prompt: `電話`, `手紙`, `送る`.
+
+Final counts:
+- Lexicon: `466`
+- Units: `23`
+- Checkpoints: `23`
+- Scenes: `47`
+- Unit 23 lex range: `[479, 498]`
+- `ja-unit-23`: exists
+- `ja-checkpoint-23`: exists
+
+Verification:
+- `npm run lint:content`: `content lint passed: 0 leaks` x3
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7 passed`, `36 passed`, `0 skipped`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-keitai'|id: 'ja-scene-phone-messages'|"'^  grammar: '"\\[|"'^  scenes: '"\\[\" -Context 3,3"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), lex23: jaSeedContent.lexicon.filter(x=>x.order>=479).map(x=>({order:x.order,id:x.id,headword:x.headword})), unit23: jaSeedContent.units.find(u=>u.id==='ja-unit-23'), checkpoint23: jaSeedContent.checkpoints.find(c=>c.id==='ja-checkpoint-23')?.items.length, scenes23: jaSeedContent.scenes.filter(s=>s.order>=46).map(s=>({id:s.id, order:s.order, lex:s.unlockedAfter.lex}))}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs = require('fs');
+const path = 'content/ja/seed.ts';
+let text = fs.readFileSync(path, 'utf8');
+const entries = [
+ ['ja-keitai',479,'\\u643a\\u5e2f','\\u3051\\u3044\\u305f\\u3044','keitai','mobile phone','noun',['core','technology'],'mobile phone.'],
+ ['ja-meeru',480,'\\u30e1\\u30fc\\u30eb','\\u30e1\\u30fc\\u30eb','meeru','email','noun',['core','communication','technology'],'email.'],
+ ['ja-intaanetto',481,'\\u30a4\\u30f3\\u30bf\\u30fc\\u30cd\\u30c3\\u30c8','\\u30a4\\u30f3\\u30bf\\u30fc\\u30cd\\u30c3\\u30c8','intaanetto','internet','noun',['core','technology'],'internet.'],
+ ['ja-pasokon',482,'\\u30d1\\u30bd\\u30b3\\u30f3','\\u30d1\\u30bd\\u30b3\\u30f3','pasokon','personal computer','noun',['core','technology'],'computer.'],
+ ['ja-nyuusu',483,'\\u30cb\\u30e5\\u30fc\\u30b9','\\u30cb\\u30e5\\u30fc\\u30b9','nyuusu','news','noun',['core','communication'],'news.'],
+ ['ja-renraku',484,'\\u9023\\u7d61','\\u308c\\u3093\\u3089\\u304f','renraku','contact; communication','noun',['core','communication'],'contact.'],
+ ['ja-douga',485,'\\u52d5\\u753b','\\u3069\\u3046\\u304c','douga','video','noun',['core','technology'],'video.'],
+ ['ja-bangou',486,'\\u756a\\u53f7','\\u3070\\u3093\\u3054\\u3046','bangou','number','noun',['core','communication'],'number.'],
+ ['ja-juusho',487,'\\u4f4f\\u6240','\\u3058\\u3085\\u3046\\u3057\\u3087','juusho','address','noun',['core','communication'],'address.'],
+ ['ja-kitte',488,'\\u5207\\u624b','\\u304d\\u3063\\u3066','kitte','stamp','noun',['core','communication'],'stamp.'],
+ ['ja-fuutou',489,'\\u5c01\\u7b52','\\u3075\\u3046\\u3068\\u3046','fuutou','envelope','noun',['core','communication'],'envelope.'],
+ ['ja-todoku',490,'\\u5c4a\\u304f','\\u3068\\u3069\\u304f','todoku','to arrive; be delivered','verb',['core','communication','godan'],'to arrive; be delivered.'],
+ ['ja-gamen',491,'\\u753b\\u9762','\\u304c\\u3081\\u3093','gamen','screen','noun',['core','technology'],'screen.'],
+ ['ja-saito',492,'\\u30b5\\u30a4\\u30c8','\\u30b5\\u30a4\\u30c8','saito','site; website','noun',['core','technology'],'site.'],
+ ['ja-apuri',493,'\\u30a2\\u30d7\\u30ea','\\u30a2\\u30d7\\u30ea','apuri','app','noun',['core','technology'],'app.'],
+ ['ja-messeeji',494,'\\u30e1\\u30c3\\u30bb\\u30fc\\u30b8','\\u30e1\\u30c3\\u30bb\\u30fc\\u30b8','messeeji','message','noun',['core','communication'],'message.'],
+ ['ja-fairu',495,'\\u30d5\\u30a1\\u30a4\\u30eb','\\u30d5\\u30a1\\u30a4\\u30eb','fairu','file','noun',['core','technology'],'file.'],
+ ['ja-deeta',496,'\\u30c7\\u30fc\\u30bf','\\u30c7\\u30fc\\u30bf','deeta','data','noun',['core','technology'],'data.'],
+ ['ja-kamera',497,'\\u30ab\\u30e1\\u30e9','\\u30ab\\u30e1\\u30e9','kamera','camera','noun',['core','technology'],'camera.'],
+ ['ja-rajio',498,'\\u30e9\\u30b8\\u30aa','\\u30e9\\u30b8\\u30aa','rajio','radio','noun',['core','technology'],'radio.']
+];
+const tagFmt = xs => "'`[${xs.map(x=>`'"'"'${x}'"'"'`).join('"', ')}]"'`;
+const lexObjects = entries.map(([id, order, headword, reading, romanization, gloss, pos, tagList, exGloss]) => `    {'"\\n      id: '"'${id}'"',\\n      lang: 'ja',\\n      order: "'${order},'"\\n      headword: '"'${headword}'"',\\n      reading: '"'${reading}'"',\\n      romanization: '"'${romanization}'"',\\n      gloss: '"'${gloss}'"',\\n      pos: '"'${pos}'"',\\n      tags: "'${tagFmt(tagList)},'"\\n      audioId: 'ja-lex-"'${id.slice(3)}'"',\\n      examples: [{ text: '"'${headword}'"\\u3002', gloss: '"'${exGloss}'"', tokens: ['"'${headword}'"'], audioId: 'ja-ex-"'${id.slice(3)}'"' }]\\n    }"'`).join('"',\\n');
+const marker = \"    },\\n\\n  ],\\n  grammar:\";
+if ("'!text.includes(marker)) throw new Error('"'lex marker not found');
+text = text.replace(marker, "'`    },'"\\n"'${lexObjects}'"\\n  ],\\n  grammar:"'`);
+fs.writeFileSync(path, text, '"'utf8');
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+const fs = require('fs');
+const path = 'content/ja/seed.ts';
+let text = fs.readFileSync(path, 'utf8');
+const entries = [
+ ['ja-keitai',479,'\\u643a\\u5e2f','\\u3051\\u3044\\u305f\\u3044','keitai','mobile phone','noun',['core','technology'],'mobile phone.'],
+ ['ja-meeru',480,'\\u30e1\\u30fc\\u30eb','\\u30e1\\u30fc\\u30eb','meeru','email','noun',['core','communication','technology'],'email.'],
+ ['ja-intaanetto',481,'\\u30a4\\u30f3\\u30bf\\u30fc\\u30cd\\u30c3\\u30c8','\\u30a4\\u30f3\\u30bf\\u30fc\\u30cd\\u30c3\\u30c8','intaanetto','internet','noun',['core','technology'],'internet.'],
+ ['ja-pasokon',482,'\\u30d1\\u30bd\\u30b3\\u30f3','\\u30d1\\u30bd\\u30b3\\u30f3','pasokon','personal computer','noun',['core','technology'],'computer.'],
+ ['ja-nyuusu',483,'\\u30cb\\u30e5\\u30fc\\u30b9','\\u30cb\\u30e5\\u30fc\\u30b9','nyuusu','news','noun',['core','communication'],'news.'],
+ ['ja-renraku',484,'\\u9023\\u7d61','\\u308c\\u3093\\u3089\\u304f','renraku','contact; communication','noun',['core','communication'],'contact.'],
+ ['ja-douga',485,'\\u52d5\\u753b','\\u3069\\u3046\\u304c','douga','video','noun',['core','technology'],'video.'],
+ ['ja-bangou',486,'\\u756a\\u53f7','\\u3070\\u3093\\u3054\\u3046','bangou','number','noun',['core','communication'],'number.'],
+ ['ja-juusho',487,'\\u4f4f\\u6240','\\u3058\\u3085\\u3046\\u3057\\u3087','juusho','address','noun',['core','communication'],'address.'],
+ ['ja-kitte',488,'\\u5207\\u624b','\\u304d\\u3063\\u3066','kitte','stamp','noun',['core','communication'],'stamp.'],
+ ['ja-fuutou',489,'\\u5c01\\u7b52','\\u3075\\u3046\\u3068\\u3046','fuutou','envelope','noun',['core','communication'],'envelope.'],
+ ['ja-todoku',490,'\\u5c4a\\u304f','\\u3068\\u3069\\u304f','todoku','to arrive; be delivered','verb',['core','communication','godan'],'to arrive; be delivered.'],
+ ['ja-gamen',491,'\\u753b\\u9762','\\u304c\\u3081\\u3093','gamen','screen','noun',['core','technology'],'screen.'],
+ ['ja-saito',492,'\\u30b5\\u30a4\\u30c8','\\u30b5\\u30a4\\u30c8','saito','site; website','noun',['core','technology'],'site.'],
+ ['ja-apuri',493,'\\u30a2\\u30d7\\u30ea','\\u30a2\\u30d7\\u30ea','apuri','app','noun',['core','technology'],'app.'],
+ ['ja-messeeji',494,'\\u30e1\\u30c3\\u30bb\\u30fc\\u30b8','\\u30e1\\u30c3\\u30bb\\u30fc\\u30b8','messeeji','message','noun',['core','communication'],'message.'],
+ ['ja-fairu',495,'\\u30d5\\u30a1\\u30a4\\u30eb','\\u30d5\\u30a1\\u30a4\\u30eb','fairu','file','noun',['core','technology'],'file.'],
+ ['ja-deeta',496,'\\u30c7\\u30fc\\u30bf','\\u30c7\\u30fc\\u30bf','deeta','data','noun',['core','technology'],'data.'],
+ ['ja-kamera',497,'\\u30ab\\u30e1\\u30e9','\\u30ab\\u30e1\\u30e9','kamera','camera','noun',['core','technology'],'camera.'],
+ ['ja-rajio',498,'\\u30e9\\u30b8\\u30aa','\\u30e9\\u30b8\\u30aa','rajio','radio','noun',['core','technology'],'radio.']
+];
+const tagFmt = xs => "'`[${xs.map(x=>`'"'"'${x}'"'"'`).join('"', ')}]"'`;
+const lexObjects = entries.map(([id, order, headword, reading, romanization, gloss, pos, tagList, exGloss]) => `    {'"\\n      id: '"'${id}'"',\\n      lang: 'ja',\\n      order: "'${order},'"\\n      headword: '"'${headword}'"',\\n      reading: '"'${reading}'"',\\n      romanization: '"'${romanization}'"',\\n      gloss: '"'${gloss}'"',\\n      pos: '"'${pos}'"',\\n      tags: "'${tagFmt(tagList)},'"\\n      audioId: 'ja-lex-"'${id.slice(3)}'"',\\n      examples: [{ text: '"'${headword}'"\\u3002', gloss: '"'${exGloss}'"', tokens: ['"'${headword}'"'], audioId: 'ja-ex-"'${id.slice(3)}'"' }]\\n    }"'`).join('"',\\n');
+const marker = \"    },\\n\\n  ],\\n  grammar:\";
+if ("'!text.includes(marker)) throw new Error('"'lex marker not found');
+text = text.replace(marker, "'`    },'"\\n"'${lexObjects}'"\\n  ],\\n  grammar:"'`);
+fs.writeFileSync(path, text, '"'utf8');
+'@ | node"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lex23 = jaSeedContent.lexicon.filter(x => x.order >= 479 && x.order <= 498);
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, unitCount: jaSeedContent.units.length, checkpointCount: jaSeedContent.checkpoints.length, sceneCount: jaSeedContent.scenes.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), lex23Count: lex23.length, lex23Orders: [Math.min(...lex23.map(x=>x.order)), Math.max(...lex23.map(x=>x.order))], unit23: jaSeedContent.units.find(u=>u.id==='ja-unit-23'), checkpoint23Exists: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-23'), scenes23: jaSeedContent.scenes.filter(s=>['ja-scene-phone-messages','ja-scene-online-news'].includes(s.id)).map(s=>({id:s.id, order:s.order}))}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const lex23 = jaSeedContent.lexicon.filter(x => x.order >= 479 && x.order <= 498);
+console.log(JSON.stringify({lexiconCount: jaSeedContent.lexicon.length, unitCount: jaSeedContent.units.length, checkpointCount: jaSeedContent.checkpoints.length, sceneCount: jaSeedContent.scenes.length, maxLex: Math.max(...jaSeedContent.lexicon.map(x=>x.order)), lex23Count: lex23.length, lex23Orders: [Math.min(...lex23.map(x=>x.order)), Math.max(...lex23.map(x=>x.order))], unit23: jaSeedContent.units.find(u=>u.id==='ja-unit-23'), checkpoint23Exists: jaSeedContent.checkpoints.some(c=>c.id==='ja-checkpoint-23'), scenes23: jaSeedContent.scenes.filter(s=>['ja-scene-phone-messages','ja-scene-online-news'].includes(s.id)).map(s=>({id:s.id, order:s.order}))}, null, 2));
+'@ | npx tsx"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-keitai'|id: 'ja-rajio'|id: 'ja-scene-phone-messages'|id: 'ja-scene-online-news'|id: 'ja-checkpoint-23'|id: 'ja-unit-23'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"id: 'ja-keitai'|id: 'ja-rajio'|id: 'ja-scene-phone-messages'|id: 'ja-scene-online-news'|id: 'ja-checkpoint-23'|id: 'ja-unit-23'\""
+tokens: in 9880457 / out 70751
+

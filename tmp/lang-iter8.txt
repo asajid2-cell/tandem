@@ -1,0 +1,16 @@
+ITERATION 8 (you are the Lead; same Foothold project. Note: the machine was rebooted to free resources — your session was resumed. iter1-7 are committed and LIVE at https://harmonizerlabs.cc/language/ with real bundled audio. The full core loop works: learn → read scenes → comprehend → SRS review.)
+
+Watcher re-verified everything post-reboot and redeployed (audio confirmed live). Continue.
+
+SCOPE — expand the JAPANESE core toward the ~100-word goal with a SECOND closed-universe unit (this is the app's whole premise: ~100 high-frequency words → read most everyday interactions). Build on Unit 1's existing 17 words (cumulative, monotonic order indices continue from where Unit 1 left off).
+1. Add ~15-18 MORE genuinely high-frequency, everyday Japanese words in content/ja/seed.ts as a Unit 2 (continue the `order` sequence; include any needed particles as first-class LexEntrys). Choose words that unlock real daily interactions (e.g. これ/それ/あれ, ここ/そこ, 人, 行く, 来る, 見る, いい, ある/いる, numbers, etc. — your judgment; high-frequency + useful).
+2. Add the grammar pattern(s) those words need (e.g. negation 〜ません/〜じゃない, past 〜ました/〜でした, existence あります/います) with proper licenses[] so inflections validate.
+3. Add 2-3 new everyday SCENES (e.g. a simple shop/ordering exchange, asking where something is) built ONLY from cumulative introduced vocab+patterns, each with comprehension QuizItems. Precompute tokens[] with the real tokenizer.
+4. Give EVERY new item an audioId and run `npm run audio:ja` to generate the new MP3s (edge-tts; they're gitignored but deployed). Confirm the new audio files exist + are non-trivial.
+5. Define the Unit 2 entry in units[] (and wire Unit 1's dangling checkpointId only if trivial; otherwise leave checkpoints for next iter).
+
+CORRECTNESS > QUANTITY (hard rule): every sentence must be natural, correct Japanese with right particles/politeness/readings, and STRICTLY closed-universe (linter 0 leaks). Use your Claude HELPER (SIMPLE invocation: write prompt to a temp file → node bin/peer.mjs ask - < file from the tandem dir) to independently cross-check the new Japanese cold (naturalness, particles, politeness, readings). A wrong/unnatural sentence is worse than fewer words.
+
+VERIFY before reporting: npm run lint:content 0 leaks (incl. all new content), npm test green, npm run build green, and `npm run audio:ja` generated the new mp3s. Don't regress earlier units or the FR path.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: new word/grammar/scene counts (and cumulative JA word total toward ~100), helper verdict on the new Japanese (converge/diverge + what it caught), audio generation result, exact lint/test/build output, and suggested single next step for iter9 (likely: unit checkpoints feature, or continue toward ~100 words, or start French parity).

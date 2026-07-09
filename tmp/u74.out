@@ -1,0 +1,152 @@
+
+===== PARTNER VERDICT (codex, 298s) =====
+
+Implemented Japanese Unit 74 only in `content/ja/seed.ts`.
+
+Counts verified:
+- Lexicon: 1464
+- Scenes: 149
+- Checkpoints: 74
+- Units: 74
+- `ja-unit-74` lexRange: `[1479, 1496]`
+- `ja-checkpoint-74`: 10 items
+- Unit 74 new lex entries: 18
+- Unit 74 audioId collisions: 0
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test`: 36 passed, 0 skipped
+
+No audio generation, deploy, or commit performed.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u5b66\\u6821\\u306e\\u898f\\u5247\\u306f\\u5927\\u5207\\u3067\\u3059\\u3002',
+  '\\u7981\\u6b62\\u3082\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u8a31\\u53ef\\u304c\\u5fc5\\u8981\\u3067\\u3059\\u304b\\u3002',
+  '\\u306f\\u3044\\u3002\\u624b\\u7d9a\\u304d\\u3082\\u5fc5\\u8981\\u3067\\u3059\\u3002',
+  '\\u4f1a\\u793e\\u306e\\u65b9\\u91dd\\u306f\\u4f55\\u3067\\u3059\\u304b\\u3002',
+  '\\u5e73\\u7b49\\u304c\\u539f\\u5247\\u3067\\u3059\\u3002',
+  '\\u5f79\\u5272\\u306f\\u3042\\u308a\\u307e\\u3059\\u304b\\u3002',
+  '\\u306f\\u3044\\u3002\\u57fa\\u6e96\\u3082\\u5236\\u9650\\u3082\\u3042\\u308a\\u307e\\u3059\\u3002'
+];
+const esc = s => [...s].map(ch => '\\\\u' + ch.codePointAt(0).toString(16).padStart(4,'0')).join('');
+for (const text of texts) console.log(esc(text), JSON.stringify(tokenizer.tokenize(text).map(esc)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u5b66\\u6821\\u306e\\u898f\\u5247\\u306f\\u5927\\u5207\\u3067\\u3059\\u3002',
+  '\\u7981\\u6b62\\u3082\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u8a31\\u53ef\\u304c\\u5fc5\\u8981\\u3067\\u3059\\u304b\\u3002',
+  '\\u306f\\u3044\\u3002\\u624b\\u7d9a\\u304d\\u3082\\u5fc5\\u8981\\u3067\\u3059\\u3002',
+  '\\u4f1a\\u793e\\u306e\\u65b9\\u91dd\\u306f\\u4f55\\u3067\\u3059\\u304b\\u3002',
+  '\\u5e73\\u7b49\\u304c\\u539f\\u5247\\u3067\\u3059\\u3002',
+  '\\u5f79\\u5272\\u306f\\u3042\\u308a\\u307e\\u3059\\u304b\\u3002',
+  '\\u306f\\u3044\\u3002\\u57fa\\u6e96\\u3082\\u5236\\u9650\\u3082\\u3042\\u308a\\u307e\\u3059\\u3002'
+];
+const esc = s => [...s].map(ch => '\\\\u' + ch.codePointAt(0).toString(16).padStart(4,'0')).join('');
+for (const text of texts) console.log(esc(text), JSON.stringify(tokenizer.tokenize(text).map(esc)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u898f\\u5247\\u3067\\u3059\\u3002',
+  '\\u547d\\u4ee4\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u8a31\\u53ef\\u304c\\u5fc5\\u8981\\u3067\\u3059\\u3002',
+  '\\u7981\\u6b62\\u3067\\u3059\\u3002',
+  '\\u5dee\\u5225\\u306f\\u554f\\u984c\\u3067\\u3059\\u3002',
+  '\\u5236\\u9650\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u79e9\\u5e8f\\u306f\\u5927\\u5207\\u3067\\u3059\\u3002',
+  '\\u5f79\\u5272\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u9055\\u53cd\\u3067\\u3059\\u3002',
+  '\\u7533\\u8acb\\u3092\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002'
+];
+const esc = s => [...s].map(ch => '\\\\u' + ch.codePointAt(0).toString(16).padStart(4,'0')).join('');
+for (const text of texts) console.log(esc(text), JSON.stringify(tokenizer.tokenize(text).map(esc)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u898f\\u5247\\u3067\\u3059\\u3002',
+  '\\u547d\\u4ee4\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u8a31\\u53ef\\u304c\\u5fc5\\u8981\\u3067\\u3059\\u3002',
+  '\\u7981\\u6b62\\u3067\\u3059\\u3002',
+  '\\u5dee\\u5225\\u306f\\u554f\\u984c\\u3067\\u3059\\u3002',
+  '\\u5236\\u9650\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u79e9\\u5e8f\\u306f\\u5927\\u5207\\u3067\\u3059\\u3002',
+  '\\u5f79\\u5272\\u304c\\u3042\\u308a\\u307e\\u3059\\u3002',
+  '\\u9055\\u53cd\\u3067\\u3059\\u3002',
+  '\\u7533\\u8acb\\u3092\\u627f\\u8a8d\\u3057\\u307e\\u3059\\u3002'
+];
+const esc = s => [...s].map(ch => '\\\\u' + ch.codePointAt(0).toString(16).padStart(4,'0')).join('');
+for (const text of texts) console.log(esc(text), JSON.stringify(tokenizer.tokenize(text).map(esc)));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-kisoku'\",\"id: 'ja-scene-school-rules'\",\"id: 'ja-checkpoint-74'\",\"id: 'ja-unit-74'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-kisoku'\",\"id: 'ja-scene-school-rules'\",\"id: 'ja-checkpoint-74'\",\"id: 'ja-unit-74'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit74Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1479 && entry.order <= 1496);
+const unit74Audio = collectAudio(unit74Lex);
+const newCollisions = unit74Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit74LexEntries: unit74Lex.length,
+  unit74LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-74')?.lexRange,
+  checkpoint74Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-74')?.items.length,
+  unit74AudioIds: unit74Audio.length,
+  unit74AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit74Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1479 && entry.order <= 1496);
+const unit74Audio = collectAudio(unit74Lex);
+const newCollisions = unit74Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit74LexEntries: unit74Lex.length,
+  unit74LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-74')?.lexRange,
+  checkpoint74Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-74')?.items.length,
+  unit74AudioIds: unit74Audio.length,
+  unit74AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+files: 0
+tokens: in 14255745 / out 80618
+

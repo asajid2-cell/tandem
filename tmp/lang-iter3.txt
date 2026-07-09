@@ -1,0 +1,27 @@
+You are the LEAD ENGINEER for "Foothold", a self-contained language-learning web app. This is a FRESH session (the prior one got tangled by an infra bug that is now FIXED — your Claude helper works correctly now). iter1 (foundation) and iter2 (Japanese kuromoji tokenizer + grammar-licensed inflection) are COMMITTED and green.
+
+ROLE & TOPOLOGY:
+- I am the Watcher (Claude, the human's planner/orchestrator): I hold the goal, verify your work, commit, and dispatch you each iteration. You are the Lead engineer/director. ONE focused step per turn: review state, implement, build, self-verify, report. Do NOT git commit (I commit). Do NOT touch unrelated repos (no OAT/T6/game-engine).
+- You have a Claude HELPER — use it as a true independent second mind, ESPECIALLY for Japanese linguistic correctness. From the tandem dir z:\328\CMPUT328-A2\codexworks\301\tandem run:  node bin/peer.mjs ask -   (pipe the task on stdin). Ask it to independently judge naturalness/particles/politeness; do NOT tell it your conclusion first. (The env bug that made this fail before is fixed.)
+
+READ FIRST (full context — fresh session):
+- z:\328\CMPUT328-A2\codexworks\301\language\docs\foothold-plan.md  (the plan; section 5 = closed-universe invariant, section 18 = build order)
+- z:\328\CMPUT328-A2\codexworks\301\language\LOOPS.md  (loop ledger — see iter1/iter2 entries for what's done)
+- z:\328\CMPUT328-A2\codexworks\301\language\src\content\types.ts  (the content contract you must author against)
+- z:\328\CMPUT328-A2\codexworks\301\language\src\engine\lint.ts  (the linter + JA tokenizer; note token format: content words -> dictionary form, particles -> own tokens, inflections -> classed ~ます style tokens licensed by grammar patterns)
+- z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts  (current JA seed — your starting point)
+
+Your working directory IS the project: z:\328\CMPUT328-A2\codexworks\301\language
+
+ITERATION 3 SCOPE — author the FIRST REAL Japanese learning unit (build order step 5), correct and natural, fully passing the failing-closed linter:
+1. JA script primer (recognition-level): the hiragana needed to read the words in this first unit (you don't need all kana yet — only what this unit uses). Romanization provided.
+2. First REAL lexicon batch (~12-18 entries) of genuinely high-frequency, day-to-day Japanese — INCLUDING the core particles as their own LexEntrys (は, を, に, の, が, も, か, etc. as needed), each with order index, headword, reading (kana), romanization, gloss, pos, audioId placeholder, and at least one example sentence per content word that PASSES the closed-universe linter (only earlier-or-equal-order tokens).
+3. 1-2 grammar patterns (e.g. polite copula 〜です and/or polite verb 〜ます; basic は-topic / を-object word order) with the licenses[] needed so inflected forms validate.
+4. 1-2 everyday SCENES (short natural dialogue: e.g. a greeting/self-intro or a simple shop exchange) built ONLY from introduced words+patterns, each with 2-3 comprehension QuizItems. Precompute tokens[] using the real tokenizer.
+5. Keep content/index.ts / allContent wiring correct so lint:content covers the new JA content.
+
+CORRECTNESS > QUANTITY: better 12 genuinely correct, natural entries + 1 flawless scene than 30 sloppy ones. This is exactly where you must use the Claude helper to cross-check Japanese (is every sentence natural? particles right? politeness consistent? readings correct?). A wrong/unnatural sentence is worse than fewer words.
+
+VERIFY before reporting: npm test green, npm run lint:content = 0 leaks (incl. all new JA content), npm run build green. Don't break FR.
+
+REPORT: what you authored (counts: lexicon/particles/patterns/scenes), the helper's independent verdict on JA correctness (converge/diverge + what it caught), exact test/lint/build output, and your suggested single next step for iter4 (likely: begin the UI — language picker + new-word card + review loop — applying ui-craft meticulously).

@@ -1,0 +1,191 @@
+
+===== PARTNER VERDICT (codex, 621s) =====
+
+Implemented the backend-only chunk. No deploy, no nginx, no git commit.
+
+Added:
+- [server/index.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/index.js:1)
+- [server/app.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/app.js:1)
+- [server/auth.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/auth.js:1)
+- [server/keyStore.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/keyStore.js:1)
+- [server/config.js](Z:/328/CMPUT328-A2/codexworks/301/language/server/config.js:1)
+- [Dockerfile](Z:/328/CMPUT328-A2/codexworks/301/language/Dockerfile:1)
+- [docker-compose.yml](Z:/328/CMPUT328-A2/codexworks/301/language/docker-compose.yml:1)
+- [.dockerignore](Z:/328/CMPUT328-A2/codexworks/301/language/.dockerignore:1)
+
+Updated:
+- `package.json` adds `server` script plus `express`, `better-sqlite3`, `cookie-parser`
+- `package-lock.json` updated from install
+
+API surface:
+- `GET /api/health` -> `{ok:true}`
+- `GET /api/me` -> hl-auth cookie verify, fail-closed
+- `GET /api/keys` -> auth required, masked per-user keys
+- `PUT /api/keys` -> auth required, stores `{provider, apiKey, baseUrl?, model?}`
+- `DELETE /api/keys` and `DELETE /api/keys/:provider` -> auth required, clears provider key
+
+Mirrors Alarmonizer by serving built `dist` under `/language`, using `hl_session`, `AUTH_INTERNAL_URL`, `AUTH_INTERNAL_KEY`, direct localhost internal verify, and a build-stage/runtime-stage container. Compose binds `127.0.0.1:4310` and persists SQLite under `/app/data`.
+
+Verified:
+- `npm run build` green
+- `npm run lint:content` green, `0 leaks`
+- `npm test` green, `33 passed`, `0 skipped`
+- Local server smoke: `/language/` 200, `/api/health` ok, `/api/me` unauthenticated false, `/api/keys` 401 JSON
+
+Note: `LOOPS.md` was already modified in the worktree; I left it alone.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$port = 4310
+$existing = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+if ($existing) { throw "Port $port is already in use" }
+$log = Join-Path $env:TEMP '"'foothold-language-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-language-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-language-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'smoke-test-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+try {
+  $ready = $false
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try {
+      $health = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2
+      $ready = $true
+      break
+    } catch {}
+  }
+  if (-not $ready) { throw '"'Server did not become ready' }
+  "'$spa = Invoke-WebRequest -Uri "http://127.0.0.1:$port/language/" -UseBasicParsing -TimeoutSec 5
+  $me = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/me" -TimeoutSec 5
+  try {
+    Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/keys" -TimeoutSec 5 | Out-Null
+    $keysStatus = 200
+    $keysBody = '"'unexpected success'
+  } catch {
+    "'$keysStatus = [int]$_.Exception.Response.StatusCode
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    $keysBody = $reader.ReadToEnd()
+  }
+  [pscustomobject]@{
+    healthOk = $health.ok
+    spaStatus = [int]$spa.StatusCode
+    me = ($me | ConvertTo-Json -Compress)
+    keysStatus = $keysStatus
+    keysBody = $keysBody
+  } | ConvertTo-Json -Compress
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$port = 4310
+$existing = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+if ($existing) { throw "Port $port is already in use" }
+$log = Join-Path $env:TEMP '"'foothold-language-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-language-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-language-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'smoke-test-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+try {
+  $ready = $false
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try {
+      $health = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2
+      $ready = $true
+      break
+    } catch {}
+  }
+  if (-not $ready) { throw '"'Server did not become ready' }
+  "'$spa = Invoke-WebRequest -Uri "http://127.0.0.1:$port/language/" -UseBasicParsing -TimeoutSec 5
+  $me = Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/me" -TimeoutSec 5
+  try {
+    Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/keys" -TimeoutSec 5 | Out-Null
+    $keysStatus = 200
+    $keysBody = '"'unexpected success'
+  } catch {
+    "'$keysStatus = [int]$_.Exception.Response.StatusCode
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    $keysBody = $reader.ReadToEnd()
+  }
+  [pscustomobject]@{
+    healthOk = $health.ok
+    spaStatus = [int]$spa.StatusCode
+    me = ($me | ConvertTo-Json -Compress)
+    keysStatus = $keysStatus
+    keysBody = $keysBody
+  } | ConvertTo-Json -Compress
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$port = 4310
+$log = Join-Path $env:TEMP '"'foothold-language-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-language-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-language-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'smoke-test-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+try {
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try { Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2 | Out-Null; break } catch { if ($i -eq 29) { throw } }
+  }
+  curl.exe -s -i "http://127.0.0.1:$port/api/keys"
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$ErrorActionPreference = '"'Stop'
+"'$port = 4310
+$log = Join-Path $env:TEMP '"'foothold-language-server.log'
+"'$err = Join-Path $env:TEMP '"'foothold-language-server.err.log'
+"'$db = Join-Path $env:TEMP '"'foothold-language-smoke.sqlite'
+Remove-Item -LiteralPath "'$log,$err,$db -Force -ErrorAction SilentlyContinue
+$env:PORT = "$port"
+$env:AUTH_INTERNAL_KEY = '"'smoke-test-key'
+"'$env:AUTH_INTERNAL_URL = '"'http://127.0.0.1:4200'
+"'$env:AUTH_COOKIE_NAME = '"'hl_session'
+"'$env:DB_PATH = $db
+$p = Start-Process -FilePath '"'node' -ArgumentList 'server/index.js' -WorkingDirectory (Get-Location) -RedirectStandardOutput "'$log -RedirectStandardError $err -WindowStyle Hidden -PassThru
+try {
+  for ($i = 0; $i -lt 30; $i++) {
+    Start-Sleep -Milliseconds 300
+    if ($p.HasExited) { throw "Server exited early with code $($p.ExitCode). stderr: $(Get-Content -Path $err -Raw -ErrorAction SilentlyContinue)" }
+    try { Invoke-RestMethod -Uri "http://127.0.0.1:$port/api/health" -TimeoutSec 2 | Out-Null; break } catch { if ($i -eq 29) { throw } }
+  }
+  curl.exe -s -i "http://127.0.0.1:$port/api/keys"
+} finally {
+  if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+  Remove-Item -LiteralPath $db,"$db-shm","$db-wal" -Force -ErrorAction SilentlyContinue
+}'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- server Dockerfile docker-compose.yml .dockerignore package.json package-lock.json'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git status --short'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Path server -File | Select-Object -ExpandProperty Name'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- server Dockerfile docker-compose.yml .dockerignore package.json package-lock.json'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Path server -File | Select-Object -ExpandProperty Name'
+files: 0
+tokens: in 7844721 / out 43199
+

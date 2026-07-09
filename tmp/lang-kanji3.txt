@@ -1,0 +1,4 @@
+FOCUSED: expand KANJI course — batch 3. Foreground; resume. Working dir = language repo. content/ja/kanji.ts now has 411 entries (maxOrder 411). ADD ~50 more common everyday kanji that appear in taught vocab but are missing from the course.
+ADD these glyphs: 買 早 顔 太 陽 葉 森 考 有 無 洗 晩 遅 座 窓 果 夫 妻 泳 悲 静 閉 渡 結 経 活 届 晴 焼 角 曲 油 包 政 増 減 要 現 失 池 種 負 説 笑 残 組 防 例 判 担 接 検 査 保 停 路 求 確 限 加 認 規 則 競
+Same rules: append KanjiEntry (order from 412 up); meanings[], onyomi[] KATAKANA, kunyomi[] HIRAGANA with okurigana dots; 2 examples that MUST be existing lexicon headwords (grep content/ja/seed.ts; use their reading+gloss); UNIQUE audioIds ja-kanji-<romaji>(-exN), suffix on collision; correct readings; existing `group`.
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0; `npm run lint:content` exit 0; `npx tsx scan-audio.tmp.mjs` "AUDIO OK"; allKanji length ~472. NO vite/audio:ja/deploy/commit. Report: tsc rc, lint rc, audio, new count, 3 samples.

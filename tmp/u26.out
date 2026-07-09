@@ -1,0 +1,89 @@
+
+===== PARTNER VERDICT (codex, 248s) =====
+
+Implemented Japanese VOCAB Unit 26 in [content/ja/seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Added:
+- 20 lex entries, orders `539-558`
+- 2 scenes: `ja-scene-clothes-shopping` order `52`, `ja-scene-laundry-chores` order `53`
+- `ja-checkpoint-26`, 10 items
+- `ja-unit-26`: `Clothing and daily chores`
+
+Final counts:
+- Lexicon: `526`
+- Units: `26`
+- Checkpoints: `26`
+- Scenes: `53`
+- `ja-unit-26`: exists
+- `ja-checkpoint-26`: exists
+- Duplicate scene IDs: none
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks` x3
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7 passed`, `36 passed`, `0 skipped`
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path content/ja/seed.ts -Tail 35'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content -Path content/ja/seed.ts -Tail 35'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "''^  grammar:" -Context 4,2'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "''^  checkpoints:" -Context 4,2'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit = jaSeedContent.units.find((u) => u.id === 'ja-unit-26');
+const checkpoint = jaSeedContent.checkpoints.find((c) => c.id === 'ja-checkpoint-26');
+const unitLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 539 && entry.order <= 558);
+const scenes = unit ? jaSeedContent.scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+const sceneIds = jaSeedContent.scenes.map((scene) => scene.id);
+const duplicateSceneIds = [...new Set(sceneIds.filter((id, index) => sceneIds.indexOf(id) "'!== index))];
+console.log(JSON.stringify({
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  maxLexOrder: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  unit26Exists: Boolean(unit),
+  checkpoint26Exists: Boolean(checkpoint),
+  duplicateSceneIds,
+  unit26: unit && { order: unit.order, title: unit.title, lexRange: unit.lexRange, grammarRange: unit.grammarRange, sceneIds: unit.sceneIds, checkpointId: unit.checkpointId },
+  checkpoint26: checkpoint && { order: checkpoint.order, unitId: checkpoint.unitId, items: checkpoint.items.length },
+  unit26LexCount: unitLex.length,
+  unit26SceneCount: scenes.length,
+  unit26SceneOrders: scenes.map((scene) => ({ id: scene.id, order: scene.order, lines: scene.lines.length, comprehension: scene.comprehension.length }))
+}, null, 2));
+'"'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const unit = jaSeedContent.units.find((u) => u.id === 'ja-unit-26');
+const checkpoint = jaSeedContent.checkpoints.find((c) => c.id === 'ja-checkpoint-26');
+const unitLex = jaSeedContent.lexicon.filter((entry) => entry.order >= 539 && entry.order <= 558);
+const scenes = unit ? jaSeedContent.scenes.filter((scene) => unit.sceneIds.includes(scene.id)) : [];
+const sceneIds = jaSeedContent.scenes.map((scene) => scene.id);
+const duplicateSceneIds = [...new Set(sceneIds.filter((id, index) => sceneIds.indexOf(id) "'!== index))];
+console.log(JSON.stringify({
+  lexiconCount: jaSeedContent.lexicon.length,
+  unitCount: jaSeedContent.units.length,
+  checkpointCount: jaSeedContent.checkpoints.length,
+  sceneCount: jaSeedContent.scenes.length,
+  maxLexOrder: Math.max(...jaSeedContent.lexicon.map((entry) => entry.order)),
+  unit26Exists: Boolean(unit),
+  checkpoint26Exists: Boolean(checkpoint),
+  duplicateSceneIds,
+  unit26: unit && { order: unit.order, title: unit.title, lexRange: unit.lexRange, grammarRange: unit.grammarRange, sceneIds: unit.sceneIds, checkpointId: unit.checkpointId },
+  checkpoint26: checkpoint && { order: checkpoint.order, unitId: checkpoint.unitId, items: checkpoint.items.length },
+  unit26LexCount: unitLex.length,
+  unit26SceneCount: scenes.length,
+  unit26SceneOrders: scenes.map((scene) => ({ id: scene.id, order: scene.order, lines: scene.lines.length, comprehension: scene.comprehension.length }))
+}, null, 2));
+'"'@ | npx tsx -"
+files: 0
+tokens: in 12941324 / out 105984
+

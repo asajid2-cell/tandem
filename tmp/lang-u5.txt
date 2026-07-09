@@ -1,0 +1,9 @@
+FOCUSED: add Japanese VOCAB Unit 5 (foreground; efficient; ONLY this; resume). content/ja/seed.ts now has 4 units / ~67 words; closed-universe enforced (keep 0 leaks). Reuse existing shapes. Goal: move toward the ~100-word core.
+
+ADD Unit 5 (continue order indices) — theme: people & communication. ~14-16 NEW high-frequency words NOT already present: e.g. 名前 name, 先生 teacher, 母/お母さん mother, 父/お父さん father, 誰 who, 何 (if not present) what, 言う say, 話す speak, 聞く listen/ask, 読む read, 書く write, 分かる understand, 知る know, 言語/日本語 (日本 present; 語?) — pick genuinely useful, correct, NOT duplicates. Include needed particles/verbs. Each: reading, romanization, gloss, pos, audioId, closed-universe example.
+- 1-2 grammar patterns if needed (e.g. 誰 question, 〜が分かる, the topic/question combos) with licenses[].
+- 2 natural SCENES (introductions/asking someone's name/can-you-read) using ONLY cumulative introduced vocab+grammar, with comprehension QuizItems; precompute tokens[] with the tokenizer.
+- ja-checkpoint-5 (unseen-but-decodable) + ja-unit-5. audioIds on everything new.
+
+CORRECTNESS > QUANTITY: natural correct Japanese (esp. politeness for family terms — お母さん vs 母 humble), closed-universe (0 leaks). Use your Claude HELPER (node bin/peer.mjs ask - < tmpfile from this tandem dir) to cross-check naturalness/particles/readings/family-term register/decodability. Do NOT run audio:ja, do NOT deploy, do NOT git commit.
+VERIFY: npm run lint:content 0 leaks, npm test green (0 skipped), npm run build green. Report: counts + cumulative JA words + helper verdict + exact lint/test/build output. Be quick.

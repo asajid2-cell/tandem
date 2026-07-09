@@ -1,0 +1,31 @@
+
+===== PARTNER VERDICT (codex, 525s) =====
+
+Done in [content/ja/seed.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/seed.ts).
+
+`npm run lint:content` exit code: `0`
+
+Confirmed:
+- `ja-unit-77` is last in `units[]`
+- `ja-checkpoint-77` is last in `checkpoints[]`
+- New lexicon count: `1521`
+- Added Unit 77 for signs/public text with 20 new entries, 2 scenes, and checkpoint wiring
+- No vite/tests/audio/deploy/commit run
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$lines = Get-Content src/engine/lint.ts; $lines[292..335]'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '営業'\",\"headword: '定休'\",\"headword: '準備'\",\"headword: '駐車'\",\"headword: '禁止'\",\"headword: '手洗い'\",\"headword: '売る'\",\"headword: '切'\" -Context 0,3"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint'; (async () => { const t = await createJapaneseTokenizer(); for (const s of ['定休日。','定休。','日。','無料。','有料。','休止。','運休。','空車。','改札。','喫煙所。','売り切れ。','売切れ。','売切。','手洗い。','トイレ。','使用中。','使用禁止。','工事中。','出口。']) console.log(s, JSON.stringify(t.tokenize(s))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint'; (async () => { const t = await createJapaneseTokenizer(); for (const s of ['定休日。','定休。','日。','無料。','有料。','休止。','運休。','空車。','改札。','喫煙所。','売り切れ。','売切れ。','売切。','手洗い。','トイレ。','使用中。','使用禁止。','工事中。','出口。']) console.log(s, JSON.stringify(t.tokenize(s))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '日'\",\"headword: '無料'\",\"headword: '有料'\",\"headword: '売り切れ'\",\"headword: 'トイレ'\",\"headword: '定休'\" -Context 0,3"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '日'\",\"headword: '無料'\",\"headword: '有料'\",\"headword: '売り切れ'\",\"headword: 'トイレ'\",\"headword: '定休'\" -Context 0,3"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint'; (async () => { const t = await createJapaneseTokenizer(); for (const s of ['ていきゅうび。','ていきゅう日。']) console.log(s, JSON.stringify(t.tokenize(s))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint'; (async () => { const t = await createJapaneseTokenizer(); for (const s of ['ていきゅうび。','ていきゅう日。']) console.log(s, JSON.stringify(t.tokenize(s))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent } from './content/ja/seed'; const lastUnit = jaSeedContent.units.at(-1); const lastCheckpoint = jaSeedContent.checkpoints.at(-1); console.log(JSON.stringify({ lexicon: jaSeedContent.lexicon.length, lastUnit, lastCheckpoint: lastCheckpoint && { id: lastCheckpoint.id, unitId: lastCheckpoint.unitId, order: lastCheckpoint.order, itemCount: lastCheckpoint.items.length } }, null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "npx tsx -e \"import { jaSeedContent } from './content/ja/seed'; const lastUnit = jaSeedContent.units.at(-1); const lastCheckpoint = jaSeedContent.checkpoints.at(-1); console.log(JSON.stringify({ lexicon: jaSeedContent.lexicon.length, lastUnit, lastCheckpoint: lastCheckpoint && { id: lastCheckpoint.id, unitId: lastCheckpoint.unitId, order: lastCheckpoint.order, itemCount: lastCheckpoint.items.length } }, null, 2));\""
+files: 0
+tokens: in 1299175 / out 17611
+

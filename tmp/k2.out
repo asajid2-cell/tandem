@@ -1,0 +1,26 @@
+
+===== PARTNER VERDICT (codex, 387s) =====
+
+Added 31 new kanji entries, orders `247..277`.
+
+New total: `277` glyph entries.
+
+Skipped duplicates: `事`, `者`, `始`, `終`, `持`, `仕`, `受`, `写`, `主`, `住`, `使`, `君`, `係`, `軽`, `血`.
+
+No build/test/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\kanji.ts -Encoding UTF8 | Select-Object -Last 25"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '君'\",\"glyph: '係'\",\"glyph: '軽'\",\"glyph: '血'\",\"glyph: '決'\",\"glyph: '研'\",\"glyph: '県'\",\"glyph: '庫'\",\"glyph: '湖'\",\"glyph: '向'\",\"glyph: '幸'\",\"glyph: '港'\",\"glyph: '号'\",\"glyph: '根'\",\"glyph: '祭'\",\"glyph: '皿'\",\"glyph: '仕'\",\"glyph: '死'\",\"glyph: '使'\",\"glyph: '始'\",\"glyph: '指'\",\"glyph: '歯'\",\"glyph: '詩'\",\"glyph: '次'\",\"glyph: '事'\",\"glyph: '持'\",\"glyph: '式'\",\"glyph: '実'\",\"glyph: '写'\",\"glyph: '者'\",\"glyph: '主'\",\"glyph: '守'\",\"glyph: '取'\",\"glyph: '酒'\",\"glyph: '受'\",\"glyph: '州'\",\"glyph: '拾'\",\"glyph: '終'\",\"glyph: '習'\",\"glyph: '集'\",\"glyph: '住'\",\"glyph: '重'\",\"glyph: '宿'\",\"glyph: '所'\",\"glyph: '暑'\",\"glyph: '助'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '君'\",\"glyph: '係'\",\"glyph: '軽'\",\"glyph: '血'\",\"glyph: '決'\",\"glyph: '研'\",\"glyph: '県'\",\"glyph: '庫'\",\"glyph: '湖'\",\"glyph: '向'\",\"glyph: '幸'\",\"glyph: '港'\",\"glyph: '号'\",\"glyph: '根'\",\"glyph: '祭'\",\"glyph: '皿'\",\"glyph: '仕'\",\"glyph: '死'\",\"glyph: '使'\",\"glyph: '始'\",\"glyph: '指'\",\"glyph: '歯'\",\"glyph: '詩'\",\"glyph: '次'\",\"glyph: '事'\",\"glyph: '持'\",\"glyph: '式'\",\"glyph: '実'\",\"glyph: '写'\",\"glyph: '者'\",\"glyph: '主'\",\"glyph: '守'\",\"glyph: '取'\",\"glyph: '酒'\",\"glyph: '受'\",\"glyph: '州'\",\"glyph: '拾'\",\"glyph: '終'\",\"glyph: '習'\",\"glyph: '集'\",\"glyph: '住'\",\"glyph: '重'\",\"glyph: '宿'\",\"glyph: '所'\",\"glyph: '暑'\",\"glyph: '助'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\kanji.ts -Encoding UTF8 | Select-Object -Last 25"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"ja-kanji-kimeru\",\"ja-kanji-ken-research\",\"ja-kanji-ken-prefecture\",\"ja-kanji-ko-warehouse\",\"ja-kanji-mizuumi\",\"ja-kanji-mukau\",\"ja-kanji-shiawase\",\"ja-kanji-minato\",\"ja-kanji-gou-number\",\"ja-kanji-ne-root\",\"ja-kanji-matsuri\",\"ja-kanji-sara\",\"ja-kanji-shinu\",\"ja-kanji-yubi\",\"ja-kanji-ha-tooth\",\"ja-kanji-shi-poem\",\"ja-kanji-tsugi\",\"ja-kanji-shiki-style\",\"ja-kanji-jitsu\",\"ja-kanji-mamoru\",\"ja-kanji-toru\",\"ja-kanji-sake-alcohol\",\"ja-kanji-shuu-state\",\"ja-kanji-hirou\",\"ja-kanji-narau\",\"ja-kanji-atsumaru\",\"ja-kanji-omoi\",\"ja-kanji-yado\",\"ja-kanji-tokoro\",\"ja-kanji-atsui\",\"ja-kanji-tasukeru\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\kanji.ts -Pattern \"ja-kanji-kimeru\",\"ja-kanji-ken-research\",\"ja-kanji-ken-prefecture\",\"ja-kanji-ko-warehouse\",\"ja-kanji-mizuumi\",\"ja-kanji-mukau\",\"ja-kanji-shiawase\",\"ja-kanji-minato\",\"ja-kanji-gou-number\",\"ja-kanji-ne-root\",\"ja-kanji-matsuri\",\"ja-kanji-sara\",\"ja-kanji-shinu\",\"ja-kanji-yubi\",\"ja-kanji-ha-tooth\",\"ja-kanji-shi-poem\",\"ja-kanji-tsugi\",\"ja-kanji-shiki-style\",\"ja-kanji-jitsu\",\"ja-kanji-mamoru\",\"ja-kanji-toru\",\"ja-kanji-sake-alcohol\",\"ja-kanji-shuu-state\",\"ja-kanji-hirou\",\"ja-kanji-narau\",\"ja-kanji-atsumaru\",\"ja-kanji-omoi\",\"ja-kanji-yado\",\"ja-kanji-tokoro\",\"ja-kanji-atsui\",\"ja-kanji-tasukeru\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "(Select-String -Path content\\ja\\kanji.ts -Pattern \"glyph: '\" -Encoding UTF8).Count"
+files: 0
+tokens: in 18060295 / out 126335
+

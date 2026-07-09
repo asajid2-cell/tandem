@@ -1,0 +1,34 @@
+
+===== PARTNER VERDICT (codex, 456s) =====
+
+Added 46 kanji entries to [content/ja/kanji.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/kanji.ts:4610), orders `318` through `363`. New `allKanji` count is `363`.
+
+Verification:
+- `npx tsc -b`: rc `0`
+- `npm run lint:content`: rc `0`
+- `npx tsx scan-audio.tmp.mjs`: rc `0`, `AUDIO OK: no conflicts`
+
+Sample entries:
+- `手`: examples `手` / `手紙`, audio `ja-kanji-te`
+- `合`: examples `間に合う` / `試合`, audio `ja-kanji-au2`
+- `通`: examples `通る` / `交通`, audio `ja-kanji-tooru`
+
+I did not run vite, `audio:ja`, deploy, or commit.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff --stat -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"id: 'ja-kanji-te'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/kanji.ts -Pattern \"id: 'ja-kanji-te'\""
+files: 0
+tokens: in 712951 / out 20102
+

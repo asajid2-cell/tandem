@@ -1,0 +1,14 @@
+﻿Final Unit 5 check. Lex 80-95: 名前, 田中, 先生, 母, お母さん, 父, お父さん, 誰, 言う, 話す, 聞く, 読む, 書く, 分かる, 知る, 日本語. Grammar 96-97: names/who questions; language actions + 分かる が + family register note (母/父 own family; お母さん/お父さん someone else's/polite).
+
+Scenes:
+1) A こんにちは。名前は何ですか。 / B 私の名前は田中です。 / A 先生ですか。 / B はい、日本語の先生です。
+2) A 日本語が分かりますか。 / B はい、分かります。 / A 日本語を読みますか。 / B はい、読みます。日本語を書きます。
+
+Checkpoint:
+1 田中先生は日本語を話します。
+2 母は日本語が分かります。
+3 お母さんは何を書きますか。名前を書きます。
+4 父は先生に聞きます。
+5 お父さんは名前を言います。
+
+lint:content passes 0 leaks. Please verdict on naturalness, family register, particles, and decodability. Keep concise.

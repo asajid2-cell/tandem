@@ -1,0 +1,37 @@
+
+===== PARTNER VERDICT (codex, 350s) =====
+
+Implemented kana mechanics content.
+
+Changed:
+- Added `special` to `KanaGroupKind` in [types.ts](z:/328/CMPUT328-A2/codexworks/301/language/src/content/types.ts:41).
+- Added hiragana group `Special marks` with 1 entry: `っ`.
+- Added katakana group `Marks & foreign sounds` with 12 entries: `ッ`, `ー`, `ファ`, `フィ`, `フェ`, `フォ`, `ティ`, `ディ`, `チェ`, `ジェ`, `ウィ`, `ヴ`.
+- Updated hiragana/katakana content tests for new counts.
+- Also fixed an existing Japanese audio/id collision for `根` by renaming it to `ja-ne-root`, required for `scan-audio.tmp.mjs` to pass.
+
+Verification:
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npm test`: rc 0, 37 tests passed
+- `npx tsx scan-audio.tmp.mjs`: rc 0, `AUDIO OK: no conflicts`
+
+No vite, audio generation, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "ja-ne-root|ja-lex-ne-root|ja-ex-ne-root" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/katakana.ts -Pattern "specialRows|Marks & foreign sounds|idSuffix" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/hiragana.ts -Pattern "specialRows|Special marks|idSuffix" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path src/content/types.ts -Pattern "KanaGroupKind" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path src/content/types.ts -Pattern "KanaGroupKind" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "ja-ne-root|ja-lex-ne-root|ja-ex-ne-root" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/katakana.ts -Pattern "specialRows|Marks & foreign sounds|idSuffix" | Select-Object Path,LineNumber,Line'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/hiragana.ts -Pattern "specialRows|Special marks|idSuffix" | Select-Object Path,LineNumber,Line'
+files: 0, 1, 2
+tokens: in 749570 / out 6969
+

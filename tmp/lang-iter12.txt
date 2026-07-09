@@ -1,0 +1,21 @@
+ITERATION 12 — DIRECTION CHANGE from the human (you are the Lead; iter1-11 committed & LIVE: 3 languages scaffolded, JA deepest). The human reviewed the live site and gave specific presentation feedback. This iteration is PRESENTATION/UX only — no new content.
+
+THREE things, all verified in BOTH light and dark mode:
+
+1. ORDERING. The kana/script primer is shown in a scattered order (screenshot shows い え か が く こ ご し ... — not gojūon order). Reorder the Japanese script primer entries into proper gojūon learning order (あ-row, か/が-row, さ-row, た/だ-row, な, は/ば/ぱ, ま, や, ら, わ, ん — only the kana this unit actually uses, but IN that canonical order). Audit the other languages' primers + any other grids so everything renders in a sensible, intentional order (lexicon already has order indices — make sure the UI respects them everywhere).
+
+2. HIDE ALL ENGLISH BY DEFAULT (this is the big one — the human was explicit). The TARGET-LANGUAGE text (Japanese/French/Korean) is ALWAYS visible. EVERYTHING English/romanization is HIDDEN BY DEFAULT and revealed on HOVER (desktop) or TAP (touch), plus one global toggle to reveal all at once. This applies to EVERY surface:
+   - romanization under headwords / kana / words (currently has a toggle — keep, default hidden)
+   - word MEANINGS (already "Tap to reveal" — keep)
+   - ★ EXAMPLE SENTENCE GLOSSES — the human specifically caught that example glosses (e.g. "I; me" under 私) are shown by default. Hide them: reveal on hover/tap like everything else.
+   - scene line glosses (already tap-to-reveal — keep consistent)
+   - any other English visible by default anywhere (primer notes, checkpoint prompts keep their English question text since that's the task, but the answer/translation content must be hidden)
+   Make a single reusable reveal primitive used everywhere so behavior is consistent: hidden → hover (desktop) reveals → tap (touch) reveals → global "Show English/romanization" toggle (persisted) forces all visible. No layout shift on reveal (reserve space). The principle: a learner should READ THE TARGET SCRIPT first; English is always one deliberate action away, never passively shown.
+
+3. DARK MODE. Keep the current light mode (the human likes it). Add a DARK MODE option for the whole app: a theme toggle in the header/settings, persisted to localStorage, applied app-wide (Tailwind dark: variants or CSS vars). Design a dark palette in the SAME calm, literary, reading-first register (not pure black — a warm/neutral dark; keep WCAG AA contrast incl. on JA/KO scripts and the teal accent). Every screen must look intentional in dark mode.
+
+ui-craft IS MANDATORY: run the viewport battery for BOTH themes across the key states (picker, primer, new-word card front + hover-revealed, scene reader + revealed, review, checkpoint) — capture light AND dark. Save to .uicraft-shots/iter12-final and TELL ME THE PATH. Confirm in the screenshots that NO English/romanization is visible by default (only target script) and that hover/toggle reveal works. Fix any breakage.
+
+VERIFY: npm run lint:content 0 leaks (all 3), npm test green (25 passed / 0 SKIPPED — confirm none skip), npm run build green. Don't regress content or audio. Use your Claude HELPER (SIMPLE invocation: prompt to temp file → node bin/peer.mjs ask - < file from tandem dir) to independently review the screenshots for: any English leaking by default, reveal-interaction clunkiness, and dark-mode slop/contrast issues.
+
+DO NOT git commit (Watcher commits + redeploys). REPORT: the reveal primitive design + everywhere it's applied, the ordering fix, the dark-mode approach, battery results + path (light+dark), helper verdict, exact lint/test/build output (confirm 0 skipped), and suggested next step for iter13 (which will be: GO DEEP ON JAPANESE — full hiragana + katakana courses, then kanji + deeper vocab + grammar).

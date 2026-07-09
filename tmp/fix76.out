@@ -1,0 +1,75 @@
+
+===== PARTNER VERDICT (codex, 234s) =====
+
+Fixed the build gate.
+
+Changes:
+- Added `と` as `ja-to-and` in `content/ja/seed.ts`
+  - `order: 2.5`
+  - `pos: 'particle'`
+  - `audioId: 'ja-lex-to-and'`
+  - inside Unit 1 lexRange `[1, 17]`
+  - audioId count verified: `1`
+- Set `build.emptyOutDir: false` in `vite.config.ts` because Vite was failing on Windows while clearing generated `dist/audio`.
+
+Verification:
+- `npm run build`: exit code `0`
+  - lint lines: `content lint passed: 0 leaks` printed 3 times
+  - no remaining lint violations
+- `npm test`: 36 passed, 0 skipped
+
+No audio generation, deploy, or commit performed.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Force dist -Recurse | Select-Object FullName,Mode,Length | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git ls-files | Select-String -Pattern "audio|vite|dist|public"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-Content vite.config.* -Encoding UTF8'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git ls-files | Select-String -Pattern "audio|vite|dist|public"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Force public -Recurse | Select-Object FullName,Mode,Length | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Get-ChildItem -Force dist -Recurse | Select-Object FullName,Mode,Length | Select-Object -First 80'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run build'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const entry = jaSeedContent.lexicon.find((item) => item.id === 'ja-to-and');
+const allAudio = collectAudio(jaSeedContent);
+console.log(JSON.stringify({
+  toEntry: entry && { order: entry.order, headword: entry.headword, pos: entry.pos, audioId: entry.audioId },
+  unit1LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-1')?.lexRange,
+  toKnownInUnit1: Boolean(entry && entry.order >= 1 && entry.order <= 17),
+  toAudioIdCount: allAudio.filter((id) => id === 'ja-lex-to-and').length
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const entry = jaSeedContent.lexicon.find((item) => item.id === 'ja-to-and');
+const allAudio = collectAudio(jaSeedContent);
+console.log(JSON.stringify({
+  toEntry: entry && { order: entry.order, headword: entry.headword, pos: entry.pos, audioId: entry.audioId },
+  unit1LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-1')?.lexRange,
+  toKnownInUnit1: Boolean(entry && entry.order >= 1 && entry.order <= 17),
+  toAudioIdCount: allAudio.filter((id) => id === 'ja-lex-to-and').length
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+files: 0
+tokens: in 16973312 / out 112072
+

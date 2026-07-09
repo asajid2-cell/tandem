@@ -1,0 +1,3 @@
+FOCUSED: Japanese VOCAB Unit 38 ONLY (foreground; FAST; resume; N4). 37 units / 746 words; closed-universe (0 leaks). STRUCTURE: LexEntry→lexicon[], Scene→scenes[], Checkpoint→checkpoints[], Unit→units[]. Wire ja-unit-38 + ja-checkpoint-38 LAST. Valid TS.
+ADD Unit 38 (~18-22) — sports & leisure: スポーツ(have?)/野球/サッカー/テニス/水泳/試合/選手/チーム/practice練習/勝つ/負ける/応援/趣味(have?)/運動/ジム/散歩. Pick correct NON-duplicate. Each LexEntry: headword, reading, romanization, gloss, pos, audioId, ONE closed-universe example. 2 SCENES (in scenes[]) using only cumulative vocab+grammar, QuizItems, tokens[]. audioIds on all. Be FAST. No audio:ja/deploy/commit.
+VERIFY: npm run lint:content "0 leaks"; npm test 36+/0 skipped. Report counts + ja-unit-38/checkpoint-38 + lint/test.

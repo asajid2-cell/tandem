@@ -1,0 +1,17 @@
+FEATURE: Reading-hints PART B — sentence furigana/kana via kuromoji. Foreground; resume. Working dir = language repo. Part A is done: readingHints ('romaji'|'kana'|'furigana'|'off') preference + header selector + a ruby renderer apply to WORD/KANJI cards. Now extend hints to SENTENCES.
+
+PROBLEM: scene lines, reading-passage lines, and grammar example sentences have no per-token kana, so kana/furigana modes can't render on them. Generate that data with kuromoji (already a dependency, used in src/engine/lint.ts) at build time.
+
+1) GENERATOR: add scripts/gen-readings.mjs + npm script "readings:ja": "tsx scripts/gen-readings.mjs". It loads jaSeedContent and, for EVERY Japanese sentence surface keyed by its UNIQUE audioId — scene lines (scenes[].lines[].audioId/text), reading lines (readings[].lines[].audioId/text), AND grammar example sentences (grammar[].examples[].audioId/text) — tokenizes with kuromoji and produces furigana segments: an array of { text: string, reading?: string } where `reading` is the HIRAGANA reading ONLY for segments that contain kanji (kana-only/punctuation segments have no reading). Convert kuromoji katakana readings to hiragana. QUALITY: if a token exactly equals a lexicon headword that has a `reading`, PREFER the lexicon's authored reading over kuromoji (authoritative); else use kuromoji. Output a typed, COMMITTED module content/ja/readings.generated.ts exporting `export const jaSentenceReadings: Record<string, { text: string; reading?: string }[]> = {...}` (key = audioId). Keep it deterministic (stable ordering) so re-runs don't churn.
+
+2) APP WIRING: import jaSentenceReadings. Extend the Part A ruby/ReadingHint renderer (or add a SentenceText component) to render a sentence by audioId per readingHints mode:
+   - 'furigana': render each segment; kanji segments as <ruby>{text}<rt>{reading}</rt></ruby>, others plain.
+   - 'kana': render the kana reading for kanji segments (plain hiragana) and kana segments as-is → a full-kana sentence.
+   - 'off': plain target sentence text.
+   - 'romaji': sentences have no per-sentence romaji → render plain target text (acceptable).
+   If an audioId is missing from the map, fall back to plain text (never crash).
+   Apply to: SceneReader scene lines, PassageReader reading lines, the grammar example sentence in NewWordFlow's grammar card AND GrammarCourseView examples. English MEANING gloss stays on showGuides, unchanged.
+
+3) Run `npm run readings:ja` and COMMIT content/ja/readings.generated.ts. Confirm it has an entry for every sentence audioId (scenes+readings+grammar examples).
+
+VERIFY (iterate to green, EXIT CODES): `npm run readings:ja` succeeds + file generated; `npx tsc -b` exit 0; `npm run lint:content` exit 0; `npm test` all pass. Do NOT run vite build/preview, audio, deploy, or git commit (I will commit). Report: tsc rc, lint rc, test count, # of audioIds in the generated map, and PASTE 3 sample sentence entries (e.g. a scene line, a reading line, a grammar example) so I can eyeball the furigana readings.

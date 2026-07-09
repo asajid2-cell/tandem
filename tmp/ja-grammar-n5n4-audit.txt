@@ -1,0 +1,1253 @@
+Audit these Japanese beginner grammar additions for correctness. Check conjugations, naturalness, closed-universe decodability, kuromoji token arrays, and whether licenses match the actual surface/auxiliary tokens. Be strict: list required fixes or say ship. Context: content linter already passes 0 leaks. Existing vocab is orders <=115 plus the new lex entry below; existing grammar is <=117.
+
+NEW LEX:
+[
+  {
+    "id": "ja-dekiru",
+    "lang": "ja",
+    "order": 118,
+    "headword": "できる",
+    "reading": "できる",
+    "romanization": "dekiru",
+    "gloss": "can do; be able",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "ichidan",
+      "potential"
+    ],
+    "audioId": "ja-lex-dekiru",
+    "examples": [
+      {
+        "text": "できる。",
+        "gloss": "can do; be able.",
+        "tokens": [
+          "できる"
+        ],
+        "audioId": "ja-ex-dekiru"
+      }
+    ]
+  }
+]
+
+NEW GRAMMAR PATTERNS:
+[
+  {
+    "id": "ja-plain-nonpast-past",
+    "lang": "ja",
+    "order": 119,
+    "title": "Plain non-past and plain past",
+    "explanation": "The dictionary form is the plain non-past form. Plain past changes the verb ending: 食べる becomes 食べた, 飲む becomes 飲んだ, and 行く becomes 行った.",
+    "formula": "verb dictionary form / verb plain past + た or だ",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Plain past verb endings.",
+        "tokens": [
+          "~た",
+          "~だ"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "た",
+          "だ"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "ご飯を食べる。",
+        "gloss": "I eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる"
+        ],
+        "audioId": "ja-ex-gohan-o-taberu-plain"
+      },
+      {
+        "text": "水を飲んだ。",
+        "gloss": "I drank water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "~だ"
+        ],
+        "audioId": "ja-ex-mizu-o-nonda"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-gohan-o-tabeta",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べた mean?",
+        "answer": "I ate a meal.",
+        "distractors": [
+          "I eat a meal.",
+          "I did not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~た"
+        ]
+      },
+      {
+        "id": "ja-drill-nihon-ni-itta",
+        "kind": "comprehend",
+        "prompt": "What does 日本に行った mean?",
+        "answer": "I went to Japan.",
+        "distractors": [
+          "I will go to Japan.",
+          "I did not go to Japan."
+        ],
+        "sourceTokens": [
+          "日本",
+          "に",
+          "行く",
+          "~た"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-plain-negative-nai",
+    "lang": "ja",
+    "order": 120,
+    "title": "Plain negative with ない and なかった",
+    "explanation": "Plain negative uses ない. Plain negative past uses なかった after the negative stem.",
+    "formula": "verb negative stem + ない / verb negative stem + なかった",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Plain negative and negative-past verb pieces.",
+        "tokens": [
+          "~ない",
+          "~なかっ"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "ない",
+          "なかった"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "ご飯を食べない。",
+        "gloss": "I do not eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~ない"
+        ],
+        "audioId": "ja-ex-gohan-o-tabenai"
+      },
+      {
+        "text": "水を飲まなかった。",
+        "gloss": "I did not drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "~なかっ",
+          "~た"
+        ],
+        "audioId": "ja-ex-mizu-o-nomanakatta"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-mizu-o-nomanai",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲まない mean?",
+        "answer": "I do not drink water.",
+        "distractors": [
+          "I drank water.",
+          "Please drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "~ない"
+        ]
+      },
+      {
+        "id": "ja-drill-gohan-o-tabenakatta",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べなかった mean?",
+        "answer": "I did not eat a meal.",
+        "distractors": [
+          "I ate a meal.",
+          "I do not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~なかっ",
+          "~た"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-polite-negative-masen",
+    "lang": "ja",
+    "order": 121,
+    "title": "Polite negative with ません",
+    "explanation": "ません is the polite negative of ます. ませんでした makes the polite negative past.",
+    "formula": "verb stem + ません / verb stem + ませんでした",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Polite negative and polite negative-past pieces.",
+        "tokens": [
+          "~ませ",
+          "~ん",
+          "~でし"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "ません",
+          "ませんでした"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "水を飲みません。",
+        "gloss": "I do not drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "~ませ",
+          "~ん"
+        ],
+        "audioId": "ja-ex-mizu-o-nomimasen"
+      },
+      {
+        "text": "ご飯を食べませんでした。",
+        "gloss": "I did not eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~ませ",
+          "~ん",
+          "~でし",
+          "~た"
+        ],
+        "audioId": "ja-ex-gohan-o-tabemasendeshita"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-mizu-o-nomimasen",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲みません mean?",
+        "answer": "I do not drink water.",
+        "distractors": [
+          "I drank water.",
+          "I want to drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "~ませ",
+          "~ん"
+        ]
+      },
+      {
+        "id": "ja-drill-gohan-o-tabemasendeshita",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べませんでした mean?",
+        "answer": "I did not eat a meal.",
+        "distractors": [
+          "I ate a meal.",
+          "I will not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "~ませ",
+          "~ん",
+          "~でし",
+          "~た"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-te-form-connect",
+    "lang": "ja",
+    "order": 122,
+    "title": "て-form for connecting actions",
+    "explanation": "The て-form connects actions in order. 食べる becomes 食べて, 飲む becomes 飲んで, and 行く becomes 行って.",
+    "formula": "verb te-form + comma + next clause",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Te-form connector pieces.",
+        "tokens": [
+          "て",
+          "で"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "て",
+          "で"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "水を飲んで、ご飯を食べます。",
+        "gloss": "I drink water, then eat a meal.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "ご飯",
+          "を",
+          "食べる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-mizu-o-nonde-gohan-o-tabemasu"
+      },
+      {
+        "text": "ご飯を食べて、水を飲みます。",
+        "gloss": "I eat a meal, then drink water.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "水",
+          "を",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-ex-gohan-o-tabete-mizu-o-nomimasu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-mizu-o-nonde-gohan",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲んで、ご飯を食べます mean?",
+        "answer": "I drink water, then eat a meal.",
+        "distractors": [
+          "I did not drink water.",
+          "Please eat a meal."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "ご飯",
+          "を",
+          "食べる",
+          "~ます"
+        ]
+      },
+      {
+        "id": "ja-drill-gohan-o-tabete-mizu",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べて、水を飲みます mean?",
+        "answer": "I eat a meal, then drink water.",
+        "distractors": [
+          "I want to eat bread.",
+          "I drank water."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "水",
+          "を",
+          "飲む",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-te-kudasai-request",
+    "lang": "ja",
+    "order": 123,
+    "title": "Requests with てください",
+    "explanation": "Add ください after the て-form to make a polite request.",
+    "formula": "verb te-form + ください",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Fixed polite request helper ください.",
+        "tokens": [
+          "くださる"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "irregular"
+        ],
+        "surfaces": [
+          "ください"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "水を飲んでください。",
+        "gloss": "Please drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "くださる"
+        ],
+        "audioId": "ja-ex-mizu-o-nonde-kudasai"
+      },
+      {
+        "text": "ご飯を食べてください。",
+        "gloss": "Please eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "くださる"
+        ],
+        "audioId": "ja-ex-gohan-o-tabete-kudasai"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-mizu-o-nonde-kudasai",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲んでください mean?",
+        "answer": "Please drink water.",
+        "distractors": [
+          "I drank water.",
+          "Do not drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "くださる"
+        ]
+      },
+      {
+        "id": "ja-drill-gohan-o-tabete-kudasai",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べてください mean?",
+        "answer": "Please eat a meal.",
+        "distractors": [
+          "I want to eat a meal.",
+          "I did not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "くださる"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-teiru-progressive",
+    "lang": "ja",
+    "order": 124,
+    "title": "Ongoing actions with ている",
+    "explanation": "ている shows an action in progress or a continuing state. In polite speech it often appears as ています.",
+    "formula": "verb te-form + いる / います",
+    "licenses": [],
+    "examples": [
+      {
+        "text": "日本語を読んでいます。",
+        "gloss": "I am reading Japanese.",
+        "tokens": [
+          "日本語",
+          "を",
+          "読む",
+          "で",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-nihongo-o-yondeimasu"
+      },
+      {
+        "text": "先生を待っています。",
+        "gloss": "I am waiting for the teacher.",
+        "tokens": [
+          "先生",
+          "を",
+          "待つ",
+          "て",
+          "いる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-sensei-o-matteimasu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-nihongo-o-yondeimasu",
+        "kind": "comprehend",
+        "prompt": "What does 日本語を読んでいます mean?",
+        "answer": "I am reading Japanese.",
+        "distractors": [
+          "I will write Japanese.",
+          "Please read Japanese."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "を",
+          "読む",
+          "で",
+          "いる",
+          "~ます"
+        ]
+      },
+      {
+        "id": "ja-drill-sensei-o-matteimasu",
+        "kind": "comprehend",
+        "prompt": "What does 先生を待っています mean?",
+        "answer": "I am waiting for the teacher.",
+        "distractors": [
+          "The teacher is waiting.",
+          "I waited for the teacher."
+        ],
+        "sourceTokens": [
+          "先生",
+          "を",
+          "待つ",
+          "て",
+          "いる",
+          "~ます"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-dekiru-potential",
+    "lang": "ja",
+    "order": 125,
+    "title": "Ability with できます",
+    "explanation": "できる means that something can be done. The thing you can do is often marked with が.",
+    "formula": "noun + が + できる / できます",
+    "licenses": [],
+    "examples": [
+      {
+        "text": "仕事ができます。",
+        "gloss": "I can do the work.",
+        "tokens": [
+          "仕事",
+          "が",
+          "できる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-shigoto-ga-dekimasu"
+      },
+      {
+        "text": "日本語ができますか。",
+        "gloss": "Can you use Japanese?",
+        "tokens": [
+          "日本語",
+          "が",
+          "できる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-ex-nihongo-ga-dekimasu-ka"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-shigoto-ga-dekimasu",
+        "kind": "comprehend",
+        "prompt": "What does 仕事ができます mean?",
+        "answer": "I can do the work.",
+        "distractors": [
+          "I will rest from work.",
+          "The work is new."
+        ],
+        "sourceTokens": [
+          "仕事",
+          "が",
+          "できる",
+          "~ます"
+        ]
+      },
+      {
+        "id": "ja-drill-nihongo-ga-dekimasu-ka",
+        "kind": "comprehend",
+        "prompt": "What does 日本語ができますか ask?",
+        "answer": "Whether you can use Japanese.",
+        "distractors": [
+          "Whether you read Japanese now.",
+          "Whether Japanese is new."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "が",
+          "できる",
+          "~ます",
+          "か"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-mashou-volitional",
+    "lang": "ja",
+    "order": 126,
+    "title": "Let's with ましょう",
+    "explanation": "ましょう politely suggests doing something together or says \"let's\" do an action.",
+    "formula": "verb stem + ましょう",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Polite volitional ending.",
+        "tokens": [
+          "~ましょ",
+          "~う"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "ましょう"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "日本語を読みましょう。",
+        "gloss": "Let's read Japanese.",
+        "tokens": [
+          "日本語",
+          "を",
+          "読む",
+          "~ましょ",
+          "~う"
+        ],
+        "audioId": "ja-ex-nihongo-o-yomimashou"
+      },
+      {
+        "text": "水を飲みましょう。",
+        "gloss": "Let's drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "~ましょ",
+          "~う"
+        ],
+        "audioId": "ja-ex-mizu-o-nomimashou"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-nihongo-o-yomimashou",
+        "kind": "comprehend",
+        "prompt": "What does 日本語を読みましょう mean?",
+        "answer": "Let's read Japanese.",
+        "distractors": [
+          "Please read Japanese.",
+          "I read Japanese."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "を",
+          "読む",
+          "~ましょ",
+          "~う"
+        ]
+      },
+      {
+        "id": "ja-drill-mizu-o-nomimashou",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲みましょう mean?",
+        "answer": "Let's drink water.",
+        "distractors": [
+          "Do not drink water.",
+          "I drank water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "~ましょ",
+          "~う"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-temo-ii-permission",
+    "lang": "ja",
+    "order": 127,
+    "title": "Permission with てもいい",
+    "explanation": "てもいい says that doing an action is okay or permitted.",
+    "formula": "verb te-form + も + いい + です",
+    "licenses": [],
+    "examples": [
+      {
+        "text": "水を飲んでもいいです。",
+        "gloss": "It is okay to drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "も",
+          "いい",
+          "~です"
+        ],
+        "audioId": "ja-ex-mizu-o-nondemo-ii-desu"
+      },
+      {
+        "text": "ご飯を食べてもいいです。",
+        "gloss": "It is okay to eat a meal.",
+        "tokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "も",
+          "いい",
+          "~です"
+        ],
+        "audioId": "ja-ex-gohan-o-tabetemo-ii-desu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-mizu-o-nondemo-ii",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲んでもいいです mean?",
+        "answer": "It is okay to drink water.",
+        "distractors": [
+          "Do not drink water.",
+          "Please drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "も",
+          "いい",
+          "~です"
+        ]
+      },
+      {
+        "id": "ja-drill-gohan-o-tabetemo-ii",
+        "kind": "comprehend",
+        "prompt": "What does ご飯を食べてもいいです mean?",
+        "answer": "It is okay to eat a meal.",
+        "distractors": [
+          "I want to eat a meal.",
+          "I did not eat a meal."
+        ],
+        "sourceTokens": [
+          "ご飯",
+          "を",
+          "食べる",
+          "て",
+          "も",
+          "いい",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-tewa-ikenai-prohibition",
+    "lang": "ja",
+    "order": 128,
+    "title": "Prohibition with てはいけない",
+    "explanation": "てはいけない says that an action must not be done.",
+    "formula": "verb te-form + は + いけない",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Fixed prohibition helper いけない.",
+        "tokens": [
+          "いける"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan"
+        ],
+        "surfaces": [
+          "いけない"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "行ってはいけない。",
+        "gloss": "You must not go.",
+        "tokens": [
+          "行く",
+          "て",
+          "は",
+          "いける",
+          "~ない"
+        ],
+        "audioId": "ja-ex-itte-wa-ikenai"
+      },
+      {
+        "text": "水を飲んではいけない。",
+        "gloss": "You must not drink water.",
+        "tokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "は",
+          "いける",
+          "~ない"
+        ],
+        "audioId": "ja-ex-mizu-o-nonde-wa-ikenai"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-itte-wa-ikenai",
+        "kind": "comprehend",
+        "prompt": "What does 行ってはいけない mean?",
+        "answer": "You must not go.",
+        "distractors": [
+          "Please go.",
+          "You can go."
+        ],
+        "sourceTokens": [
+          "行く",
+          "て",
+          "は",
+          "いける",
+          "~ない"
+        ]
+      },
+      {
+        "id": "ja-drill-mizu-o-nonde-wa-ikenai",
+        "kind": "comprehend",
+        "prompt": "What does 水を飲んではいけない mean?",
+        "answer": "You must not drink water.",
+        "distractors": [
+          "It is okay to drink water.",
+          "Please drink water."
+        ],
+        "sourceTokens": [
+          "水",
+          "を",
+          "飲む",
+          "で",
+          "は",
+          "いける",
+          "~ない"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-nakereba-naranai-must",
+    "lang": "ja",
+    "order": 129,
+    "title": "Must with なければならない",
+    "explanation": "なければならない says that an action has to be done. The polite form is なければなりません.",
+    "formula": "verb negative stem + なければならない / なければなりません",
+    "licenses": [
+      {
+        "kind": "inflection",
+        "description": "Must-do expression pieces.",
+        "tokens": [
+          "~なけれ",
+          "ば",
+          "なる"
+        ],
+        "appliesToPos": [
+          "verb"
+        ],
+        "lemmaClasses": [
+          "ichidan",
+          "godan",
+          "irregular"
+        ],
+        "surfaces": [
+          "なければ",
+          "ならない",
+          "なりません"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "仕事をしなければならない。",
+        "gloss": "I must do work.",
+        "tokens": [
+          "仕事",
+          "を",
+          "する",
+          "~なけれ",
+          "ば",
+          "なる",
+          "~ない"
+        ],
+        "audioId": "ja-ex-shigoto-o-shinakereba-naranai"
+      },
+      {
+        "text": "日本語を読まなければなりません。",
+        "gloss": "I must read Japanese.",
+        "tokens": [
+          "日本語",
+          "を",
+          "読む",
+          "~なけれ",
+          "ば",
+          "なる",
+          "~ませ",
+          "~ん"
+        ],
+        "audioId": "ja-ex-nihongo-o-yomanakereba-narimasen"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-shigoto-o-shinakereba",
+        "kind": "comprehend",
+        "prompt": "What does 仕事をしなければならない mean?",
+        "answer": "I must do work.",
+        "distractors": [
+          "I must not do work.",
+          "I can do work."
+        ],
+        "sourceTokens": [
+          "仕事",
+          "を",
+          "する",
+          "~なけれ",
+          "ば",
+          "なる",
+          "~ない"
+        ]
+      },
+      {
+        "id": "ja-drill-nihongo-o-yomanakereba",
+        "kind": "comprehend",
+        "prompt": "What does 日本語を読まなければなりません mean?",
+        "answer": "I must read Japanese.",
+        "distractors": [
+          "I am reading Japanese.",
+          "Please read Japanese."
+        ],
+        "sourceTokens": [
+          "日本語",
+          "を",
+          "読む",
+          "~なけれ",
+          "ば",
+          "なる",
+          "~ませ",
+          "~ん"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-yori-hou-comparison",
+    "lang": "ja",
+    "order": 130,
+    "title": "Comparison with より and のほうが",
+    "explanation": "より marks the thing being compared against. のほうが marks the side that has more of the quality.",
+    "formula": "A + より + B + の + ほう + が + adjective / 好き + です",
+    "licenses": [
+      {
+        "kind": "surface-token",
+        "description": "Comparison markers.",
+        "tokens": [
+          "より",
+          "ほう"
+        ],
+        "surfaces": [
+          "より",
+          "ほう"
+        ]
+      }
+    ],
+    "examples": [
+      {
+        "text": "パンよりご飯のほうが好きです。",
+        "gloss": "I like rice/meals more than bread.",
+        "tokens": [
+          "パン",
+          "より",
+          "ご飯",
+          "の",
+          "ほう",
+          "が",
+          "好き",
+          "~です"
+        ],
+        "audioId": "ja-ex-pan-yori-gohan-no-hou-ga-suki"
+      },
+      {
+        "text": "夜より朝のほうが好きです。",
+        "gloss": "I like mornings more than nights.",
+        "tokens": [
+          "夜",
+          "より",
+          "朝",
+          "の",
+          "ほう",
+          "が",
+          "好き",
+          "~です"
+        ],
+        "audioId": "ja-ex-yoru-yori-asa-no-hou-ga-suki"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-pan-yori-gohan",
+        "kind": "comprehend",
+        "prompt": "What does パンよりご飯のほうが好きです mean?",
+        "answer": "I like rice/meals more than bread.",
+        "distractors": [
+          "I like bread more than rice/meals.",
+          "I do not like rice/meals."
+        ],
+        "sourceTokens": [
+          "パン",
+          "より",
+          "ご飯",
+          "の",
+          "ほう",
+          "が",
+          "好き",
+          "~です"
+        ]
+      },
+      {
+        "id": "ja-drill-yoru-yori-asa",
+        "kind": "comprehend",
+        "prompt": "What does 夜より朝のほうが好きです mean?",
+        "answer": "I like mornings more than nights.",
+        "distractors": [
+          "I like nights more than mornings.",
+          "I wake up at night."
+        ],
+        "sourceTokens": [
+          "夜",
+          "より",
+          "朝",
+          "の",
+          "ほう",
+          "が",
+          "好き",
+          "~です"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-kara-reason",
+    "lang": "ja",
+    "order": 131,
+    "title": "Reasons with から",
+    "explanation": "から after a clause gives a reason, like \"because\" or \"so\" in English.",
+    "formula": "reason clause + から + result clause",
+    "licenses": [],
+    "examples": [
+      {
+        "text": "おいしいですから、食べます。",
+        "gloss": "Because it is delicious, I will eat it.",
+        "tokens": [
+          "おいしい",
+          "~です",
+          "から",
+          "食べる",
+          "~ます"
+        ],
+        "audioId": "ja-ex-oishii-desu-kara-tabemasu"
+      },
+      {
+        "text": "高いですから、買いません。",
+        "gloss": "Because it is expensive, I will not buy it.",
+        "tokens": [
+          "高い",
+          "~です",
+          "から",
+          "買う",
+          "~ませ",
+          "~ん"
+        ],
+        "audioId": "ja-ex-takai-desu-kara-kaimasen"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-oishii-kara-tabemasu",
+        "kind": "comprehend",
+        "prompt": "What does おいしいですから、食べます mean?",
+        "answer": "Because it is delicious, I will eat it.",
+        "distractors": [
+          "It is delicious but expensive.",
+          "Please eat it."
+        ],
+        "sourceTokens": [
+          "おいしい",
+          "~です",
+          "から",
+          "食べる",
+          "~ます"
+        ]
+      },
+      {
+        "id": "ja-drill-takai-kara-kaimasen",
+        "kind": "comprehend",
+        "prompt": "What does 高いですから、買いません mean?",
+        "answer": "Because it is expensive, I will not buy it.",
+        "distractors": [
+          "Because it is cheap, I will buy it.",
+          "It is expensive but delicious."
+        ],
+        "sourceTokens": [
+          "高い",
+          "~です",
+          "から",
+          "買う",
+          "~ませ",
+          "~ん"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ja-contrast-ga",
+    "lang": "ja",
+    "order": 132,
+    "title": "Soft contrast with が",
+    "explanation": "が after a clause can soften a contrast, like \"but\" in English.",
+    "formula": "clause + が + contrasting clause",
+    "licenses": [],
+    "examples": [
+      {
+        "text": "おいしいですが、高いです。",
+        "gloss": "It is delicious, but it is expensive.",
+        "tokens": [
+          "おいしい",
+          "~です",
+          "が",
+          "高い",
+          "~です"
+        ],
+        "audioId": "ja-ex-oishii-desu-ga-takai-desu"
+      },
+      {
+        "text": "食べたいですが、高いです。",
+        "gloss": "I want to eat it, but it is expensive.",
+        "tokens": [
+          "食べる",
+          "~たい",
+          "~です",
+          "が",
+          "高い",
+          "~です"
+        ],
+        "audioId": "ja-ex-tabetai-desu-ga-takai-desu"
+      }
+    ],
+    "drills": [
+      {
+        "id": "ja-drill-oishii-ga-takai",
+        "kind": "comprehend",
+        "prompt": "What does おいしいですが、高いです mean?",
+        "answer": "It is delicious, but expensive.",
+        "distractors": [
+          "It is delicious because it is expensive.",
+          "It is cheap and delicious."
+        ],
+        "sourceTokens": [
+          "おいしい",
+          "~です",
+          "が",
+          "高い",
+          "~です"
+        ]
+      },
+      {
+        "id": "ja-drill-tabetai-ga-takai",
+        "kind": "comprehend",
+        "prompt": "What does 食べたいですが、高いです mean?",
+        "answer": "I want to eat it, but it is expensive.",
+        "distractors": [
+          "I must eat it because it is cheap.",
+          "I do not want to eat it."
+        ],
+        "sourceTokens": [
+          "食べる",
+          "~たい",
+          "~です",
+          "が",
+          "高い",
+          "~です"
+        ]
+      }
+    ]
+  }
+]

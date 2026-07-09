@@ -1,0 +1,20 @@
+NEW WORKSTREAM — give Foothold a small BACKEND so it can do INLINE hl-auth login + per-account API-key storage (later an AI feature). You are the Lead; foreground-supervised; backend code only this chunk (no frontend UI, no deploy yet). Working dir z:\328\CMPUT328-A2\codexworks\301\language.
+
+REFERENCE (look at how it's done): the sibling app z:\328\CMPUT328-A2\codexworks\301\alarmonizer integrates hl-auth + runs as a container — read its server, Dockerfile, docker-compose, and how it uses the canonical requireAccess + AUTH_* env. MIRROR that pattern (env names, cookie name hl_session, the localhost internal-verify approach). Foothold must remain SELF-CONTAINED at runtime (no external paid APIs in this chunk).
+
+hl-auth facts (confirmed): backend at http://127.0.0.1:4200; localhost-only oracle GET/POST `/internal/verify?token=<hl_session>&page=<id>` (needs header/x-internal-key = AUTH_INTERNAL_KEY) → JSON {authenticated, allowed, user:{userId,username,...}}. Public JSON (same-origin) endpoints the FRONTEND will use later: POST /auth/api/login, GET /auth/api/me, POST /auth/api/logout (cookie-based; do NOT proxy these — the SPA calls them directly same-origin).
+
+BUILD THIS:
+1. A Node/Express backend under server/ (server/index.js + modules) that:
+   - serves the built SPA from dist/ (static assets + SPA fallback to index.html for non-/api routes), respecting the /language base path.
+   - GET /api/me → reads the hl_session cookie, calls AUTH_INTERNAL_URL/internal/verify (with AUTH_INTERNAL_KEY) → returns {authenticated:boolean, user?:{userId,username}}. Fail-closed on auth unreachable.
+   - GET /api/keys → requires a valid session (verify via oracle); returns the CURRENT user's stored provider keys MASKED (e.g. last4 + provider + whether set), never the raw secret.
+   - PUT /api/keys → requires valid session; body {provider, apiKey, baseUrl?, model?}; stores per-user in SQLite (better-sqlite3) keyed by userId; validates inputs; DELETE to clear.
+   - All /api/* gated routes fail-closed (no session → 401 JSON).
+   - Health: GET /api/health → {ok:true}.
+   - Config via env: PORT (default 4310), AUTH_INTERNAL_URL (default http://127.0.0.1:4200), AUTH_INTERNAL_KEY, AUTH_COOKIE_NAME (default hl_session), DB_PATH (sqlite file under a data dir).
+2. Dockerfile + docker-compose.yml mirroring alarmonizer: build the vite app + run the server; expose the chosen port on 127.0.0.1; volume for the sqlite DB; AUTH_* env; bind-mount the canonical /home/harmonizer/hl-auth/integration/requireAccess.js read-only IF you use it (otherwise the direct internal-verify call is fine — match alarmonizer).
+3. package.json: add express + better-sqlite3 + cookie-parser; add scripts: "server" (run the backend) and keep build/test/lint. Keep dev workflow working.
+4. Keep the existing content-linter, kana/kanji courses, tests intact.
+
+DO NOT deploy, DO NOT git commit, DO NOT touch nginx. VERIFY locally: npm run build green; the server starts and serves dist + GET /api/health ok + GET /api/me returns {authenticated:false} with no cookie + /api/keys returns 401 with no session; npm run lint:content 0 leaks; npm test green (0 skipped). Report: files added, the API surface, the container/compose + env, how it mirrors alarmonizer, and confirm the local verifications. Keep it tight.

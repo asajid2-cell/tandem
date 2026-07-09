@@ -1,0 +1,38 @@
+
+===== PARTNER VERDICT (codex, 218s) =====
+
+Implemented Japanese VOCAB Unit 51 in [seed.ts](Z:\328\CMPUT328-A2\codexworks\301\language\content\ja\seed.ts).
+
+Final counts:
+- Lexicon: `1026`
+- Scenes: `103`
+- Checkpoints: `51`
+- Units: `51`
+- Max lex order: `1058`
+- Max scene order: `103`
+- `ja-unit-51`: exists, lexRange `[1039, 1058]`
+- `ja-checkpoint-51`: exists, `10` items
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test -- --minWorkers=1 --maxWorkers=1`: `7` files passed, `36` tests passed, `0` skipped
+
+No `audio:ja`, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; Select-String -Path 'content/ja/seed.ts' -Pattern \"headword: '(留学|受験|単位|学期|学部|大学院|論文|実験|調査|暗記|筆記|校長|教室|教員|教授|生物|化学|物理|文学|教育|資料|説明|図書館|練習)'\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); for (const line of ['留学。','受験。','単位。','学期。','学部。','大学院。','論文。','実験。','調査。','暗記。','筆記。','校長。','教室。','教員。','教授。','生物。','化学。','物理。','文学。','教育。','資料。','説明。','図書館。','練習。']) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['講義に出席しますか。','はい。発表もあります。','欠席しますか。','いいえ。質問に答えます。','予習しますか。','はい。復習もします。','受験は大切ですか。','合格します。','単位があります。','学期は長いです。','学部の教員です。','大学院の教授に聞きます。','論文を書きます。','実験します。','調査します。','暗記します。','筆記します。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { createJapaneseTokenizer } from './src/engine/lint.ts'; (async()=>{ const t=await createJapaneseTokenizer(); const lines=['講義に出席しますか。','はい。発表もあります。','欠席しますか。','いいえ。質問に答えます。','予習しますか。','はい。復習もします。','受験は大切ですか。','合格します。','単位があります。','学期は長いです。','学部の教員です。','大学院の教授に聞きます。','論文を書きます。','実験します。','調査します。','暗記します。','筆記します。']; for (const line of lines) console.log(line, JSON.stringify(t.tokenize(line))); })();\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-51'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-51'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit51:"'!!unit,checkpoint51:!!cp,unit51LexRange:unit?.lexRange,unit51SceneIds:unit?.sceneIds,checkpoint51Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['合格','講義','出席','欠席','予習','復習','発表','答える','受験','単位','学期','学部','大学院','論文','実験','調査','暗記','筆記','教員','教授']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const unit=s.units.find(x=>x.id==='ja-unit-51'); const cp=s.checkpoints.find(x=>x.id==='ja-checkpoint-51'); console.log(JSON.stringify({lex:s.lexicon.length,scenes:s.scenes.length,checkpoints:s.checkpoints.length,units:s.units.length,maxLex:Math.max(...s.lexicon.map(x=>x.order)),maxScene:Math.max(...s.scenes.map(x=>x.order)),maxCheckpoint:Math.max(...s.checkpoints.map(x=>x.order)),maxUnit:Math.max(...s.units.map(x=>x.order)),unit51:"'!!unit,checkpoint51:!!cp,unit51LexRange:unit?.lexRange,unit51SceneIds:unit?.sceneIds,checkpoint51Items:cp?.items.length}, null, 2));"'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npx tsx -e \"import { jaSeedContent as s } from './content/ja/seed.ts'; const words=['合格','講義','出席','欠席','予習','復習','発表','答える','受験','単位','学期','学部','大学院','論文','実験','調査','暗記','筆記','教員','教授']; console.log(JSON.stringify(Object.fromEntries(words.map(w=>[w,s.lexicon.filter(x=>x.headword===w).length])), null, 2));\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; npm run lint:content"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Set-Location 'Z:\\328\\CMPUT328-A2\\codexworks\\301\\language'; "'$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+files: 0
+tokens: in 23723892 / out 183704
+

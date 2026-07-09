@@ -1,0 +1,10 @@
+FOCUSED: expand the KANJI course — batch 1. Foreground; resume. Working dir = language repo. content/ja/kanji.ts has 317 entries (maxOrder 317). ADD ~46 high-frequency kanji that appear in already-taught vocabulary but are missing from the course.
+
+ADD these glyphs (all appear in >=3 existing lexicon words): 手 合 通 曜 用 予 文 側 回 記 職 知 面 空 番 当 約 報 冷 育 術 民 役 能 飯 近 風 歩 両 数 変 伝 直 差 点 続 止 留 性 科 付 割 感 断 明 単
+For EACH, append a KanjiEntry to the allKanji array (continue order from 318 upward), shape:
+{ id, glyph, meanings: string[], onyomi: string[] (KATAKANA), kunyomi: string[] (HIRAGANA, okurigana after a dot e.g. 'あ.う'), examples: [{word, reading, gloss, audioId}], strokeCount, group, order, audioId }
+RULES:
+- CLOSED-UNIVERSE examples: each kanji's 2 examples MUST be words that already exist as lexicon headwords in content/ja/seed.ts (grep to confirm; use the lexicon's reading+gloss). Prefer the most common taught word using that kanji. (e.g. 手→手/手紙 if taught; 知→知る; 飯→ご飯; 近→近い; 通→通る/交通 if taught.)
+- audioIds globally UNIQUE: ja-kanji-<romaji> and ja-kanji-<romaji>-ex0/-ex1 (suffix if the base romaji already exists, e.g. -te2). Verify against existing ids.
+- readings must be correct; meanings concise; pick an existing `group` value.
+VERIFY (iterate to green, EXIT CODES): `npx tsc -b` exit 0; `npm run lint:content` exit 0; `npx tsx scan-audio.tmp.mjs` prints "AUDIO OK" (no collisions); confirm allKanji length increased by ~46. Do NOT run vite/audio:ja/deploy/commit. Report: tsc rc, lint rc, audio scan, new count, and 3 sample entries.

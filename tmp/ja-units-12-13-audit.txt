@@ -1,0 +1,1999 @@
+Audit Japanese VOCAB Units 12 and 13 for correctness. Unit 12 home/everyday objects; Unit 13 food/meals/restaurant. Check readings, romanization, loanword katakana, naturalness, closed-universe decodability, token arrays, and whether avoiding ?? in favor of ? is acceptable. Be strict and concise: list required fixes or say ship. Context: npm run lint:content passes 0 leaks after these edits; existing vocab through order 250 and grammar through order 132 are available.
+
+UNITS:
+[
+  {
+    "id": "ja-unit-12",
+    "lang": "ja",
+    "order": 12,
+    "title": "Home and everyday objects",
+    "lexRange": [
+      251,
+      272
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-room-objects",
+      "ja-scene-finding-things"
+    ],
+    "checkpointId": "ja-checkpoint-12"
+  },
+  {
+    "id": "ja-unit-13",
+    "lang": "ja",
+    "order": 13,
+    "title": "Food and meals",
+    "lexRange": [
+      273,
+      294
+    ],
+    "grammarRange": [
+      119,
+      132
+    ],
+    "sceneIds": [
+      "ja-scene-restaurant-order",
+      "ja-scene-meal-talk"
+    ],
+    "checkpointId": "ja-checkpoint-13"
+  }
+]
+
+UNIT 12 LEX:
+[
+  {
+    "id": "ja-tsukue",
+    "lang": "ja",
+    "order": 251,
+    "headword": "机",
+    "reading": "つくえ",
+    "romanization": "tsukue",
+    "gloss": "desk",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home"
+    ],
+    "audioId": "ja-lex-tsukue",
+    "examples": [
+      {
+        "text": "机。",
+        "gloss": "desk.",
+        "tokens": [
+          "机"
+        ],
+        "audioId": "ja-ex-tsukue"
+      }
+    ]
+  },
+  {
+    "id": "ja-isu",
+    "lang": "ja",
+    "order": 252,
+    "headword": "椅子",
+    "reading": "いす",
+    "romanization": "isu",
+    "gloss": "chair",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home"
+    ],
+    "audioId": "ja-lex-isu",
+    "examples": [
+      {
+        "text": "椅子。",
+        "gloss": "chair.",
+        "tokens": [
+          "椅子"
+        ],
+        "audioId": "ja-ex-isu"
+      }
+    ]
+  },
+  {
+    "id": "ja-doa",
+    "lang": "ja",
+    "order": 253,
+    "headword": "ドア",
+    "reading": "ドア",
+    "romanization": "doa",
+    "gloss": "door",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home",
+      "katakana"
+    ],
+    "audioId": "ja-lex-doa",
+    "examples": [
+      {
+        "text": "ドア。",
+        "gloss": "door.",
+        "tokens": [
+          "ドア"
+        ],
+        "audioId": "ja-ex-doa"
+      }
+    ]
+  },
+  {
+    "id": "ja-mado",
+    "lang": "ja",
+    "order": 254,
+    "headword": "窓",
+    "reading": "まど",
+    "romanization": "mado",
+    "gloss": "window",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home"
+    ],
+    "audioId": "ja-lex-mado",
+    "examples": [
+      {
+        "text": "窓。",
+        "gloss": "window.",
+        "tokens": [
+          "窓"
+        ],
+        "audioId": "ja-ex-mado"
+      }
+    ]
+  },
+  {
+    "id": "ja-terebi",
+    "lang": "ja",
+    "order": 255,
+    "headword": "テレビ",
+    "reading": "テレビ",
+    "romanization": "terebi",
+    "gloss": "television; TV",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home",
+      "katakana"
+    ],
+    "audioId": "ja-lex-terebi",
+    "examples": [
+      {
+        "text": "テレビ。",
+        "gloss": "television.",
+        "tokens": [
+          "テレビ"
+        ],
+        "audioId": "ja-ex-terebi"
+      }
+    ]
+  },
+  {
+    "id": "ja-shinbun",
+    "lang": "ja",
+    "order": 256,
+    "headword": "新聞",
+    "reading": "しんぶん",
+    "romanization": "shinbun",
+    "gloss": "newspaper",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-shinbun",
+    "examples": [
+      {
+        "text": "新聞。",
+        "gloss": "newspaper.",
+        "tokens": [
+          "新聞"
+        ],
+        "audioId": "ja-ex-shinbun"
+      }
+    ]
+  },
+  {
+    "id": "ja-tegami",
+    "lang": "ja",
+    "order": 257,
+    "headword": "手紙",
+    "reading": "てがみ",
+    "romanization": "tegami",
+    "gloss": "letter",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "communication"
+    ],
+    "audioId": "ja-lex-tegami",
+    "examples": [
+      {
+        "text": "手紙。",
+        "gloss": "letter.",
+        "tokens": [
+          "手紙"
+        ],
+        "audioId": "ja-ex-tegami"
+      }
+    ]
+  },
+  {
+    "id": "ja-kagi",
+    "lang": "ja",
+    "order": 258,
+    "headword": "鍵",
+    "reading": "かぎ",
+    "romanization": "kagi",
+    "gloss": "key",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-kagi",
+    "examples": [
+      {
+        "text": "鍵。",
+        "gloss": "key.",
+        "tokens": [
+          "鍵"
+        ],
+        "audioId": "ja-ex-kagi"
+      }
+    ]
+  },
+  {
+    "id": "ja-fuku",
+    "lang": "ja",
+    "order": 259,
+    "headword": "服",
+    "reading": "ふく",
+    "romanization": "fuku",
+    "gloss": "clothes",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "clothing"
+    ],
+    "audioId": "ja-lex-fuku",
+    "examples": [
+      {
+        "text": "服。",
+        "gloss": "clothes.",
+        "tokens": [
+          "服"
+        ],
+        "audioId": "ja-ex-fuku"
+      }
+    ]
+  },
+  {
+    "id": "ja-kutsu",
+    "lang": "ja",
+    "order": 260,
+    "headword": "靴",
+    "reading": "くつ",
+    "romanization": "kutsu",
+    "gloss": "shoes",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "clothing"
+    ],
+    "audioId": "ja-lex-kutsu",
+    "examples": [
+      {
+        "text": "靴。",
+        "gloss": "shoes.",
+        "tokens": [
+          "靴"
+        ],
+        "audioId": "ja-ex-kutsu"
+      }
+    ]
+  },
+  {
+    "id": "ja-boushi",
+    "lang": "ja",
+    "order": 261,
+    "headword": "帽子",
+    "reading": "ぼうし",
+    "romanization": "boushi",
+    "gloss": "hat; cap",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "clothing"
+    ],
+    "audioId": "ja-lex-boushi",
+    "examples": [
+      {
+        "text": "帽子。",
+        "gloss": "hat.",
+        "tokens": [
+          "帽子"
+        ],
+        "audioId": "ja-ex-boushi"
+      }
+    ]
+  },
+  {
+    "id": "ja-kaban",
+    "lang": "ja",
+    "order": 262,
+    "headword": "かばん",
+    "reading": "かばん",
+    "romanization": "kaban",
+    "gloss": "bag",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-kaban",
+    "examples": [
+      {
+        "text": "かばん。",
+        "gloss": "bag.",
+        "tokens": [
+          "かばん"
+        ],
+        "audioId": "ja-ex-kaban"
+      }
+    ]
+  },
+  {
+    "id": "ja-kasa",
+    "lang": "ja",
+    "order": 263,
+    "headword": "傘",
+    "reading": "かさ",
+    "romanization": "kasa",
+    "gloss": "umbrella",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-kasa",
+    "examples": [
+      {
+        "text": "傘。",
+        "gloss": "umbrella.",
+        "tokens": [
+          "傘"
+        ],
+        "audioId": "ja-ex-kasa"
+      }
+    ]
+  },
+  {
+    "id": "ja-tokei",
+    "lang": "ja",
+    "order": 264,
+    "headword": "時計",
+    "reading": "とけい",
+    "romanization": "tokei",
+    "gloss": "clock; watch",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object",
+      "time"
+    ],
+    "audioId": "ja-lex-tokei",
+    "examples": [
+      {
+        "text": "時計。",
+        "gloss": "clock; watch.",
+        "tokens": [
+          "時計"
+        ],
+        "audioId": "ja-ex-tokei"
+      }
+    ]
+  },
+  {
+    "id": "ja-shashin",
+    "lang": "ja",
+    "order": 265,
+    "headword": "写真",
+    "reading": "しゃしん",
+    "romanization": "shashin",
+    "gloss": "photo; picture",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-shashin",
+    "examples": [
+      {
+        "text": "写真。",
+        "gloss": "photo.",
+        "tokens": [
+          "写真"
+        ],
+        "audioId": "ja-ex-shashin"
+      }
+    ]
+  },
+  {
+    "id": "ja-hako",
+    "lang": "ja",
+    "order": 266,
+    "headword": "箱",
+    "reading": "はこ",
+    "romanization": "hako",
+    "gloss": "box",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-hako",
+    "examples": [
+      {
+        "text": "箱。",
+        "gloss": "box.",
+        "tokens": [
+          "箱"
+        ],
+        "audioId": "ja-ex-hako"
+      }
+    ]
+  },
+  {
+    "id": "ja-hondana",
+    "lang": "ja",
+    "order": 267,
+    "headword": "本棚",
+    "reading": "ほんだな",
+    "romanization": "hondana",
+    "gloss": "bookshelf",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home"
+    ],
+    "audioId": "ja-lex-hondana",
+    "examples": [
+      {
+        "text": "本棚。",
+        "gloss": "bookshelf.",
+        "tokens": [
+          "本棚"
+        ],
+        "audioId": "ja-ex-hondana"
+      }
+    ]
+  },
+  {
+    "id": "ja-beddo",
+    "lang": "ja",
+    "order": 268,
+    "headword": "ベッド",
+    "reading": "ベッド",
+    "romanization": "beddo",
+    "gloss": "bed",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home",
+      "katakana"
+    ],
+    "audioId": "ja-lex-beddo",
+    "examples": [
+      {
+        "text": "ベッド。",
+        "gloss": "bed.",
+        "tokens": [
+          "ベッド"
+        ],
+        "audioId": "ja-ex-beddo"
+      }
+    ]
+  },
+  {
+    "id": "ja-daidokoro",
+    "lang": "ja",
+    "order": 269,
+    "headword": "台所",
+    "reading": "だいどころ",
+    "romanization": "daidokoro",
+    "gloss": "kitchen",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "home"
+    ],
+    "audioId": "ja-lex-daidokoro",
+    "examples": [
+      {
+        "text": "台所。",
+        "gloss": "kitchen.",
+        "tokens": [
+          "台所"
+        ],
+        "audioId": "ja-ex-daidokoro"
+      }
+    ]
+  },
+  {
+    "id": "ja-sara",
+    "lang": "ja",
+    "order": 270,
+    "headword": "皿",
+    "reading": "さら",
+    "romanization": "sara",
+    "gloss": "plate; dish",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object",
+      "food"
+    ],
+    "audioId": "ja-lex-sara",
+    "examples": [
+      {
+        "text": "皿。",
+        "gloss": "plate.",
+        "tokens": [
+          "皿"
+        ],
+        "audioId": "ja-ex-sara"
+      }
+    ]
+  },
+  {
+    "id": "ja-koppu",
+    "lang": "ja",
+    "order": 271,
+    "headword": "コップ",
+    "reading": "コップ",
+    "romanization": "koppu",
+    "gloss": "cup; glass",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object",
+      "katakana"
+    ],
+    "audioId": "ja-lex-koppu",
+    "examples": [
+      {
+        "text": "コップ。",
+        "gloss": "cup.",
+        "tokens": [
+          "コップ"
+        ],
+        "audioId": "ja-ex-koppu"
+      }
+    ]
+  },
+  {
+    "id": "ja-kami-paper",
+    "lang": "ja",
+    "order": 272,
+    "headword": "紙",
+    "reading": "かみ",
+    "romanization": "kami",
+    "gloss": "paper",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "object"
+    ],
+    "audioId": "ja-lex-kami-paper",
+    "examples": [
+      {
+        "text": "紙。",
+        "gloss": "paper.",
+        "tokens": [
+          "紙"
+        ],
+        "audioId": "ja-ex-kami-paper"
+      }
+    ]
+  }
+]
+
+UNIT 13 LEX:
+[
+  {
+    "id": "ja-niku",
+    "lang": "ja",
+    "order": 273,
+    "headword": "肉",
+    "reading": "にく",
+    "romanization": "niku",
+    "gloss": "meat",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-niku",
+    "examples": [
+      {
+        "text": "肉。",
+        "gloss": "meat.",
+        "tokens": [
+          "肉"
+        ],
+        "audioId": "ja-ex-niku"
+      }
+    ]
+  },
+  {
+    "id": "ja-sakana",
+    "lang": "ja",
+    "order": 274,
+    "headword": "魚",
+    "reading": "さかな",
+    "romanization": "sakana",
+    "gloss": "fish",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-sakana",
+    "examples": [
+      {
+        "text": "魚。",
+        "gloss": "fish.",
+        "tokens": [
+          "魚"
+        ],
+        "audioId": "ja-ex-sakana"
+      }
+    ]
+  },
+  {
+    "id": "ja-yasai",
+    "lang": "ja",
+    "order": 275,
+    "headword": "野菜",
+    "reading": "やさい",
+    "romanization": "yasai",
+    "gloss": "vegetables",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-yasai",
+    "examples": [
+      {
+        "text": "野菜。",
+        "gloss": "vegetables.",
+        "tokens": [
+          "野菜"
+        ],
+        "audioId": "ja-ex-yasai"
+      }
+    ]
+  },
+  {
+    "id": "ja-kudamono",
+    "lang": "ja",
+    "order": 276,
+    "headword": "果物",
+    "reading": "くだもの",
+    "romanization": "kudamono",
+    "gloss": "fruit",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-kudamono",
+    "examples": [
+      {
+        "text": "果物。",
+        "gloss": "fruit.",
+        "tokens": [
+          "果物"
+        ],
+        "audioId": "ja-ex-kudamono"
+      }
+    ]
+  },
+  {
+    "id": "ja-tamago",
+    "lang": "ja",
+    "order": 277,
+    "headword": "卵",
+    "reading": "たまご",
+    "romanization": "tamago",
+    "gloss": "egg",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-tamago",
+    "examples": [
+      {
+        "text": "卵。",
+        "gloss": "egg.",
+        "tokens": [
+          "卵"
+        ],
+        "audioId": "ja-ex-tamago"
+      }
+    ]
+  },
+  {
+    "id": "ja-gyuunyuu",
+    "lang": "ja",
+    "order": 278,
+    "headword": "牛乳",
+    "reading": "ぎゅうにゅう",
+    "romanization": "gyuunyuu",
+    "gloss": "milk",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "drink"
+    ],
+    "audioId": "ja-lex-gyuunyuu",
+    "examples": [
+      {
+        "text": "牛乳。",
+        "gloss": "milk.",
+        "tokens": [
+          "牛乳"
+        ],
+        "audioId": "ja-ex-gyuunyuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-ocha",
+    "lang": "ja",
+    "order": 279,
+    "headword": "お茶",
+    "reading": "おちゃ",
+    "romanization": "ocha",
+    "gloss": "tea",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "drink"
+    ],
+    "audioId": "ja-lex-ocha",
+    "examples": [
+      {
+        "text": "お茶。",
+        "gloss": "tea.",
+        "tokens": [
+          "お茶"
+        ],
+        "audioId": "ja-ex-ocha"
+      }
+    ]
+  },
+  {
+    "id": "ja-koohii",
+    "lang": "ja",
+    "order": 280,
+    "headword": "コーヒー",
+    "reading": "コーヒー",
+    "romanization": "koohii",
+    "gloss": "coffee",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "drink",
+      "katakana"
+    ],
+    "audioId": "ja-lex-koohii",
+    "examples": [
+      {
+        "text": "コーヒー。",
+        "gloss": "coffee.",
+        "tokens": [
+          "コーヒー"
+        ],
+        "audioId": "ja-ex-koohii"
+      }
+    ]
+  },
+  {
+    "id": "ja-sake",
+    "lang": "ja",
+    "order": 281,
+    "headword": "酒",
+    "reading": "さけ",
+    "romanization": "sake",
+    "gloss": "alcohol; sake",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "drink"
+    ],
+    "audioId": "ja-lex-sake",
+    "examples": [
+      {
+        "text": "酒。",
+        "gloss": "alcohol; sake.",
+        "tokens": [
+          "酒"
+        ],
+        "audioId": "ja-ex-sake"
+      }
+    ]
+  },
+  {
+    "id": "ja-ryouri",
+    "lang": "ja",
+    "order": 282,
+    "headword": "料理",
+    "reading": "りょうり",
+    "romanization": "ryouri",
+    "gloss": "cooking; dish",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-ryouri",
+    "examples": [
+      {
+        "text": "料理。",
+        "gloss": "dish; cooking.",
+        "tokens": [
+          "料理"
+        ],
+        "audioId": "ja-ex-ryouri"
+      }
+    ]
+  },
+  {
+    "id": "ja-asagohan",
+    "lang": "ja",
+    "order": 283,
+    "headword": "朝ご飯",
+    "reading": "あさごはん",
+    "romanization": "asagohan",
+    "gloss": "breakfast",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "time"
+    ],
+    "audioId": "ja-lex-asagohan",
+    "examples": [
+      {
+        "text": "朝ご飯。",
+        "gloss": "breakfast.",
+        "tokens": [
+          "朝",
+          "ご飯"
+        ],
+        "audioId": "ja-ex-asagohan"
+      }
+    ]
+  },
+  {
+    "id": "ja-hirugohan",
+    "lang": "ja",
+    "order": 284,
+    "headword": "昼ご飯",
+    "reading": "ひるごはん",
+    "romanization": "hirugohan",
+    "gloss": "lunch",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "time"
+    ],
+    "audioId": "ja-lex-hirugohan",
+    "examples": [
+      {
+        "text": "昼ご飯。",
+        "gloss": "lunch.",
+        "tokens": [
+          "昼",
+          "ご飯"
+        ],
+        "audioId": "ja-ex-hirugohan"
+      }
+    ]
+  },
+  {
+    "id": "ja-bangohan",
+    "lang": "ja",
+    "order": 285,
+    "headword": "晩ご飯",
+    "reading": "ばんごはん",
+    "romanization": "bangohan",
+    "gloss": "dinner",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "time"
+    ],
+    "audioId": "ja-lex-bangohan",
+    "examples": [
+      {
+        "text": "晩ご飯。",
+        "gloss": "dinner.",
+        "tokens": [
+          "晩",
+          "ご飯"
+        ],
+        "audioId": "ja-ex-bangohan"
+      }
+    ]
+  },
+  {
+    "id": "ja-menyuu",
+    "lang": "ja",
+    "order": 286,
+    "headword": "メニュー",
+    "reading": "メニュー",
+    "romanization": "menyuu",
+    "gloss": "menu",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "katakana"
+    ],
+    "audioId": "ja-lex-menyuu",
+    "examples": [
+      {
+        "text": "メニュー。",
+        "gloss": "menu.",
+        "tokens": [
+          "メニュー"
+        ],
+        "audioId": "ja-ex-menyuu"
+      }
+    ]
+  },
+  {
+    "id": "ja-chuumon",
+    "lang": "ja",
+    "order": 287,
+    "headword": "注文",
+    "reading": "ちゅうもん",
+    "romanization": "chuumon",
+    "gloss": "order",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-chuumon",
+    "examples": [
+      {
+        "text": "注文。",
+        "gloss": "order.",
+        "tokens": [
+          "注文"
+        ],
+        "audioId": "ja-ex-chuumon"
+      }
+    ]
+  },
+  {
+    "id": "ja-chuumon-suru",
+    "lang": "ja",
+    "order": 288,
+    "headword": "注文する",
+    "reading": "ちゅうもんする",
+    "romanization": "chuumon suru",
+    "gloss": "to order",
+    "pos": "verb",
+    "tags": [
+      "core",
+      "food",
+      "suru-verb"
+    ],
+    "audioId": "ja-lex-chuumon-suru",
+    "examples": [
+      {
+        "text": "注文する。",
+        "gloss": "to order.",
+        "tokens": [
+          "注文",
+          "する"
+        ],
+        "audioId": "ja-ex-chuumon-suru"
+      }
+    ]
+  },
+  {
+    "id": "ja-satou",
+    "lang": "ja",
+    "order": 289,
+    "headword": "砂糖",
+    "reading": "さとう",
+    "romanization": "satou",
+    "gloss": "sugar",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-satou",
+    "examples": [
+      {
+        "text": "砂糖。",
+        "gloss": "sugar.",
+        "tokens": [
+          "砂糖"
+        ],
+        "audioId": "ja-ex-satou"
+      }
+    ]
+  },
+  {
+    "id": "ja-shio",
+    "lang": "ja",
+    "order": 290,
+    "headword": "塩",
+    "reading": "しお",
+    "romanization": "shio",
+    "gloss": "salt",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-shio",
+    "examples": [
+      {
+        "text": "塩。",
+        "gloss": "salt.",
+        "tokens": [
+          "塩"
+        ],
+        "audioId": "ja-ex-shio"
+      }
+    ]
+  },
+  {
+    "id": "ja-kome",
+    "lang": "ja",
+    "order": 291,
+    "headword": "米",
+    "reading": "こめ",
+    "romanization": "kome",
+    "gloss": "rice; uncooked rice",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-kome",
+    "examples": [
+      {
+        "text": "米。",
+        "gloss": "rice.",
+        "tokens": [
+          "米"
+        ],
+        "audioId": "ja-ex-kome"
+      }
+    ]
+  },
+  {
+    "id": "ja-hashi-chopsticks",
+    "lang": "ja",
+    "order": 292,
+    "headword": "箸",
+    "reading": "はし",
+    "romanization": "hashi",
+    "gloss": "chopsticks",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food",
+      "object"
+    ],
+    "audioId": "ja-lex-hashi-chopsticks",
+    "examples": [
+      {
+        "text": "箸。",
+        "gloss": "chopsticks.",
+        "tokens": [
+          "箸"
+        ],
+        "audioId": "ja-ex-hashi-chopsticks"
+      }
+    ]
+  },
+  {
+    "id": "ja-aji",
+    "lang": "ja",
+    "order": 293,
+    "headword": "味",
+    "reading": "あじ",
+    "romanization": "aji",
+    "gloss": "taste; flavor",
+    "pos": "noun",
+    "tags": [
+      "core",
+      "food"
+    ],
+    "audioId": "ja-lex-aji",
+    "examples": [
+      {
+        "text": "味。",
+        "gloss": "taste.",
+        "tokens": [
+          "味"
+        ],
+        "audioId": "ja-ex-aji"
+      }
+    ]
+  },
+  {
+    "id": "ja-amai",
+    "lang": "ja",
+    "order": 294,
+    "headword": "甘い",
+    "reading": "あまい",
+    "romanization": "amai",
+    "gloss": "sweet",
+    "pos": "adjective",
+    "tags": [
+      "core",
+      "food",
+      "i-adjective"
+    ],
+    "audioId": "ja-lex-amai",
+    "examples": [
+      {
+        "text": "甘い。",
+        "gloss": "sweet.",
+        "tokens": [
+          "甘い"
+        ],
+        "audioId": "ja-ex-amai"
+      }
+    ]
+  }
+]
+
+SCENES:
+[
+  {
+    "id": "ja-scene-room-objects",
+    "lang": "ja",
+    "order": 24,
+    "unlockedAfter": {
+      "lex": 272,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "部屋に机がありますか。",
+        "gloss": "Is there a desk in the room?",
+        "tokens": [
+          "部屋",
+          "に",
+          "机",
+          "が",
+          "ある",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-room-objects-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。椅子もあります。",
+        "gloss": "Yes. There is also a chair.",
+        "tokens": [
+          "はい",
+          "椅子",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-room-objects-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "テレビはどこですか。",
+        "gloss": "Where is the TV?",
+        "tokens": [
+          "テレビ",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-room-objects-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "窓の前です。",
+        "gloss": "It is in front of the window.",
+        "tokens": [
+          "窓",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-scene-room-objects-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-room-objects-q1",
+        "kind": "comprehend",
+        "prompt": "What is in the room?",
+        "answer": "A desk and a chair.",
+        "distractors": [
+          "A bed and a cup.",
+          "A newspaper and a letter."
+        ],
+        "sourceText": "部屋に机がありますか。はい。椅子もあります。",
+        "sourceTokens": [
+          "部屋",
+          "に",
+          "机",
+          "が",
+          "ある",
+          "~ます",
+          "か",
+          "はい",
+          "椅子",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-room-objects-q1"
+      },
+      {
+        "id": "ja-scene-room-objects-q2",
+        "kind": "comprehend",
+        "prompt": "What does A ask about?",
+        "answer": "The TV.",
+        "distractors": [
+          "The key.",
+          "The umbrella."
+        ],
+        "sourceText": "テレビはどこですか。",
+        "sourceTokens": [
+          "テレビ",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-room-objects-q2"
+      },
+      {
+        "id": "ja-scene-room-objects-q3",
+        "kind": "comprehend",
+        "prompt": "Where is the TV?",
+        "answer": "In front of the window.",
+        "distractors": [
+          "Inside the box.",
+          "On the bookshelf."
+        ],
+        "sourceText": "窓の前です。",
+        "sourceTokens": [
+          "窓",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-scene-room-objects-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-finding-things",
+    "lang": "ja",
+    "order": 25,
+    "unlockedAfter": {
+      "lex": 272,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "鍵はどこですか。",
+        "gloss": "Where is the key?",
+        "tokens": [
+          "鍵",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-finding-things-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "箱の中です。",
+        "gloss": "It is inside the box.",
+        "tokens": [
+          "箱",
+          "の",
+          "中",
+          "~です"
+        ],
+        "audioId": "ja-scene-finding-things-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "かばんはどこですか。",
+        "gloss": "Where is the bag?",
+        "tokens": [
+          "かばん",
+          "は",
+          "どこ",
+          "~です",
+          "か"
+        ],
+        "audioId": "ja-scene-finding-things-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "ドアの前です。傘も靴もあります。",
+        "gloss": "It is in front of the door. There are also an umbrella and shoes.",
+        "tokens": [
+          "ドア",
+          "の",
+          "前",
+          "~です",
+          "傘",
+          "も",
+          "靴",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-finding-things-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-finding-things-q1",
+        "kind": "comprehend",
+        "prompt": "Where is the key?",
+        "answer": "Inside the box.",
+        "distractors": [
+          "In front of the door.",
+          "On the desk."
+        ],
+        "sourceText": "箱の中です。",
+        "sourceTokens": [
+          "箱",
+          "の",
+          "中",
+          "~です"
+        ],
+        "audioId": "ja-scene-finding-things-q1"
+      },
+      {
+        "id": "ja-scene-finding-things-q2",
+        "kind": "comprehend",
+        "prompt": "Where is the bag?",
+        "answer": "In front of the door.",
+        "distractors": [
+          "Inside the box.",
+          "In the kitchen."
+        ],
+        "sourceText": "ドアの前です。",
+        "sourceTokens": [
+          "ドア",
+          "の",
+          "前",
+          "~です"
+        ],
+        "audioId": "ja-scene-finding-things-q2"
+      },
+      {
+        "id": "ja-scene-finding-things-q3",
+        "kind": "comprehend",
+        "prompt": "What else is there?",
+        "answer": "An umbrella and shoes.",
+        "distractors": [
+          "A hat and clothes.",
+          "A plate and a cup."
+        ],
+        "sourceText": "傘も靴もあります。",
+        "sourceTokens": [
+          "傘",
+          "も",
+          "靴",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-finding-things-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-restaurant-order",
+    "lang": "ja",
+    "order": 26,
+    "unlockedAfter": {
+      "lex": 294,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "メニューを見ます。",
+        "gloss": "I will look at the menu.",
+        "tokens": [
+          "メニュー",
+          "を",
+          "見る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "何を注文しますか。",
+        "gloss": "What will you order?",
+        "tokens": [
+          "何",
+          "を",
+          "注文",
+          "する",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-restaurant-order-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "肉の料理を注文します。野菜もあります。",
+        "gloss": "I will order a meat dish. There are also vegetables.",
+        "tokens": [
+          "肉",
+          "の",
+          "料理",
+          "を",
+          "注文",
+          "する",
+          "~ます",
+          "野菜",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "魚もあります。",
+        "gloss": "There is also fish.",
+        "tokens": [
+          "魚",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-restaurant-order-q1",
+        "kind": "comprehend",
+        "prompt": "What does A look at?",
+        "answer": "The menu.",
+        "distractors": [
+          "The clock.",
+          "A photo."
+        ],
+        "sourceText": "メニューを見ます。",
+        "sourceTokens": [
+          "メニュー",
+          "を",
+          "見る",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-q1"
+      },
+      {
+        "id": "ja-scene-restaurant-order-q2",
+        "kind": "comprehend",
+        "prompt": "What will A order?",
+        "answer": "A meat dish, and vegetables are also available.",
+        "distractors": [
+          "Coffee and milk.",
+          "Eggs and fruit."
+        ],
+        "sourceText": "肉の料理を注文します。野菜もあります。",
+        "sourceTokens": [
+          "肉",
+          "の",
+          "料理",
+          "を",
+          "注文",
+          "する",
+          "~ます",
+          "野菜",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-q2"
+      },
+      {
+        "id": "ja-scene-restaurant-order-q3",
+        "kind": "comprehend",
+        "prompt": "What else is available?",
+        "answer": "Fish.",
+        "distractors": [
+          "Sugar.",
+          "Chopsticks."
+        ],
+        "sourceText": "魚もあります。",
+        "sourceTokens": [
+          "魚",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-scene-restaurant-order-q3"
+      }
+    ]
+  },
+  {
+    "id": "ja-scene-meal-talk",
+    "lang": "ja",
+    "order": 27,
+    "unlockedAfter": {
+      "lex": 294,
+      "grammar": 132
+    },
+    "lines": [
+      {
+        "speaker": "A",
+        "text": "朝ご飯に卵を食べますか。",
+        "gloss": "Do you eat eggs for breakfast?",
+        "tokens": [
+          "朝",
+          "ご飯",
+          "に",
+          "卵",
+          "を",
+          "食べる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-meal-talk-a1"
+      },
+      {
+        "speaker": "B",
+        "text": "はい。牛乳も飲みます。",
+        "gloss": "Yes. I also drink milk.",
+        "tokens": [
+          "はい",
+          "牛乳",
+          "も",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-meal-talk-b1"
+      },
+      {
+        "speaker": "A",
+        "text": "昼ご飯は何を食べますか。",
+        "gloss": "What do you eat for lunch?",
+        "tokens": [
+          "昼",
+          "ご飯",
+          "は",
+          "何",
+          "を",
+          "食べる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-meal-talk-a2"
+      },
+      {
+        "speaker": "B",
+        "text": "果物を食べます。コーヒーも飲みます。",
+        "gloss": "I eat fruit. I also drink coffee.",
+        "tokens": [
+          "果物",
+          "を",
+          "食べる",
+          "~ます",
+          "コーヒー",
+          "も",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-meal-talk-b2"
+      }
+    ],
+    "comprehension": [
+      {
+        "id": "ja-scene-meal-talk-q1",
+        "kind": "comprehend",
+        "prompt": "What does A ask about breakfast?",
+        "answer": "Whether B eats eggs.",
+        "distractors": [
+          "Whether B drinks coffee.",
+          "Whether B orders fish."
+        ],
+        "sourceText": "朝ご飯に卵を食べますか。",
+        "sourceTokens": [
+          "朝",
+          "ご飯",
+          "に",
+          "卵",
+          "を",
+          "食べる",
+          "~ます",
+          "か"
+        ],
+        "audioId": "ja-scene-meal-talk-q1"
+      },
+      {
+        "id": "ja-scene-meal-talk-q2",
+        "kind": "comprehend",
+        "prompt": "What does B also drink?",
+        "answer": "Milk.",
+        "distractors": [
+          "Tea.",
+          "Alcohol."
+        ],
+        "sourceText": "はい。牛乳も飲みます。",
+        "sourceTokens": [
+          "はい",
+          "牛乳",
+          "も",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-meal-talk-q2"
+      },
+      {
+        "id": "ja-scene-meal-talk-q3",
+        "kind": "comprehend",
+        "prompt": "What does B have for lunch?",
+        "answer": "Fruit and coffee.",
+        "distractors": [
+          "Meat and vegetables.",
+          "Rice and tea."
+        ],
+        "sourceText": "果物を食べます。コーヒーも飲みます。",
+        "sourceTokens": [
+          "果物",
+          "を",
+          "食べる",
+          "~ます",
+          "コーヒー",
+          "も",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-scene-meal-talk-q3"
+      }
+    ]
+  }
+]
+
+CHECKPOINTS:
+[
+  {
+    "id": "ja-checkpoint-12",
+    "lang": "ja",
+    "unitId": "ja-unit-12",
+    "order": 12,
+    "title": "Unit 12 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-12-q1",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I read the newspaper.",
+        "distractors": [
+          "I write a letter.",
+          "I look at the clock."
+        ],
+        "sourceText": "新聞を読みます。",
+        "sourceTokens": [
+          "新聞",
+          "を",
+          "読む",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-12-q1"
+      },
+      {
+        "id": "ja-checkpoint-12-q2",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I write a letter.",
+        "distractors": [
+          "I read the newspaper.",
+          "I ask a question."
+        ],
+        "sourceText": "手紙を書きます。",
+        "sourceTokens": [
+          "手紙",
+          "を",
+          "書く",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-12-q2"
+      },
+      {
+        "id": "ja-checkpoint-12-q3",
+        "kind": "comprehend",
+        "prompt": "What did someone look at?",
+        "answer": "A clock or watch.",
+        "distractors": [
+          "A photo.",
+          "A TV."
+        ],
+        "sourceText": "時計を見ました。",
+        "sourceTokens": [
+          "時計",
+          "を",
+          "見る",
+          "~ました"
+        ],
+        "audioId": "ja-checkpoint-12-q3"
+      },
+      {
+        "id": "ja-checkpoint-12-q4",
+        "kind": "comprehend",
+        "prompt": "Where is the photo?",
+        "answer": "On the bookshelf.",
+        "distractors": [
+          "Inside the box.",
+          "In the kitchen."
+        ],
+        "sourceText": "写真は本棚の上です。",
+        "sourceTokens": [
+          "写真",
+          "は",
+          "本棚",
+          "の",
+          "上",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-12-q4"
+      },
+      {
+        "id": "ja-checkpoint-12-q5",
+        "kind": "comprehend",
+        "prompt": "What is in the kitchen?",
+        "answer": "A plate, and also a cup.",
+        "distractors": [
+          "A hat and shoes.",
+          "A desk and a chair."
+        ],
+        "sourceText": "台所に皿があります。コップもあります。",
+        "sourceTokens": [
+          "台所",
+          "に",
+          "皿",
+          "が",
+          "ある",
+          "~ます",
+          "コップ",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-12-q5"
+      },
+      {
+        "id": "ja-checkpoint-12-q6",
+        "kind": "comprehend",
+        "prompt": "What does this request?",
+        "answer": "A little paper, please.",
+        "distractors": [
+          "A little sugar, please.",
+          "A small bag, please."
+        ],
+        "sourceText": "紙を少しください。",
+        "sourceTokens": [
+          "紙",
+          "を",
+          "少し",
+          "くださる"
+        ],
+        "audioId": "ja-checkpoint-12-q6"
+      },
+      {
+        "id": "ja-checkpoint-12-q7",
+        "kind": "comprehend",
+        "prompt": "Where is the bed?",
+        "answer": "In the room.",
+        "distractors": [
+          "In front of the door.",
+          "At the restaurant."
+        ],
+        "sourceText": "ベッドは部屋にあります。",
+        "sourceTokens": [
+          "ベッド",
+          "は",
+          "部屋",
+          "に",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-12-q7"
+      }
+    ]
+  },
+  {
+    "id": "ja-checkpoint-13",
+    "lang": "ja",
+    "unitId": "ja-unit-13",
+    "order": 13,
+    "title": "Unit 13 checkpoint",
+    "items": [
+      {
+        "id": "ja-checkpoint-13-q1",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I eat eggs for breakfast.",
+        "distractors": [
+          "I drink milk for lunch.",
+          "I order meat for dinner."
+        ],
+        "sourceText": "朝ご飯に卵を食べます。",
+        "sourceTokens": [
+          "朝",
+          "ご飯",
+          "に",
+          "卵",
+          "を",
+          "食べる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-13-q1"
+      },
+      {
+        "id": "ja-checkpoint-13-q2",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I eat fruit for lunch.",
+        "distractors": [
+          "I eat fish for breakfast.",
+          "I drink coffee for dinner."
+        ],
+        "sourceText": "昼ご飯に果物を食べます。",
+        "sourceTokens": [
+          "昼",
+          "ご飯",
+          "に",
+          "果物",
+          "を",
+          "食べる",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-13-q2"
+      },
+      {
+        "id": "ja-checkpoint-13-q3",
+        "kind": "comprehend",
+        "prompt": "What does this sentence mean?",
+        "answer": "I drink a little alcohol with dinner.",
+        "distractors": [
+          "I drink a lot of tea with breakfast.",
+          "I eat a little rice with lunch."
+        ],
+        "sourceText": "晩ご飯に酒を少し飲みます。",
+        "sourceTokens": [
+          "晩",
+          "ご飯",
+          "に",
+          "酒",
+          "を",
+          "少し",
+          "飲む",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-13-q3"
+      },
+      {
+        "id": "ja-checkpoint-13-q4",
+        "kind": "comprehend",
+        "prompt": "What is there?",
+        "answer": "Sugar, and also salt.",
+        "distractors": [
+          "Meat and vegetables.",
+          "Tea and coffee."
+        ],
+        "sourceText": "砂糖があります。塩もあります。",
+        "sourceTokens": [
+          "砂糖",
+          "が",
+          "ある",
+          "~ます",
+          "塩",
+          "も",
+          "ある",
+          "~ます"
+        ],
+        "audioId": "ja-checkpoint-13-q4"
+      },
+      {
+        "id": "ja-checkpoint-13-q5",
+        "kind": "comprehend",
+        "prompt": "How is the dish described?",
+        "answer": "Sweet.",
+        "distractors": [
+          "Expensive.",
+          "Old."
+        ],
+        "sourceText": "料理は甘いです。",
+        "sourceTokens": [
+          "料理",
+          "は",
+          "甘い",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-13-q5"
+      },
+      {
+        "id": "ja-checkpoint-13-q6",
+        "kind": "comprehend",
+        "prompt": "How is the taste?",
+        "answer": "Delicious.",
+        "distractors": [
+          "Cheap.",
+          "Difficult."
+        ],
+        "sourceText": "味はおいしいです。",
+        "sourceTokens": [
+          "味",
+          "は",
+          "おいしい",
+          "~です"
+        ],
+        "audioId": "ja-checkpoint-13-q6"
+      },
+      {
+        "id": "ja-checkpoint-13-q7",
+        "kind": "comprehend",
+        "prompt": "What does this request?",
+        "answer": "Tea, and chopsticks too, please.",
+        "distractors": [
+          "Coffee and milk, please.",
+          "A menu and a photo, please."
+        ],
+        "sourceText": "お茶をください。箸もください。",
+        "sourceTokens": [
+          "お茶",
+          "を",
+          "くださる",
+          "箸",
+          "も",
+          "くださる"
+        ],
+        "audioId": "ja-checkpoint-13-q7"
+      }
+    ]
+  }
+]

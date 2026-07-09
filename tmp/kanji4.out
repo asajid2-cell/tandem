@@ -1,0 +1,36 @@
+
+===== PARTNER VERDICT (codex, 268s) =====
+
+Updated [content/ja/kanji.ts](z:/328/CMPUT328-A2/codexworks/301/language/content/ja/kanji.ts:6981).
+
+Added 7 missing glyphs at orders 476-482: `危 険 非 常 満 禁 案`.  
+Skipped already-present glyphs: `注 意 受 付 内`.
+
+Verification:
+- `npx tsc -b`: rc 0
+- `npm run lint:content`: rc 0
+- `npx tsx scan-audio.tmp.mjs`: `AUDIO OK: no conflicts`
+- duplicate glyph check: none; count 482, maxOrder 482
+
+Samples:
+- `危`: `危ない`, `危険`
+- `険`: `危険`, `保険`
+- `禁`: `禁止`, `禁煙`
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "node -e \"import('./content/ja/kanji.ts').then(({allKanji})=>{const seen=new Map(),dups=[]; for (const k of allKanji){ if(seen.has(k.glyph)) dups.push(k.glyph); else seen.set(k.glyph,k); } console.log(JSON.stringify({count:allKanji.length,maxOrder:Math.max(...allKanji.map(k=>k.order)),dups})); })\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "node -e \"import('./content/ja/kanji.ts').then(({allKanji})=>{const seen=new Map(),dups=[]; for (const k of allKanji){ if(seen.has(k.glyph)) dups.push(k.glyph); else seen.set(k.glyph,k); } console.log(JSON.stringify({count:allKanji.length,maxOrder:Math.max(...allKanji.map(k=>k.order)),dups})); })\""
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsx scan-audio.tmp.mjs'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npx tsc -b'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content/ja/kanji.ts -Pattern \"glyph: '危'|glyph: '険'|glyph: '非'|glyph: '常'|glyph: '満'|glyph: '禁'|glyph: '案'\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line.Trim())" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Select-String -Path content/ja/kanji.ts -Pattern \"glyph: '危'|glyph: '険'|glyph: '非'|glyph: '常'|glyph: '満'|glyph: '禁'|glyph: '案'\" | ForEach-Object { \""'$($_.LineNumber):$($_.Line.Trim())" }'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'git diff -- content/ja/kanji.ts'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content content/ja/kanji.ts -Encoding UTF8 | Select-Object -Skip 6940 -First 120'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content content/ja/kanji.ts -Encoding UTF8 | Select-Object -Skip 6940 -First 120'
+files: 0
+tokens: in 428842 / out 6978
+

@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 1 (foreground; resume; N4). seed.ts grammar[] has 42 patterns (ends ~order 60s). ADD 4 NEW N4 grammar patterns, continuing the order sequence (next orders after current max grammar order). Place each new pattern object inside grammar[] (NOT lexicon/scenes).
+GrammarPattern shape (copy EXACTLY from existing, e.g. ja-polite-masu): { id, lang:'ja', order, title, explanation, formula, licenses:[{kind, description, tokens, appliesToPos, surfaces}], examples:[{text, gloss, tokens, audioId(UNIQUE)}], drills:[{id, kind:'comprehend', prompt, answer, distractors, sourceTokens}] }.
+ADD these 4 (build ONLY on already-licensed forms — て-form, ない-form, past た, dict form, ます — and already-taught vocab; if a new inflected surface is used, license it):
+1. ～たい (want to do) — verb ます-stem + たい. id ja-want-tai.
+2. ～てもいい (may / it's OK to) — て-form + もいい. id ja-permission-temoii.
+3. ～ことができる (be able to) — dict verb + ことができる. id ja-able-koto-ga-dekiru.
+4. ～たほうがいい (had better) — past た + ほうがいい. id ja-advice-ta-hou-ga-ii.
+Each: 3 examples + 1-2 drills, closed-universe (only known vocab + licensed inflections), tokens EXACTLY matching kuromoji output.
+VERIFY (FAST, iterate to green): run `npm run lint:content` and confirm EXIT CODE 0 (it prints token-mismatch/leak lines AND still says "0 leaks", so trust the EXIT CODE, not the text). Do NOT run vite build / tests / audio / deploy / commit (too slow). Report: lint:content exit code + the 4 ids + new grammar count.

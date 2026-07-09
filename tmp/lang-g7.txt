@@ -1,0 +1,9 @@
+FOCUSED: Japanese GRAMMAR batch 7 — FAVORS & CONNECTIVES (foreground; resume; N4). seed.ts grammar[] has 66 patterns. ADD 4 NEW, order after current max. Inside grammar[].
+Shape: copy existing GrammarPattern EXACTLY; license any new surface. Use only already-taught vocab (くれる/もらう/あげる now exist).
+ADD:
+25. ～てあげる／てくれる／てもらう (do something for/from someone — favors) — て-form + あげる/くれる/もらう — id ja-favor-te-auxiliaries.
+26. ～ので (because — softer/objective reason) — id ja-reason-node.
+27. ～のに (even though / despite — contrary) — id ja-contrast-noni.
+28. ～し (and what's more; listing reasons) — id ja-listing-shi.
+Each: 3 examples + 1-2 drills, closed-universe, tokens EXACTLY = kuromoji output.
+VERIFY (FAST, iterate to green): `npm run lint:content` EXIT CODE 0 (trust exit code). NO vite/tests/audio/deploy/commit. Report: lint exit code + 4 ids + new grammar count.

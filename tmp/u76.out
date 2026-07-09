@@ -1,0 +1,98 @@
+
+===== PARTNER VERDICT (codex, 803s) =====
+
+Implemented Japanese Unit 76 only in `content/ja/seed.ts`.
+
+Counts verified:
+- Lexicon: 1500
+- Scenes: 153
+- Checkpoints: 76
+- Units: 76
+- `ja-unit-76` lexRange: `[1515, 1532]`
+- `ja-checkpoint-76`: 10 items
+- Unit 76 new lex entries: 18
+- Unit 76 audioId collisions: 0
+
+Verification:
+- `npm run lint:content`: passed, `0 leaks`
+- `npm test`: 36 passed, 0 skipped
+
+Skipped existing duplicates: `飲み物`, `酒`, `醤油`. Also replaced tokenizer-problem requested terms `おやつ` and `調味料` with clean non-duplicate food terms `菓子` and `大豆`. No audio generation, deploy, or commit performed.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"headword: '香り'\",\"headword: '大豆'\",\"headword: '海藻'\",\"headword: '芋'\",\"headword: '果物'\",\"headword: '野菜'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const samples = ['\\u9999\\u308a\\u3002','\\u5927\\u8c46\\u3002','\\u6d77\\u85fb\\u3002','\\u828b\\u3002'];
+for (const text of samples) console.log(JSON.stringify({ tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"headword: '香り'\",\"headword: '大豆'\",\"headword: '海藻'\",\"headword: '芋'\",\"headword: '果物'\",\"headword: '野菜'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const samples = ['\\u9999\\u308a\\u3002','\\u5927\\u8c46\\u3002','\\u6d77\\u85fb\\u3002','\\u828b\\u3002'];
+for (const text of samples) console.log(JSON.stringify({ tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-kashi'\",\"id: 'ja-daizu'\",\"id: 'ja-scene-bento-ingredients'\",\"id: 'ja-checkpoint-76'\",\"id: 'ja-unit-76'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-kashi'\",\"id: 'ja-daizu'\",\"id: 'ja-scene-bento-ingredients'\",\"id: 'ja-checkpoint-76'\",\"id: 'ja-unit-76'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit76Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1515 && entry.order <= 1532);
+const unit76Audio = collectAudio(unit76Lex);
+const newCollisions = unit76Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit76LexEntries: unit76Lex.length,
+  unit76LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-76')?.lexRange,
+  checkpoint76Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-76')?.items.length,
+  unit76AudioIds: unit76Audio.length,
+  unit76AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const collectAudio = (value, out = []) => {
+  if (Array.isArray(value)) value.forEach((item) => collectAudio(item, out));
+  else if (value && typeof value === 'object') {
+    if (typeof value.audioId === 'string') out.push(value.audioId);
+    Object.values(value).forEach((item) => collectAudio(item, out));
+  }
+  return out;
+};
+const allAudio = collectAudio(jaSeedContent);
+const unit76Lex = jaSeedContent.lexicon.filter((entry) => entry.order >= 1515 && entry.order <= 1532);
+const unit76Audio = collectAudio(unit76Lex);
+const newCollisions = unit76Audio.filter((id) => allAudio.filter((candidate) => candidate === id).length > 1);
+console.log(JSON.stringify({
+  lexicon: jaSeedContent.lexicon.length,
+  scenes: jaSeedContent.scenes.length,
+  checkpoints: jaSeedContent.checkpoints.length,
+  units: jaSeedContent.units.length,
+  unit76LexEntries: unit76Lex.length,
+  unit76LexRange: jaSeedContent.units.find((unit) => unit.id === 'ja-unit-76')?.lexRange,
+  checkpoint76Items: jaSeedContent.checkpoints.find((checkpoint) => checkpoint.id === 'ja-checkpoint-76')?.items.length,
+  unit76AudioIds: unit76Audio.length,
+  unit76AudioCollisions: [...new Set(newCollisions)]
+}, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm test'
+files: 0
+tokens: in 16154254 / out 106816
+

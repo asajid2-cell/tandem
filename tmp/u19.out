@@ -1,0 +1,69 @@
+
+===== PARTNER VERDICT (codex, 268s) =====
+
+Implemented Japanese Unit 19 and kept the content lint clean. I also finished the in-progress Unit 18 lint cleanup that was still local from the interrupted turn, so the repo is back to `0 leaks`.
+
+Counts:
+- Unit 19 new words: `20`
+- Cumulative JA words: `386`
+- Total JA units: `19`
+- `ja-unit-19`: exists, lexRange `[399, 418]`
+- `ja-checkpoint-19`: exists, `10` items
+- Unit 19 scenes: both wired
+
+Verification:
+
+```text
+> foothold-language@0.1.0 lint:content
+> tsx scripts/lint-content.ts
+
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+content lint passed: 0 leaks
+```
+
+```text
+> foothold-language@0.1.0 test
+> vitest run --minWorkers=1 --maxWorkers=1
+
+ Test Files  7 passed (7)
+      Tests  36 passed (36)
+```
+
+No audio, deploy, or commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"pos: '.*adjective|headword: '好き'|headword: '楽しい'|headword: '元気'\" -Context 0,4 | Select-Object -First 60"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"pos: '.*adjective|headword: '好き'|headword: '楽しい'|headword: '元気'\" -Context 0,4 | Select-Object -First 60"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '嬉しい'|headword: '悲しい'|headword: '怖い'|headword: '嫌い'|headword: '欲しい'|headword: '寂しい'|headword: '疲れる'|headword: '眠い'|headword: '大変'|headword: '便利'|headword: '不便'|headword: '危ない'|headword: '静か'|headword: 'うるさい'|headword: 'きれい'|headword: '汚い'|headword: '心配'|headword: '恥ずかしい'|headword: '怒る'|headword: '気持ち'|headword: '簡単'\" -Context 0,4"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content/ja/seed.ts -Pattern \"headword: '嬉しい'|headword: '悲しい'|headword: '怖い'|headword: '嫌い'|headword: '欲しい'|headword: '寂しい'|headword: '疲れる'|headword: '眠い'|headword: '大変'|headword: '便利'|headword: '不便'|headword: '危ない'|headword: '静か'|headword: 'うるさい'|headword: 'きれい'|headword: '汚い'|headword: '心配'|headword: '恥ずかしい'|headword: '怒る'|headword: '気持ち'|headword: '簡単'\" -Context 0,4"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "ja-checkpoint-18" -Context 0,45'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'Select-String -Path content/ja/seed.ts -Pattern "ja-checkpoint-18" -Context 0,45'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command '$env:NODE_OPTIONS='"'--max-old-space-size=4096'; npm test -- --minWorkers=1 --maxWorkers=1"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints, scenes } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-19');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-19');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit19WordCount: unitWords.length, totalUnits: units.length, unit19Exists: Boolean(unit), checkpoint19Exists: Boolean(checkpoint), checkpoint19Items: checkpoint?.items.length ?? 0, unit19LexRange: unit?.lexRange ?? null, unit19ScenesExist: unit?.sceneIds.map(id => scenes.some(s => s.id === id)) ?? [] }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed';
+const { lexicon, units, checkpoints, scenes } = jaSeedContent;
+const unit = units.find((u) => u.id === 'ja-unit-19');
+const checkpoint = checkpoints.find((c) => c.id === 'ja-checkpoint-19');
+const unitWords = unit ? lexicon.filter((entry) => entry.order >= unit.lexRange[0] && entry.order <= unit.lexRange[1]) : [];
+console.log(JSON.stringify({ cumulativeJaWords: lexicon.length, unit19WordCount: unitWords.length, totalUnits: units.length, unit19Exists: Boolean(unit), checkpoint19Exists: Boolean(checkpoint), checkpoint19Items: checkpoint?.items.length ?? 0, unit19LexRange: unit?.lexRange ?? null, unit19ScenesExist: unit?.sceneIds.map(id => scenes.some(s => s.id === id)) ?? [] }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 59205227 / out 306890
+
+
+⚠ tandem: codex 019ef3c5 has run 13 turns (compaction threshold 12).
+   If autoCompact is on (the default), the bridge hands off to a fresh session on the next ask.
+   Or craft the handoff now: node bin/peer.mjs compact "Summarize X, Y, Z so a fresh session continues seamlessly"

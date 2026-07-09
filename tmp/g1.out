@@ -1,0 +1,57 @@
+
+===== PARTNER VERDICT (codex, 210s) =====
+
+Added 4 Japanese grammar patterns to `grammar[]`:
+
+- `ja-want-tai` order `148`
+- `ja-permission-temoii` order `149`
+- `ja-able-koto-ga-dekiru` order `150`
+- `ja-advice-ta-hou-ga-ii` order `151`
+
+`npm run lint:content`: exit code `0`
+
+New grammar count: `46`
+
+No build/test/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['ご飯','水','食べる','飲む','日本','ここ','店','駅','行く','見る','帰る','読む','日本語','早い','休む','できる','いい'];
+console.log(jaSeedContent.lexicon.filter(e => words.includes(e.headword)).map(e => [e.headword,e.order]));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['ご飯','水','食べる','飲む','日本','ここ','店','駅','行く','見る','帰る','読む','日本語','早い','休む','できる','いい'];
+console.log(jaSeedContent.lexicon.filter(e => words.includes(e.headword)).map(e => [e.headword,e.order]));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-gohan','ja-mizu','ja-taberu','ja-nomu','ja-nihon','ja-koko','ja-mise','ja-eki','ja-iku','ja-miru','ja-kaeru','ja-yomu','ja-nihongo','ja-hayai','ja-yasumu','ja-dekiru','ja-ii'];
+console.log(jaSeedContent.lexicon.filter(e => ids.includes(e.id)).map(e => [e.id,e.headword,e.order]));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-gohan','ja-mizu','ja-taberu','ja-nomu','ja-nihon','ja-koko','ja-mise','ja-eki','ja-iku','ja-miru','ja-kaeru','ja-yomu','ja-nihongo','ja-hayai','ja-yasumu','ja-dekiru','ja-ii'];
+console.log(jaSeedContent.lexicon.filter(e => ids.includes(e.id)).map(e => [e.id,e.headword,e.order]));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\seed.ts -Encoding UTF8 | Select-Object -Skip 21580 -First 520"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\seed.ts -Encoding UTF8 | Select-Object -Skip 21580 -First 520"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-you-ni-naru-change'\" -Context 0,80 -Encoding UTF8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"id: 'ja-you-ni-naru-change'\" -Context 0,80 -Encoding UTF8"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-want-tai','ja-permission-temoii','ja-able-koto-ga-dekiru','ja-advice-ta-hou-ga-ii'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-want-tai','ja-permission-temoii','ja-able-koto-ga-dekiru','ja-advice-ta-hou-ga-ii'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 20408312 / out 143217
+

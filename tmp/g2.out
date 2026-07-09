@@ -1,0 +1,70 @@
+
+===== PARTNER VERDICT (codex, 135s) =====
+
+Added 4 Japanese grammar patterns to `grammar[]`:
+
+- `ja-must-nakereba` order `152`
+- `ja-prohibition-tewaikenai` order `153`
+- `ja-intention-tsumori` order `154`
+- `ja-simultaneous-nagara` order `155`
+
+`npm run lint:content`: exit code `0`
+
+New grammar count: `50`
+
+No build/test/audio/deploy/commit run.
+
+----- what codex did -----
+commands:
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, max: Math.max(...jaSeedContent.grammar.map(g => g.order)), last: jaSeedContent.grammar.slice(-8).map(({id, order}) => ({id, order})) }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { createJapaneseTokenizer } from './src/engine/lint.ts';
+const tokenizer = await createJapaneseTokenizer();
+const texts = [
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u306a\\u3051\\u308c\\u3070\\u306a\\u3089\\u306a\\u3044\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u307e\\u306a\\u3051\\u308c\\u3070\\u306a\\u3089\\u306a\\u3044\\u3002',
+  '\\u65e5\\u672c\\u306b\\u884c\\u304b\\u306a\\u3051\\u308c\\u3070\\u306a\\u3089\\u306a\\u3044\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u3066\\u306f\\u3044\\u3051\\u306a\\u3044\\u3002',
+  '\\u3053\\u3053\\u3067\\u4f11\\u3093\\u3067\\u306f\\u3044\\u3051\\u306a\\u3044\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u3093\\u3067\\u306f\\u3044\\u3051\\u306a\\u3044\\u3002',
+  '\\u65e5\\u672c\\u306b\\u884c\\u304f\\u3064\\u3082\\u308a\\u3067\\u3059\\u3002',
+  '\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u3080\\u3064\\u3082\\u308a\\u3067\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u308b\\u3064\\u3082\\u308a\\u3067\\u3059\\u3002',
+  '\\u6c34\\u3092\\u98f2\\u307f\\u306a\\u304c\\u3089\\u8aad\\u307f\\u307e\\u3059\\u3002',
+  '\\u3054\\u98ef\\u3092\\u98df\\u3079\\u306a\\u304c\\u3089\\u65e5\\u672c\\u8a9e\\u3092\\u8aad\\u307f\\u307e\\u3059\\u3002',
+  '\\u898b\\u306a\\u304c\\u3089\\u98f2\\u307f\\u307e\\u3059\\u3002'
+];
+for (const text of texts) console.log(JSON.stringify({ text, tokens: tokenizer.tokenize(text) }));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"headword: 'なる'\",\"headword: 'いける'\",\"headword: '行ける'\",\"tokens: \\['~なけれ'\",\"tokens: \\['つもり'\",\"tokens: \\['ながら'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['ja-naru','ja-ikeru','ja-iku'];
+console.log(jaSeedContent.lexicon.filter(e => words.includes(e.id) || ['なる','いける','行ける'].includes(e.headword)).map(e => ({id:e.id, headword:e.headword, order:e.order, pos:e.pos})));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Select-String -Path content\\ja\\seed.ts -Pattern \"headword: 'なる'\",\"headword: 'いける'\",\"headword: '行ける'\",\"tokens: \\['~なけれ'\",\"tokens: \\['つもり'\",\"tokens: \\['ながら'\" -Encoding UTF8 | Select-Object LineNumber,Line"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const words = ['ja-naru','ja-ikeru','ja-iku'];
+console.log(jaSeedContent.lexicon.filter(e => words.includes(e.id) || ['なる','いける','行ける'].includes(e.headword)).map(e => ({id:e.id, headword:e.headword, order:e.order, pos:e.pos})));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\seed.ts -Encoding UTF8 | Select-Object -Skip 20690 -First 90"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "Get-Content content\\ja\\seed.ts -Encoding UTF8 | Select-Object -Skip 20690 -First 90"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command 'npm run lint:content'
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-must-nakereba','ja-prohibition-tewaikenai','ja-intention-tsumori','ja-simultaneous-nagara'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+  "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Command "@'
+import { jaSeedContent } from './content/ja/seed.ts';
+const ids = ['ja-must-nakereba','ja-prohibition-tewaikenai','ja-intention-tsumori','ja-simultaneous-nagara'];
+console.log(JSON.stringify({ count: jaSeedContent.grammar.length, added: jaSeedContent.grammar.filter((g) => ids.includes(g.id)).map(({ id, order }) => ({ id, order })) }, null, 2));
+'@ | npx tsx -"
+files: 0
+tokens: in 21562981 / out 148340
+
