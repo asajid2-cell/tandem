@@ -36,7 +36,7 @@ node bin/peer.mjs ask "<scoped task>"
 node bin/peer.mjs ask - < task.txt
 node bin/peer.mjs ask --bg "<long task>"       # background a long turn; poll status / use wait
 node bin/peer.mjs status      # is the partner mid-turn? last verdict
-node bin/peer.mjs wait 1800   # block until the --bg turn finishes
+node bin/peer.mjs wait 240   # block until the --bg turn finishes
 node bin/peer.mjs tail 60     # live progress of the in-flight turn
 node bin/peer.mjs ledger "<entry>"             # record to THIS pair's own ledger (no arg = print it)
 node bin/peer.mjs compact "<handoff prompt>"   # hand a near-full partner to a fresh thread
@@ -80,17 +80,18 @@ foreground `ask` also works; a hand-rolled detached shell (Start-Process / nohup
 NOT — it has broken here before. Do your own analysis in parallel — never just idle waiting on
 the partner.
 
-**Reliability (auto-managed — set in `tandem.config.json`):**
-- **`autoCompact`** (default `true`) — after **`maxTurnsBeforeCompact`** turns (default 12) the
-  bridge auto-hands-off to a fresh partner session, preserving continuity via a summary, so the
-  partner never degrades/spins near its context limit. The reactive net (recover on a hard
-  context error) is always on regardless.
-- **`maxTurnSec`** (default 2400) — a runaway/stuck partner turn is killed (tree-killed, so its
-  child processes don't pile up) after this many seconds, so a spin can't run forever. Generous
-  so a long legit build isn't clipped; raise it for genuinely long builds, or 0 to disable.
-- **`taskPreamble`** — project context (repo root + key paths) auto-prepended to a *fresh*
-  partner session's first task, so it doesn't burn a turn hunting for paths or recursing a huge
-  workspace from root. Empty by default. Resumed sessions already have the context.
+**Reliability (set in `tandem.config.json`):**
+- **`autoCompact`** (on in the shipped config; code default off) + **`compactAtTokens`** (default
+  300000 input tokens, env `TANDEM_COMPACT_AT`) — when the partner's tracked input tokens cross
+  the threshold, the next **Codex-partner** ask auto-hands-off to a fresh session first,
+  preserving continuity via a summary. The **Claude partner is never auto-compacted** — `ask`/
+  `status` warn "running low"; run `compact "<handoff>"` yourself. Hard-context-error recovery
+  (fresh session seeded with a summary) is always on for the Codex partner only.
+- **There is NO runaway-turn kill.** A partner turn runs until the partner CLI finishes; `wait`
+  giving up does not stop the turn. Scope asks small (~20 min of work); a truly runaway Claude
+  partner can be stopped with `stop`/`new` — a Codex partner has no kill lever.
+- Project context for a fresh partner session goes **in the ask itself** (there is no preamble
+  mechanism) — state repo root and key paths so the partner doesn't recurse a huge workspace.
 
 ## Prerequisite the USER must set up first
 

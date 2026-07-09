@@ -32,8 +32,11 @@ const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on
 const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
 const CODEX_DRIVER_ID =
   process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
-// Per-driver verdict/status files so concurrent tandems don't clobber each other (matches peer.mjs).
-const SK = jobKey(CODEX_DRIVER_ID);
+// Per-driver verdict/status files so concurrent tandems don't clobber each other. MUST use the
+// same driver-id precedence as peer.mjs DRIVER_ID (Claude session id first), or a Claude driver
+// with a Claude partner writes jobs under one key and reads them under another (status/wait/
+// verdict never return — the tandem looks hung while the partner worked fine).
+const SK = jobKey(process.env.CLAUDE_CODE_SESSION_ID || CODEX_DRIVER_ID);
 const LASTMSG = join(STATE, `last-${SK}.txt`);
 const JOB = join(STATE, `job-${SK}.json`);
 
