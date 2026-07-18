@@ -41,6 +41,9 @@ if (process.env.FAKE_FAIL_CONTEXT === "1" && resume) {
 const sid = resume ? sidArg : process.env.FAKE_SID || randomUUID();
 const verdict = `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
 const lines = [];
+if (!resume && process.env.FAKE_DECOY_ID) {
+  lines.push(JSON.stringify({ type: "item.started", id: process.env.FAKE_DECOY_ID }));
+}
 if (!resume && process.env.FAKE_OMIT_SESSION_ID !== "1") lines.push(JSON.stringify({ session_id: sid })); // peer.mjs parseSessionId picks this up
 lines.push(JSON.stringify({ item: { type: "agent_message", text: verdict } }));
 lines.push(JSON.stringify({ usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 1000, output_tokens: 40 } }));

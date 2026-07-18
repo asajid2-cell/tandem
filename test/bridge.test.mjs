@@ -375,6 +375,57 @@ test("concurrent fresh turns couple only to the rollout carrying their lane nonc
   assert.equal(sidOf(b2.out), sidB, "lane B resumes the rollout containing B's nonce");
 });
 
+test("fresh coupling ignores generic event ids and accepts only an explicit session id", (t) => {
+  const state = freshState(t);
+  const actual = "11111111-2222-4333-8444-555555555555";
+  const decoy = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const env = { FAKE_SID: actual, FAKE_DECOY_ID: decoy };
+
+  const first = peer(["ask", "DECOY-ID-FIRST"], { state, driver: "decoyDriver", env });
+  assert.equal(first.code, 0);
+  assert.equal(sidOf(first.out), actual);
+  const second = peer(["ask", "DECOY-ID-CONTINUE"], { state, driver: "decoyDriver", env });
+  assert.match(second.out, /mode=resume/);
+  assert.equal(sidOf(second.out), actual);
+  assert.doesNotMatch(second.out, new RegExp(decoy));
+});
+
+test("fresh coupling fails closed with a persistent warning when no session metadata can be proven", (t) => {
+  const root = freshState(t);
+  const state = join(root, "lane");
+  const sessions = join(root, "empty-sessions");
+  mkdirSync(state, { recursive: true });
+  mkdirSync(sessions, { recursive: true });
+  const uncoupledEnv = {
+    FAKE_OMIT_SESSION_ID: "1",
+    TANDEM_CODEX_SESSIONS: sessions,
+  };
+
+  const first = peer(["ask", "UNCOUPLED-FIRST"], {
+    state,
+    driver: "uncoupledDriver",
+    env: uncoupledEnv,
+  });
+  assert.equal(first.code, 0);
+  assert.match(first.out, /could not prove its session id/i);
+  assert.ok(!existsSync(join(state, "peer.session")));
+
+  const status = peer(["status"], {
+    state,
+    driver: "uncoupledDriver",
+    env: uncoupledEnv,
+  });
+  assert.match(status.out, /continuity was left uncoupled/i);
+
+  const replacement = peer(["ask", "UNCOUPLED-REPLACEMENT"], {
+    state,
+    driver: "uncoupledDriver",
+    env: { FAKE_SID: "99999999-8888-4777-8666-555555555555", TANDEM_CODEX_SESSIONS: sessions },
+  });
+  assert.equal(replacement.code, 0);
+  assert.match(replacement.out, /mode=fresh/);
+});
+
 test("lane worktree provisioning persists an isolated cwd for fresh editing turns", (t) => {
   const root = freshState(t);
   const repo = join(root, "repo");

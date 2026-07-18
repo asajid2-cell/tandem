@@ -285,7 +285,13 @@ function rolloutMatches(marker, startedAt) {
   const matches = [];
   const walk = (dir, depth) => {
     if (depth > 6) return;
-    for (const name of readdirSync(dir)) {
+    let names;
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of names) {
       const file = join(dir, name);
       let stat;
       try {
@@ -1413,9 +1419,13 @@ function parseSessionId(text) {
     } catch {
       continue;
     }
-    const cand =
-      o.session_id ?? o.thread_id ?? o.conversation_id ?? o.payload?.session_id ?? o.payload?.id ?? o.id;
-    if (typeof cand === "string" && /^[0-9a-f-]{36}$/i.test(cand)) return cand;
+    const cand = o.session_id ?? o.thread_id ?? o.conversation_id ?? o.payload?.session_id;
+    if (
+      typeof cand === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cand)
+    ) {
+      return cand;
+    }
   }
   return null;
 }
