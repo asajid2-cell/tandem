@@ -14,6 +14,7 @@ import { join } from "node:path";
 
 const DEFAULT_WEDGE_AFTER_SEC = 60;
 const DEFAULT_SPAWN_GRACE_SEC = 5;
+const RENAME_RETRY_CELL = new Int32Array(new SharedArrayBuffer(4));
 
 export function jobPaths(state, sk) {
   return {
@@ -35,7 +36,30 @@ export function readJson(file) {
 export function writeJsonAtomic(file, value) {
   const tmp = `${file}.${process.pid}.${randomUUID()}.tmp`;
   writeFileSync(tmp, JSON.stringify(value));
-  renameSync(tmp, file);
+  let lastError;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    try {
+      renameSync(tmp, file);
+      return;
+    } catch (error) {
+      if (!["EACCES", "EBUSY", "EPERM"].includes(error.code)) {
+        try {
+          rmSync(tmp);
+        } catch {
+          /* ignore cleanup failure; preserve the original write error */
+        }
+        throw error;
+      }
+      lastError = error;
+      Atomics.wait(RENAME_RETRY_CELL, 0, 0, Math.min(5 * (attempt + 1), 50));
+    }
+  }
+  try {
+    rmSync(tmp);
+  } catch {
+    /* ignore cleanup failure; preserve the replacement error */
+  }
+  throw lastError;
 }
 
 export function isPidAlive(pid) {
@@ -61,8 +85,13 @@ export function inspectDispatch(
   const paths = jobPaths(state, sk);
   const job = readJson(paths.job);
   const lock = readJson(paths.lock);
+  const finishedLeaseMismatch =
+    job &&
+    job.status !== "running" &&
+    lock &&
+    (!job.dispatchId || !lock.dispatchId || job.dispatchId !== lock.dispatchId);
 
-  if (job && job.status !== "running") {
+  if (job && job.status !== "running" && !finishedLeaseMismatch) {
     return {
       ...job,
       lockPresent: !!lock,
@@ -90,7 +119,9 @@ export function inspectDispatch(
   const heartbeatAgeSec = heartbeatTs ? Math.max(0, Math.round((now - heartbeatTs) / 1000)) : null;
 
   let reason = "";
-  if (job && lock && job.dispatchId && lock.dispatchId && job.dispatchId !== lock.dispatchId) {
+  if (finishedLeaseMismatch) {
+    reason = "finished job/lease dispatch IDs disagree";
+  } else if (job && lock && job.dispatchId && lock.dispatchId && job.dispatchId !== lock.dispatchId) {
     reason = "job/lease dispatch IDs disagree";
   } else if (!workerPid && elapsedSec > spawnGraceSec) {
     reason = "no worker PID was recorded before the spawn grace expired";
@@ -297,7 +328,12 @@ export function forceFinishDispatch(state, sk, finalState) {
     finishedTs: Date.now(),
     ts: Date.now(),
   });
-  if (lock.dispatchId === dispatchId) removeIfOwned(paths.lock, dispatchId);
-  if (readJson(paths.heartbeat)?.dispatchId === dispatchId) removeIfOwned(paths.heartbeat, dispatchId);
+  for (const file of [paths.lock, paths.heartbeat]) {
+    try {
+      if (existsSync(file)) rmSync(file);
+    } catch {
+      /* explicit force-finish leaves the final job record as the recovery evidence */
+    }
+  }
   return readJson(paths.job);
 }

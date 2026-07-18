@@ -897,3 +897,45 @@ test("hard-killed worker becomes WEDGED and requires explicit reap before replac
   assert.match(replacement.out, /WEDGE-REPLACEMENT/);
   assert.doesNotMatch(replacement.out, /WEDGE-BLIND-RETRY/);
 });
+
+test("mismatched finished job and stale lease become WEDGED and can be reaped", (t) => {
+  const s = freshState(t);
+  const driver = "mismatchedLease";
+  const sk = jobKey(driver);
+  writeFileSync(
+    join(s, `job-${sk}.json`),
+    JSON.stringify({
+      status: "done",
+      dispatchId: "finished-dispatch",
+      partner: "codex",
+      verdict: "old result",
+      ts: Date.now() - 1000,
+    }),
+  );
+  writeFileSync(
+    join(s, `dispatch-${sk}.lock`),
+    JSON.stringify({
+      dispatchId: "stale-dispatch",
+      ownerPid: 2147483647,
+      partner: "codex",
+      startedTs: Date.now() - 1000,
+    }),
+  );
+  writeFileSync(
+    join(s, `heartbeat-${sk}.json`),
+    JSON.stringify({ dispatchId: "stale-dispatch", pid: 2147483647, ts: Date.now() - 1000 }),
+  );
+
+  const opts = { state: s, driver };
+  const status = peer(["status"], opts);
+  assert.match(status.out, /job: WEDGED/);
+  assert.match(status.out, /finished job\/lease dispatch IDs disagree/i);
+
+  const reaped = peer(["reap"], opts);
+  assert.equal(reaped.code, 0);
+  assert.ok(!existsSync(join(s, `dispatch-${sk}.lock`)));
+  assert.ok(!existsSync(join(s, `heartbeat-${sk}.json`)));
+  const replacement = peer(["ask", "MISMATCH-RECOVERED"], opts);
+  assert.equal(replacement.code, 0);
+  assert.match(replacement.out, /MISMATCH-RECOVERED/);
+});
