@@ -38,7 +38,9 @@ rl.on("line", (line) => {
       }) + "\n",
     );
   };
-  const delay = Number(process.env.FAKE_DELAY) || 0;
+  const delayMatches =
+    !process.env.FAKE_DELAY_MATCH || task.includes(process.env.FAKE_DELAY_MATCH);
+  const delay = delayMatches ? Number(process.env.FAKE_DELAY) || 0 : 0;
   if (delay > 0) setTimeout(reply, delay);
   else reply();
 });

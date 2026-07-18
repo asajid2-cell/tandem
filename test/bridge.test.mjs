@@ -841,7 +841,7 @@ test("`stop` cancels an active Claude turn without leaving a wedged lease", (t) 
     state: s,
     driver: "claudeStop",
     partner: "claude",
-    env: { FAKE_DELAY: "1200" },
+    env: { FAKE_DELAY: "10000", FAKE_DELAY_MATCH: "CLAUDE-STOP-LIVE" },
   };
   assert.equal(peer(["ask", "CLAUDE-PREVIOUS-RESULT"], opts).code, 0);
   assert.match(readLast(s, "claudeStop"), /CLAUDE-PREVIOUS-RESULT/);
