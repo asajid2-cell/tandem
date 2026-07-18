@@ -29,7 +29,7 @@ rl.on("line", (line) => {
       process.stdout.write(JSON.stringify({ session_id: sid }) + "\n"); // daemon captures + records the pair
       firstTurn = false;
     }
-    const verdict = `FAKE-CLAUDE ok sid=${sid} first=${first} last=${last}`;
+    const verdict = `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}`;
     process.stdout.write(
       JSON.stringify({
         type: "result",

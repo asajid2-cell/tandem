@@ -552,6 +552,39 @@ test("worktree binding is immutable after coupling and detached worktrees are re
   assert.match(detached.out, /worktree is detached/i);
 });
 
+test("persistent Claude lanes start inside the worktree pinned in lane metadata", (t) => {
+  const root = freshState(t);
+  const repo = join(root, "repo");
+  const state = join(root, "state");
+  const worktree = join(root, "claude-editing");
+  mkdirSync(repo, { recursive: true });
+  mkdirSync(state, { recursive: true });
+  runGit(["init"], repo);
+  runGit(["config", "user.email", "tandem-test@example.invalid"], repo);
+  runGit(["config", "user.name", "Tandem Test"], repo);
+  writeFileSync(join(repo, "seed.txt"), "seed\n");
+  runGit(["add", "seed.txt"], repo);
+  runGit(["commit", "-m", "seed"], repo);
+
+  const opts = {
+    state,
+    driver: "claudeWorktreeDriver",
+    partner: "claude",
+    env: { TANDEM_CWD: repo, TANDEM_LABEL: "claude-editing-lane" },
+  };
+  t.after(() => stopDaemon(state));
+  assert.equal(
+    peer(["worktree", "create", worktree, "tandem/claude-editing", "HEAD"], opts).code,
+    0,
+  );
+  const asked = peer(["ask", "CLAUDE-EDIT-IN-WORKTREE"], opts);
+  assert.equal(asked.code, 0);
+  assert.ok(
+    readLast(state, "claudeWorktreeDriver").includes(`cwd=${resolve(worktree)}`),
+    "Claude daemon inherited the persisted lane cwd",
+  );
+});
+
 test("swarm start auto-namespaces five same-driver lanes and aggregates their states", (t) => {
   const state = freshState(t);
   const manifest = join(state, "swarm.json");

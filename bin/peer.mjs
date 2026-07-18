@@ -551,7 +551,7 @@ function killDaemon() {
 // Ensure the persistent, RESUMABLE Claude partner session is open. Auto-starts the
 // daemon if needed; the daemon resumes the stored session id, so closing/reopening
 // always continues the same durable session (never an ephemeral subagent).
-async function ensureClaudeDaemon() {
+async function ensureClaudeDaemon(cfg) {
   const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
   if (isPidAlive(pid) && (status === "IDLE" || status === "RUNNING")) return true;
@@ -569,7 +569,11 @@ async function ensureClaudeDaemon() {
     return false;
   }
   console.error("tandem: opening persistent Claude session (serve)…");
-  const child = spawn(process.execPath, [SERVE_SCRIPT], { detached: true, stdio: "ignore", env: { ...process.env, TANDEM_STATE: STATE } });
+  const child = spawn(process.execPath, [SERVE_SCRIPT], {
+    detached: true,
+    stdio: "ignore",
+    env: { ...process.env, TANDEM_STATE: STATE, TANDEM_CWD: cfg.cwd },
+  });
   child.unref();
   for (let i = 0; i < 70; i++) {
     await sleep(500);
@@ -594,7 +598,7 @@ async function askClaudeDaemon(task, cfg, bg, lease) {
     }
   }
   const stopStartingHeartbeat = startHeartbeat(lease, { pid: process.pid });
-  const ok = await ensureClaudeDaemon();
+  const ok = await ensureClaudeDaemon(cfg);
   stopStartingHeartbeat();
   if (!ok) return false;
   const daemonPid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
@@ -620,7 +624,7 @@ async function askClaudeDaemon(task, cfg, bg, lease) {
 async function compactClaude(prompt, cfg, lease) {
   const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
   try {
-    if (!(await ensureClaudeDaemon())) throw new Error("persistent Claude daemon did not become ready");
+    if (!(await ensureClaudeDaemon(cfg))) throw new Error("persistent Claude daemon did not become ready");
     const daemonPid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
     updateDispatch(lease, {
       workerPid: process.pid,
@@ -1663,7 +1667,10 @@ if (cmd === "ask" || cmd === "continue") {
     console.log(`tandem: persistent Claude session is already open (daemon pid ${daemonPid})`);
   } else {
     killDaemon();
-    spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: { ...process.env, TANDEM_STATE: STATE } }).on("exit", (c) => process.exit(c || 0));
+    spawn(process.execPath, [SERVE_SCRIPT], {
+      stdio: "inherit",
+      env: { ...process.env, TANDEM_STATE: STATE, TANDEM_CWD: cfg.cwd },
+    }).on("exit", (c) => process.exit(c || 0));
   }
 } else if (cmd === "stop") {
   const active = jobState(cfg);
