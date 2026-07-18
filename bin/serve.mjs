@@ -104,6 +104,14 @@ function claudePartnerFor(codexId) {
 let sessionId =
   claudePartnerFor(CODEX_DRIVER_ID) || (existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "");
 let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--dangerously-skip-permissions", "--verbose"];
+// Partner model/effort bind at daemon start (`stop` then re-ask to change). Env is inherited
+// from the driver that spawned us. Resolution mirrors peer.mjs: explicit TANDEM_MODEL/EFFORT >
+// TANDEM_TIER preset (tiers.claude.<tier> in the config) > flat config defaults.
+const tier = (process.env.TANDEM_TIER && C.tiers && C.tiers.claude && C.tiers.claude[process.env.TANDEM_TIER]) || {};
+const claudeModel = process.env.TANDEM_MODEL || tier.model || C.claudeModel || "";
+if (claudeModel) args.push("--model", claudeModel);
+const claudeEffort = process.env.TANDEM_EFFORT || tier.effort || C.claudeEffort || "";
+if (claudeEffort) args.push("--effort", claudeEffort);
 if (sessionId) args.push("--resume", sessionId);
 let bin = process.env.TANDEM_CLAUDE_BIN || C.claudeBin || "claude";
 const cwd = process.env.TANDEM_CWD || C.cwd || process.cwd();
@@ -123,6 +131,10 @@ console.log("  feed it turns with:  peer.mjs ask \"<task>\"   (Ctrl+C to close t
 let buf = "";
 let turnStart = 0;
 let inTurn = false;
+// Per-turn output targets: each ask's envelope carries the SENDER's job key, so verdicts land
+// under the asking driver's files even across driver restarts. Startup SK is the fallback.
+let curJob = JOB;
+let curLast = LASTMSG;
 
 claude.stdout.on("data", (b) => {
   buf += b.toString();
@@ -160,8 +172,8 @@ claude.stdout.on("data", (b) => {
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
       try {
-        writeFileSync(LASTMSG, verdict);
-        writeFileSync(JOB, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
+        writeFileSync(curLast, verdict);
+        writeFileSync(curJob, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
       } catch {
         /* ignore */
       }
@@ -227,12 +239,29 @@ setInterval(() => {
     /* ignore */
   }
   if (!task.trim()) return;
+  // Unwrap the peer envelope (carries the sender's job key); bare text = legacy sender.
+  curJob = JOB;
+  curLast = LASTMSG;
+  try {
+    const env2 = JSON.parse(task);
+    if (env2 && env2.__tandem === 1 && typeof env2.task === "string") {
+      task = env2.task;
+      const sk = String(env2.sk || "").replace(/[^a-zA-Z0-9._-]/g, "");
+      if (sk) {
+        curJob = join(STATE, "job-" + sk + ".json");
+        curLast = join(STATE, "last-" + sk + ".txt");
+      }
+    }
+  } catch {
+    /* bare text task */
+  }
+  if (!task.trim()) return;
   inTurn = true;
   turnStart = Date.now();
   writeFileSync(STATUS, "RUNNING");
   try {
     writeFileSync(TURNLOG, ""); // reset the live stream for this turn
-    writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
+    writeFileSync(curJob, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
   } catch {
     /* ignore */
   }

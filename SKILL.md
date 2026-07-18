@@ -87,11 +87,22 @@ the partner.
   preserving continuity via a summary. The **Claude partner is never auto-compacted** — `ask`/
   `status` warn "running low"; run `compact "<handoff>"` yourself. Hard-context-error recovery
   (fresh session seeded with a summary) is always on for the Codex partner only.
-- **There is NO runaway-turn kill.** A partner turn runs until the partner CLI finishes; `wait`
-  giving up does not stop the turn. Scope asks small (~20 min of work); a truly runaway Claude
-  partner can be stopped with `stop`/`new` — a Codex partner has no kill lever.
+- **`maxTurnSec`** (shipped 2400, env `TANDEM_MAX_TURN_SEC`, 0 = off) — a runaway CODEX-partner
+  turn is tree-killed at the cap and the job reports an error naming it. `wait` giving up does
+  NOT stop a turn — only the cap does. A runaway Claude-partner turn has no auto-kill: use
+  `stop`/`new`. Scope asks small (~20 min of work) regardless.
 - Project context for a fresh partner session goes **in the ask itself** (there is no preamble
   mechanism) — state repo root and key paths so the partner doesn't recurse a huge workspace.
+- **Partner tier/model/effort:** doctrine is model-agnostic — select by TIER via env
+  `TANDEM_TIER=efficient|deep` (default tier = just ask). The tier→model mapping lives ONLY in
+  `tandem.config.json`: `tiers.<partner>.<tier>` = `{model, effort}`, flat
+  `codexModel`/`codexEffort`/`claudeModel`/`claudeEffort` keys = the default tier. Explicit env
+  `TANDEM_MODEL`/`TANDEM_EFFORT` override a tier. Codex partner: binds per ask (fresh and resume,
+  `-m`/`-c model_reasoning_effort`). Claude partner: binds at daemon start (`--model`/`--effort`)
+  — `stop` first to change. Doctrine: default tier for most work incl. grunt + adversarial
+  passes; efficient tier for mechanical sweeps; deep tier ONLY for genuinely deep architectural
+  review (state the reason); never map a tier to a small/mini-class model. Update the config when
+  model generations change — never docs.
 
 ## Prerequisite the USER must set up first
 

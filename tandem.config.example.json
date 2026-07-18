@@ -2,5 +2,22 @@
   "codexBin": "codex",
   "claudeBin": "claude",
   "cwd": ".",
-  "posture": "config"
+  "posture": "config",
+  "autoCompact": true,
+  "compactAtTokens": 300000,
+  "maxTurnSec": 2400,
+  "codexModel": "gpt-5.6-sol",
+  "codexEffort": "medium",
+  "claudeModel": "opus",
+  "claudeEffort": "xhigh",
+  "tiers": {
+    "codex": {
+      "efficient": { "model": "gpt-5.6-luna", "effort": "medium" },
+      "deep": { "model": "gpt-5.6-sol", "effort": "max" }
+    },
+    "claude": {
+      "efficient": { "model": "opus", "effort": "medium" },
+      "deep": { "model": "fable", "effort": "xhigh" }
+    }
+  }
 }

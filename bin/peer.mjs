@@ -29,6 +29,9 @@ const ROOT = resolve(HERE, "..");
 // never share state, timeline, or ledger. Name it with `peer.mjs label`. TANDEM_STATE overrides
 // (tests); no-driver CLI uses .state.
 const DRIVER_ID = process.env.CLAUDE_CODE_SESSION_ID || process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
+// What KIND of agent is driving (for truthful timeline/group records — a Codex driver used to be
+// hardcoded as "claude"). Same detection signals as detectPartner().
+const DRIVER_KIND = process.env.CLAUDECODE || process.env.CLAUDE_CODE_SESSION_ID || process.env.CLAUDE_CODE_ENTRYPOINT ? "claude" : DRIVER_ID ? "codex" : "claude";
 const STATE = stateDir(ROOT, DRIVER_ID);
 const SESSION_FILE = join(STATE, "peer.session");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
@@ -122,6 +125,21 @@ function loadConfig() {
     compactAtTokens: Number(process.env.TANDEM_COMPACT_AT) || 300000,
     // if true, the bridge compacts automatically (default summary) instead of just notifying.
     autoCompact: process.env.TANDEM_AUTO_COMPACT === "1" || false,
+    // hard cap on a single CODEX-partner turn: after this many seconds the turn is tree-killed
+    // and the job reports an error naming the cap. 0 = no cap. (The Claude partner's levers are
+    // stop/new — its daemon turn is not killed by this.)
+    maxTurnSec: 0,
+    // partner model selection. codexModel/codexEffort apply per-ask (fresh AND resume both
+    // accept -m / -c model_reasoning_effort). claudeModel/claudeEffort bind when the serve
+    // daemon starts — `stop` first to change. Empty = defer to each CLI's own config.
+    codexModel: "",
+    codexEffort: "",
+    claudeModel: "",
+    claudeEffort: "",
+    // tier presets — tiers.<partner>.<tier> = { model, effort }. The ONLY place model names
+    // live; docs/doctrine speak in tiers (TANDEM_TIER) so they survive model generations.
+    // The flat keys above are the "default" tier.
+    tiers: {},
   };
   let cfg = defaults;
   for (const p of [join(ROOT, "tandem.config.json"), join(process.cwd(), "tandem.config.json")]) {
@@ -143,8 +161,35 @@ function loadConfig() {
   if (process.env.TANDEM_CWD) cfg.cwd = process.env.TANDEM_CWD;
   if (process.env.TANDEM_PARTNER) cfg.partner = process.env.TANDEM_PARTNER;
   if (process.env.TANDEM_POSTURE) cfg.posture = process.env.TANDEM_POSTURE;
+  // TANDEM_TIER resolves a config tier preset for the active partner (routed AFTER the
+  // TANDEM_PARTNER override above). Explicit TANDEM_MODEL/TANDEM_EFFORT below still win.
+  if (process.env.TANDEM_TIER) {
+    const t = (cfg.tiers || {})[cfg.partner]?.[process.env.TANDEM_TIER];
+    if (t) {
+      if (cfg.partner === "claude") {
+        if (t.model) cfg.claudeModel = t.model;
+        if (t.effort) cfg.claudeEffort = t.effort;
+      } else {
+        if (t.model) cfg.codexModel = t.model;
+        if (t.effort) cfg.codexEffort = t.effort;
+      }
+    } else {
+      console.error(`tandem: unknown tier "${process.env.TANDEM_TIER}" for partner "${cfg.partner}" (no tiers entry in tandem.config.json) — using defaults`);
+    }
+  }
+  // TANDEM_MODEL / TANDEM_EFFORT target whichever partner is active. codex: -m /
+  // -c model_reasoning_effort per ask. claude: --model / --effort at daemon start.
+  if (process.env.TANDEM_MODEL) {
+    if (cfg.partner === "claude") cfg.claudeModel = process.env.TANDEM_MODEL;
+    else cfg.codexModel = process.env.TANDEM_MODEL;
+  }
+  if (process.env.TANDEM_EFFORT) {
+    if (cfg.partner === "claude") cfg.claudeEffort = process.env.TANDEM_EFFORT;
+    else cfg.codexEffort = process.env.TANDEM_EFFORT;
+  }
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
+  if (process.env.TANDEM_MAX_TURN_SEC) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
   return cfg;
 }
 
@@ -210,7 +255,7 @@ function codexPartnerFor(driverId) {
 // Point .state/peer.session at this driver's coupled codex (or clear it so a new
 // driver starts a fresh codex = a new tandem). Returns the driver id.
 function pairCodexForDriver() {
-  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = DRIVER_ID; // any driver kind — a Codex driver resumes its codex partner too
   const paired = codexPartnerFor(driverId);
   if (paired) writeFileSync(SESSION_FILE, paired);
   else if (existsSync(SESSION_FILE)) rmSync(SESSION_FILE);
@@ -263,12 +308,12 @@ async function ask(task, cfg) {
   // Codex partner → durable, resumable `codex exec resume`, coupled to this driver.
   // The resume target comes from the IMMUTABLE recorded pair (codexPartnerFor), never the
   // shared global — so concurrent tandems can't cross-wire to each other's Codex.
-  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = DRIVER_ID;
   const resumeSid = codexPartnerFor(driverId);
   pairCodexForDriver(); // keep the global peer.session current for the watcher's display only
-  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", driverId, partnerId: resumeSid, task });
+  logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   // record now if the pair is already known (resumed); a fresh pair records after askCodex
-  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
   const res = await askCodex(task, cfg, resumeSid);
   if (res) {
     printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
@@ -284,7 +329,7 @@ async function ask(task, cfg) {
     });
     // register/refresh this exact pair — codexId is the ACTUAL codex this turn used/created
     const cdx = res.codexId || resumeSid;
-    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
   }
 }
@@ -365,7 +410,9 @@ async function askClaudeDaemon(task, cfg, bg) {
   } catch {
     /* ignore */
   }
-  writeFileSync(INBOX, task);
+  // Envelope carries OUR job key so the daemon answers under it even if the daemon was started
+  // by an earlier driver session (restart re-key) or a different driver id derivation.
+  writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, task }));
   if (bg) {
     console.log("tandem: sent to the open Claude session (bg). poll: peer.mjs status  ·  block: peer.mjs wait");
     return;
@@ -379,7 +426,7 @@ async function askClaudeDaemon(task, cfg, bg) {
 async function compactClaude(prompt, cfg) {
   if (!(await ensureClaudeDaemon())) return;
   writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
-  writeFileSync(INBOX, prompt && prompt.trim() ? prompt : COMPACT_PROMPT);
+  writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, task: prompt && prompt.trim() ? prompt : COMPACT_PROMPT }));
   console.error("tandem: asking the Claude partner for a handoff summary…");
   await waitJob(cfg.claudeMaxSec || 1800);
   const summary = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
@@ -410,11 +457,11 @@ async function startJob(task, cfg) {
   // Codex partner → detached exec-resume worker (resumable session, survives shell timeouts).
   // Pass the driver id + IMMUTABLE resume id (from the recorded pair) + task path by ARGV so
   // concurrent bg tandems are fully isolated and can NEVER cross-wire via shared global files.
-  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = DRIVER_ID;
   const resumeSid = codexPartnerFor(driverId);
   pairCodexForDriver(); // keep the global peer.session current for the watcher's display only
   // record on delegate if the pair is already known (resumed) so it shows live DURING the turn
-  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+  if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
   for (const f of [TURNLOG, LASTMSG]) if (existsSync(f)) rmSync(f);
   const taskFile = join(STATE, "job-" + (driverId || "anon").replace(/[^a-zA-Z0-9-]/g, "") + ".task");
   writeFileSync(taskFile, task);
@@ -430,7 +477,7 @@ async function startJob(task, cfg) {
 
 async function runJob(cfg, jobArgv) {
   // self-contained from argv (race-free): [driverId, resumeSid, taskFile]
-  const driverId = jobArgv[0] || process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = jobArgv[0] || DRIVER_ID;
   const resumeSid = jobArgv[1] || "";
   const taskFile = jobArgv[2] || JOB_TASK;
   let task = "";
@@ -440,7 +487,7 @@ async function runJob(cfg, jobArgv) {
     return;
   }
   // background worker is codex-only (claude bg goes through the persistent daemon)
-  logEvent({ type: "delegate", ts: Date.now(), driver: "claude", partner: "codex", driverId, partnerId: resumeSid, task });
+  logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   let res = null;
   try {
     res = await askCodex(task, cfg, resumeSid);
@@ -449,13 +496,24 @@ async function runJob(cfg, jobArgv) {
     return;
   }
   const job = res
-    ? { status: "done", partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null, lowContext: res.lowContext || null, ts: Date.now() }
+    ? {
+        status: res.killed ? "error" : "done",
+        error: res.killed ? "turn tree-killed at the maxTurnSec cap — re-scope the ask; check the tree for partial edits" : undefined,
+        partner: "codex",
+        durSec: res.dur,
+        verdict: res.verdict,
+        commands: res.d?.commands || [],
+        files: res.d?.files || [],
+        tokens: res.d?.tokens || null,
+        lowContext: res.lowContext || null,
+        ts: Date.now(),
+      }
     : { status: "error", partner: "codex", ts: Date.now() };
   writeFileSync(JOB, JSON.stringify(job));
   if (res) {
     // Register the EXACT pair: the real driver ↔ the actual codex this turn used/created.
     const cdx = res.codexId || resumeSid;
-    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: "claude->codex" });
+    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     logEvent({ type: "verdict", ts: Date.now(), partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null });
   }
   try {
@@ -504,6 +562,10 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
   const args = ["exec"];
   if (sid) args.push("resume");
   args.push("--json", "--skip-git-repo-check", "-o", outFile, ...postureArgs(cfg.posture, !sid));
+  // model/effort are accepted by both `exec` and `exec resume` (unlike -C/--sandbox). Values are
+  // passed via spawn (no shell), so the TOML quotes on the effort value arrive intact.
+  if (cfg.codexModel) args.push("-m", cfg.codexModel);
+  if (cfg.codexEffort) args.push("-c", `model_reasoning_effort="${cfg.codexEffort}"`);
   if (!sid) args.push("-C", cfg.cwd);
   if (sid) args.push(sid);
   args.push("-");
@@ -514,7 +576,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
     /* ignore */
   }
   const t0 = Date.now();
-  const { stdout: out, code } = await runCodex(cfg.codexBin, args, task);
+  const { stdout: out, code, killed } = await runCodex(cfg.codexBin, args, task, cfg.maxTurnSec || 0);
   const dur = Math.round((Date.now() - t0) / 1000);
 
   // capture the session id for continuity — only on a successful fresh run, and
@@ -533,9 +595,10 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
   }
 
   // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
-  const verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
+  let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
+  if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
   const d = digest(out);
-  return { verdict, d, dur, raw: out, code, codexId };
+  return { verdict, d, dur, raw: out, code, codexId, killed };
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
@@ -588,7 +651,7 @@ async function askCodex(task, cfg, sidOverride) {
 // the summary as a seed, and detach the old pairing. The NEXT ask starts a fresh session with the
 // seed prepended and re-couples to it — no wasted "ack" turn, and the real verdict slot stays clean.
 async function compactCodex(task, cfg) {
-  const driverId = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = DRIVER_ID;
   // Only ever compact THIS driver's own coupled codex. Never fall back to the shared global
   // for a known driver — that could compact an unrelated tandem's session.
   const sid = driverId ? codexPartnerFor(driverId) : readSession();
@@ -606,7 +669,7 @@ async function compactCodex(task, cfg) {
   console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
-function runCodex(bin, args, stdin) {
+function runCodex(bin, args, stdin, maxSec = 0) {
   // a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
   if (/\.[mc]?js$/i.test(bin)) {
     args = [bin, ...args];
@@ -616,6 +679,8 @@ function runCodex(bin, args, stdin) {
     let stdout = "";
     let stderr = "";
     let child;
+    let killed = false;
+    let timer = null;
     try {
       child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     } catch (e) {
@@ -626,6 +691,18 @@ function runCodex(bin, args, stdin) {
       console.error(`tandem: partner spawn error: ${e.message} (is codex installed + logged in?)`);
       process.exit(1);
     });
+    // real runaway-turn cap: tree-kill (child + its processes) so a spin can't run unbounded
+    if (maxSec > 0) {
+      timer = setTimeout(() => {
+        killed = true;
+        try {
+          if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
+          else child.kill("SIGKILL");
+        } catch {
+          /* already gone */
+        }
+      }, maxSec * 1000);
+    }
     child.stdout.on("data", (b) => {
       stdout += b.toString();
       try {
@@ -638,8 +715,9 @@ function runCodex(bin, args, stdin) {
     child.stdin.write(stdin);
     child.stdin.end();
     child.on("exit", (code) => {
-      if (code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
-      resolveP({ stdout, code: code ?? 0 });
+      if (timer) clearTimeout(timer);
+      if (!killed && code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
+      resolveP({ stdout, code: code ?? 0, killed });
     });
   });
 }
@@ -715,7 +793,7 @@ function status(cfg) {
     console.log(`\nlast verdict:\n${readFileSync(LASTMSG, "utf8").trim().slice(0, 1200)}`);
   }
   if (cfg.partner === "codex") {
-    const cur = codexPartnerFor(process.env.CLAUDE_CODE_SESSION_ID || "") || readSession();
+    const cur = codexPartnerFor(DRIVER_ID) || readSession();
     const note = lowContextNote(cur, cfg.compactAtTokens || 0);
     if (note) console.log(note);
   }
@@ -788,7 +866,7 @@ if (cmd === "ask") {
   let rec;
   if (argv[0]) rec = all.find((r) => String(r.n) === String(argv[0]));
   else {
-    const drv = process.env.CLAUDE_CODE_SESSION_ID;
+    const drv = DRIVER_ID;
     rec = (drv && all.find((r) => r.claudeId === drv)) || all[0];
   }
   if (!rec) console.log(`tandem: ${argv[0] ? "no group " + argv[0] : "no tandems yet"}`);
@@ -830,10 +908,7 @@ else if (cmd === "new") {
   for (const f of [SESSION_FILE, CLAUDE_SESSION, CLAUDE_VERDICT, JOB, JOB_TASK]) if (existsSync(f)) rmSync(f);
   // The coupling lives in groups.json (codexPartnerFor / claudePartnerFor), not just the
   // files above — so detach this driver too, or the next ask re-resumes the same thread.
-  const driverId =
-    cfg.partner === "claude"
-      ? process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || ""
-      : process.env.CLAUDE_CODE_SESSION_ID || "";
+  const driverId = DRIVER_ID; // any driver kind — same-model tandems detach correctly too
   markDetached(DETACHED, driverId);
   console.log(
     driverId
