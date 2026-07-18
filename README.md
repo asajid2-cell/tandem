@@ -63,6 +63,9 @@ and neither side would have found it alone.
 - **`bin/peer.mjs`** — the bridge. Delegate a turn to the partner and get back its verdict plus
   a digest of what it did (commands, files, tokens). It resumes one continuous partner session,
   so you never hand-parse session logs.
+- **`bin/jobs.mjs`** — the atomic lane lease, heartbeat, liveness probe, cancel, and wedge recovery.
+- **`bin/swarm.mjs`** — manifest-driven fan-out with isolated lane state and aggregate status.
+- **`bin/worktrees.mjs`** — per-lane Git worktree provisioning for concurrent editing agents.
 - **`SKILL.md`** — the invokable skill that flips a session into dual-driven mode and teaches
   the method (independent vantages → cross-check → ground-truth-wins → converge/diverge).
 - **`tandem.config.json`** — partner, binary path, working dir, posture.
@@ -74,14 +77,105 @@ and neither side would have found it alone.
 # 1) Install deps and create your local config:
 npm install
 cp tandem.config.example.json tandem.config.json   # then set codexBin/claudeBin/cwd if not on PATH
-# 2) Delegate from any session:
-node bin/peer.mjs ask "Independently verify X from runtime evidence — don't trust my source theory."
-node bin/peer.mjs status      # mid-turn? last verdict
-node bin/peer.mjs tail 60     # live progress
+# 2) Name the lane, then delegate:
+node bin/peer.mjs label "runtime-check"
+node bin/peer.mjs ask --bg "Independently verify X from runtime evidence."
+node bin/peer.mjs status
+node bin/peer.mjs tail 60
+node bin/peer.mjs wait 240
+node bin/peer.mjs result
 ```
 
 In a Claude Code session, run `/tandem` (after install) to enter dual-driven mode; the agent
 then uses the bridge as a co-engineer per the method in `SKILL.md`.
+
+## One lane, one active dispatch
+
+The bridge enforces the rule that used to depend on driver discipline: a lane cannot run two
+turns against the same partner session. `ask`, `continue`, `compact`, and interactive `attach`
+all acquire the same atomic lease. A second dispatch exits `3` and leaves the live turn alone.
+
+```bash
+peer.mjs continue "Check the failing integration case"   # same coupled session
+peer.mjs interrupt                                      # cancel the live turn, keep the session
+peer.mjs status                                         # running / done / error / WEDGED
+peer.mjs reap                                           # only for WEDGED; inspect edits first
+```
+
+Background jobs record the controller and partner PIDs plus a heartbeat. If a worker is hard-killed,
+`status` reports `WEDGED` instead of pretending the lane is busy forever. Replacement is explicit:
+inspect partial edits, run `reap`, then dispatch again. `new`, `resume`, label changes, and worktree
+changes are refused while a turn is running or wedged.
+
+`wait` now has automation-friendly exits: `0` done, `1` partner error or timeout, `2` no job, `3`
+wedged. `result` reports the current error when no verdict was produced; it does not print an older
+Claude result after a failed turn.
+
+## Run 4–5 lanes as a swarm
+
+Use a manifest when one head session fans out several authoritative lanes. `swarm start` atomically
+reserves the swarm name, derives a unique label and state directory for every lane, and starts each
+turn in the background. A setup race cannot dispatch the same namespace twice.
+
+```json
+{
+  "lanes": [
+    { "name": "runtime", "task": "Measure the real failure from the running build." },
+    { "name": "tests", "task": "Find the highest-risk missing regression tests." },
+    { "name": "api", "taskFile": "tasks/api.md", "worktree": true },
+    { "name": "ui", "taskFile": "tasks/ui.md", "worktree": true }
+  ]
+}
+```
+
+Paths in the manifest are relative to the manifest file. A fuller template lives at
+`examples/swarm.example.json`.
+
+```bash
+peer.mjs swarm start hardening examples/swarm.example.json
+peer.mjs swarm status hardening
+peer.mjs swarm wait hardening 240
+
+peer.mjs swarm tail hardening runtime 80
+peer.mjs swarm continue hardening runtime "Now test the competing explanation."
+peer.mjs swarm result hardening runtime
+peer.mjs swarm interrupt hardening runtime
+```
+
+`swarm status` prints every lane in one table. `results` aggregates all verdicts; `result <lane>`
+selects one. A failed setup remains reserved and visible for inspection rather than silently reusing
+partial state.
+
+## Isolate editing lanes with Git worktrees
+
+Set `"worktree": true` on an editing swarm lane. Tandem creates a linked worktree outside the main
+checkout and a dedicated `tandem/<lane-label>` branch, then persists that cwd as a lane invariant.
+Later `TANDEM_CWD` values cannot redirect the lane into the shared checkout.
+
+For one lane:
+
+```bash
+peer.mjs worktree create [path] [branch] [start-point]
+peer.mjs worktree status
+```
+
+Create or attach the worktree before the first partner turn. Once coupled, the cwd cannot change;
+run `peer.mjs new` first if a fresh session must move. Detached worktrees are rejected for editing
+lanes. Tandem never removes worktrees automatically.
+
+## Continue a lane by hand
+
+The head keeps driving the coupled session with `continue` or `swarm continue`. A human can open
+that exact session in the native CLI while retaining the lane lease:
+
+```bash
+peer.mjs attach --command                  # inspect exact cwd + argv
+peer.mjs attach                            # interactive native CLI
+peer.mjs swarm attach hardening runtime    # select a swarm lane by name
+```
+
+While the interactive CLI is open, background or foreground dispatches to that lane are refused.
+Closing it releases the lane; the next `continue` resumes the same session.
 
 ## Required setup: the partner must never ask for permission
 
@@ -120,7 +214,8 @@ reopened anytime**, continuing the same conversation across turns, restarts, and
 **The Codex→Claude session** (`tandem serve`):
 - **Kept open + resumable.** `serve` holds one persistent `claude -p --input-format stream-json`
   process — a single continuous session you converse with turn after turn (full context, live
-  streaming). `peer.mjs ask` auto-starts it on the first turn. `stop` closes it; the **session id
+  streaming). `peer.mjs ask` auto-starts it on the first turn. `stop` closes it; if a turn is live,
+  `stop` cancels that turn cleanly first. The **session id
   persists**, so reopening with another `ask` (or `serve`) **resumes the exact same session** — even
   after a restart or reboot. It's a dedicated session, separate from your main Claude chats.
 - **Never the API.** Every API-routing var (`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`,
@@ -133,6 +228,7 @@ reopened anytime**, continuing the same conversation across turns, restarts, and
 peer.mjs serve     # open the persistent Claude session in the foreground (Ctrl+C closes)
 peer.mjs stop      # close it — the session id persists and is resumable
 peer.mjs ask "…"   # auto-opens/reuses the session; --bg + status/wait for long turns
+peer.mjs continue "…"   # explicit next turn on the same session
 ```
 
 For a **Codex** driver session, give it `references/codex-driver.md`.

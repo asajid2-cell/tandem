@@ -35,9 +35,14 @@ node bin/peer.mjs ask "<scoped task>"
 # long/multiline task (preferred — pipe via stdin from a file; never a heredoc/inline multiline):
 node bin/peer.mjs ask - < task.txt
 node bin/peer.mjs ask --bg "<long task>"       # background a long turn; poll status / use wait
+node bin/peer.mjs continue "<next task>"        # explicit next turn on the same coupled session
 node bin/peer.mjs status      # is the partner mid-turn? last verdict
 node bin/peer.mjs wait 240   # block until the --bg turn finishes
 node bin/peer.mjs tail 60     # live progress of the in-flight turn
+node bin/peer.mjs result      # exact verdict, or the current error/wedge
+node bin/peer.mjs interrupt   # cancel a live turn; inspect partial edits
+node bin/peer.mjs reap        # clear a WEDGED lane after inspection
+node bin/peer.mjs attach      # human continues the exact session in its native CLI
 node bin/peer.mjs ledger "<entry>"             # record to THIS pair's own ledger (no arg = print it)
 node bin/peer.mjs compact "<handoff prompt>"   # hand a near-full partner to a fresh thread
 node bin/peer.mjs new         # forget the session (start fresh)
@@ -49,10 +54,27 @@ private folder `tandems/<name>/` — its own registry, timeline, pointers, and l
 from different code sessions never cross-contaminate. If you skip it, the folder falls back to the
 opaque session id. Nothing else to point; just run `peer.mjs`.
 
-**Fanning out multiple concurrent tandems from ONE session (subagents/workers): unique `TANDEM_LABEL`
-env per tandem.** The `label` command keys off the driver session id, which parallel workers share —
-they'd all collapse into one folder. Set `TANDEM_LABEL=<unique-name>` on every `peer.mjs` call for
-that tandem instead (it overrides the recorded label). One tandem = one label = one folder.
+**Fan out through `swarm`, not hand-maintained labels.** Put each lane's `name` plus `task` or
+`taskFile` in a manifest, then run `peer.mjs swarm start <name> <manifest.json>`. The bridge
+atomically reserves the namespace and derives a unique state folder for every lane, even though all
+workers share the same driver session id. Use:
+
+```bash
+node bin/peer.mjs swarm status <name>
+node bin/peer.mjs swarm wait <name> 240
+node bin/peer.mjs swarm tail <name> <lane> 80
+node bin/peer.mjs swarm continue <name> <lane> "<next task>"
+node bin/peer.mjs swarm result <name> <lane>
+node bin/peer.mjs swarm interrupt <name> <lane>
+```
+
+Manual parallel lanes remain supported: set a unique `TANDEM_LABEL` on every call belonging to that
+lane. Reusing a label means resuming that lane; it is not a fresh worker identity.
+
+**Editing lanes use worktrees.** Set `"worktree": true` in the swarm manifest, or run
+`peer.mjs worktree create [path] [branch] [start]` before the first ask. The lane cwd is then pinned
+to that Git worktree and cannot be overridden by a later `TANDEM_CWD`. Rebinding after coupling is
+refused; run `new` first so the replacement partner session starts in the new cwd.
 
 **Drive like a master planner — fan out lanes, never idle.** A partner turn running is when YOUR
 real job happens: you own the whole (plan, direction, correctness); each partner owns a slice.
@@ -62,8 +84,13 @@ lane per workstream concurrently (unique `TANDEM_LABEL` + `ask --bg` each), then
 poll `status` per lane → interpret arrivals (converge/diverge) → dispatch next. Size asks for
 steering, not batching — a mega-turn bundling five questions loses parallelism and early divergence
 signals; long turns are only for genuinely long work (builds, captures, deep debugs). Each lane is
-still a peer on its slice (independent vantage, no conclusion-feeding); 2–4 lanes is the honest
-ceiling before the driver stops genuinely interpreting.
+still a peer on its slice (independent vantage, no conclusion-feeding). The bridge safely supports
+4–5 lanes; the driver's ability to interpret every arrival remains the practical ceiling.
+
+**Interactive continuation works both ways.** The head uses `continue` (or `swarm continue`) to
+steer the persistent partner. The user uses `attach` (or `swarm attach <name> <lane>`) to open that
+same session in the native CLI. Interactive attach owns the lane lease until the CLI closes, so an
+automated turn cannot race the human.
 
 **Compaction — don't let the partner break at its context limit.** `ask`/`status` warn you when
 the partner is running low. When you see that, run `peer.mjs compact "<what to preserve>"`: the
@@ -78,9 +105,16 @@ project with `TANDEM_CWD=<path>` (or `cwd` in `tandem.config.json`).
 `status` (or `wait`) — the bridge owns the backgrounding. A true harness background tool on a
 foreground `ask` also works; a hand-rolled detached shell (Start-Process / nohup wrappers) does
 NOT — it has broken here before. Do your own analysis in parallel — never just idle waiting on
-the partner.
+the partner. `wait` exits `0` on done, `1` on partner error/timeout, `2` when no job exists, and
+`3` when the lane is wedged.
 
 **Reliability (set in `tandem.config.json`):**
+- **One active dispatch per lane is enforced.** `ask`, `continue`, `compact`, and `attach` share an
+  atomic lease. A second dispatch exits `3`; `new`, `resume`, label changes, and worktree changes
+  are also refused while the lane is live.
+- **`wedgeAfterSec`** (shipped 60, env `TANDEM_WEDGE_AFTER_SEC`) backs the worker PID check with a
+  heartbeat. A hard-killed worker becomes `WEDGED`; inspect partial edits and run `reap` before
+  replacement. Never blind-retry a wedged lane.
 - **`autoCompact`** (on in the shipped config; code default off) + **`compactAtTokens`** (default
   300000 input tokens, env `TANDEM_COMPACT_AT`) — when the partner's tracked input tokens cross
   the threshold, the next **Codex-partner** ask auto-hands-off to a fresh session first,
@@ -89,8 +123,9 @@ the partner.
   (fresh session seeded with a summary) is always on for the Codex partner only.
 - **`maxTurnSec`** (shipped 2400, env `TANDEM_MAX_TURN_SEC`, 0 = off) — a runaway CODEX-partner
   turn is tree-killed at the cap and the job reports an error naming it. `wait` giving up does
-  NOT stop a turn — only the cap does. A runaway Claude-partner turn has no auto-kill: use
-  `stop`/`new`. Scope asks small (~20 min of work) regardless.
+  NOT stop a turn — only the cap does. A runaway Claude-partner turn has no timer: use
+  `interrupt` (or `stop`, which cleanly cancels a live Claude turn). Scope asks small (~20 min of
+  work) regardless.
 - Project context for a fresh partner session goes **in the ask itself** (there is no preamble
   mechanism) — state repo root and key paths so the partner doesn't recurse a huge workspace.
 - **Partner tier/model/effort:** doctrine is model-agnostic — select by TIER via env

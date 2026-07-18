@@ -21,6 +21,10 @@ can reopen anytime, continuing the same conversation across turns.
 Set `TANDEM_PARTNER=claude`. The first `ask` auto-opens the persistent session; later `ask`s reuse
 it (full context). Each `ask` prints Claude's verdict.
 
+The examples below use shell-prefix syntax. In PowerShell, set the variable in the same tool call:
+`$env:TANDEM_PARTNER = "claude"; node $BR/peer.mjs ...`. Codex shell-tool calls do not retain
+environment changes between calls, so repeat the assignment each time.
+
 ```bash
 # name THIS tandem first so its state + ledger get their own readable folder (tandems/<name>/):
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs label "watch-together-cdn-engine"
@@ -34,7 +38,11 @@ TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask - < task.txt   # lon
    # stdin — write it to a file first; NEVER a heredoc or inline multiline quotes (they mangle)
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ask --bg "<long task>"   # background
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs status   # running? last verdict
-TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs wait     # block until the bg turn is done
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs wait 240 # 0 done; 1 error/timeout; 2 no job; 3 wedged
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs continue "<next task>"
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs interrupt # cancel live turn; inspect edits
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs reap      # only after status says WEDGED
+TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs attach    # user resumes exact session by hand
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs stop     # close (session id persists)
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs compact "<handoff prompt>"  # near-full → fresh
 TANDEM_PARTNER=claude node /path/to/tandem/bin/peer.mjs ledger "<entry>"  # this tandem's own ledger
@@ -50,17 +58,31 @@ breaking at its context limit without losing the thread.
 anything non-trivial use `ask --bg` then poll `status` (instant) in a loop until done — don't try to
 background it with detached PowerShell (that broke before). The bridge owns the backgrounding.
 
-**Multiple concurrent tandems from one session (e.g. parallel workers): unique `TANDEM_LABEL` env
-each.** The `label` command keys off the driver session id, which parallel workers share — they'd all
-collapse into one folder. Set `TANDEM_LABEL=<unique-name>` on every `peer.mjs` call belonging to that
-tandem instead; it overrides the recorded label. One tandem = one label = one private folder (and,
-for Claude partners, its own daemon — so lanes run truly concurrently).
+**For 4–5 concurrent lanes, use a swarm manifest.** `peer.mjs swarm start <name> <manifest.json>`
+atomically reserves unique lane folders and starts each turn in the background. Track and steer it
+without reconstructing environment variables:
+
+```bash
+node /path/to/tandem/bin/peer.mjs swarm status <name>
+node /path/to/tandem/bin/peer.mjs swarm tail <name> <lane> 80
+node /path/to/tandem/bin/peer.mjs swarm continue <name> <lane> "<next task>"
+node /path/to/tandem/bin/peer.mjs swarm result <name> <lane>
+node /path/to/tandem/bin/peer.mjs swarm attach <name> <lane>
+```
+
+Set `"worktree": true` on every lane that edits the repository. Tandem creates a dedicated linked
+worktree and branch, then pins that lane's cwd. For manual parallel lanes, a unique `TANDEM_LABEL`
+on every call is still required.
+
+The lane lock is enforced, not advisory: a second `ask`/`continue`/`compact`/`attach` exits `3`.
+If the recorded worker dies, `status` reports `WEDGED`; inspect partial edits and run `reap` before
+dispatching a replacement.
 
 **Never idle on a partner turn — drive like a master planner.** Don't hand Claude one 30+ min task
 and sleep until the verdict; that makes you its subagent. While lanes run: advance your own track,
 interpret verdicts as they land (converge/diverge), update the plan, prep the next delegations.
-Independent workstreams → independent lanes (`TANDEM_LABEL` each, `ask --bg` each); size asks for
-steering, not batching; 2–4 lanes max or you stop genuinely interpreting.
+Independent workstreams → independent lanes; size asks for steering, not batching. The bridge can
+isolate 4–5 lanes, but the driver still has to read and verify every result.
 
 ## The method (same doctrine, roles swapped)
 

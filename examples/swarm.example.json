@@ -1,0 +1,26 @@
+{
+  "lanes": [
+    {
+      "name": "runtime",
+      "task": "Measure the actual failure from the running build and return the exact reproduction command."
+    },
+    {
+      "name": "tests",
+      "task": "Identify and implement the highest-value missing regression test."
+    },
+    {
+      "name": "backend",
+      "task": "Implement the scoped backend change, verify it, and report the changed files.",
+      "worktree": true
+    },
+    {
+      "name": "frontend",
+      "task": "Implement the scoped frontend change, verify it at desktop and mobile widths, and report the changed files.",
+      "worktree": true
+    },
+    {
+      "name": "review",
+      "task": "Independently review the other planned changes for correctness risks and missing verification."
+    }
+  ]
+}
