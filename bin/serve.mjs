@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
+import { finishDispatch, jobPaths, leaseFrom, leaseIsOwned, startHeartbeat, updateDispatch } from "./jobs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -38,7 +39,7 @@ const CODEX_DRIVER_ID =
 // verdict never return — the tandem looks hung while the partner worked fine).
 const SK = jobKey(process.env.CLAUDE_CODE_SESSION_ID || CODEX_DRIVER_ID);
 const LASTMSG = join(STATE, `last-${SK}.txt`);
-const JOB = join(STATE, `job-${SK}.json`);
+const JOB = jobPaths(STATE, SK).job;
 
 function cfg() {
   const p = join(ROOT, "tandem.config.json");
@@ -135,6 +136,8 @@ let inTurn = false;
 // under the asking driver's files even across driver restarts. Startup SK is the fallback.
 let curJob = JOB;
 let curLast = LASTMSG;
+let curLease = null;
+let stopTurnHeartbeat = null;
 
 claude.stdout.on("data", (b) => {
   buf += b.toString();
@@ -172,11 +175,26 @@ claude.stdout.on("data", (b) => {
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
       try {
-        writeFileSync(curLast, verdict);
-        writeFileSync(curJob, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
+        if (!curLease || leaseIsOwned(curLease)) writeFileSync(curLast, verdict);
+        if (curLease) {
+          finishDispatch(curLease, {
+            status: "done",
+            partner: "claude",
+            workerPid: process.pid,
+            partnerPid: claude.pid || 0,
+            durSec: dur,
+            verdict,
+            lowContext: low,
+          });
+        } else {
+          writeFileSync(curJob, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
+        }
       } catch {
         /* ignore */
       }
+      if (stopTurnHeartbeat) stopTurnHeartbeat();
+      stopTurnHeartbeat = null;
+      curLease = null;
       log({ type: "verdict", ts: Date.now(), partner: "claude", durSec: dur, verdict });
       if (low) console.log(low);
       // register this Codex→Claude pair as a tandem group (codex driver id best-effort)
@@ -196,11 +214,25 @@ claude.stdout.on("data", (b) => {
 claude.stderr.on("data", (b) => process.stderr.write(b));
 claude.on("exit", (code) => {
   console.error(`tandem serve: claude session ended (${code})`);
+  if (curLease) {
+    if (stopTurnHeartbeat) stopTurnHeartbeat();
+    finishDispatch(curLease, {
+      status: "error",
+      partner: "claude",
+      workerPid: process.pid,
+      partnerPid: claude.pid || 0,
+      error: `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
+    });
+    curLease = null;
+    stopTurnHeartbeat = null;
+  }
   cleanup();
   process.exit(code || 0);
 });
 
 function cleanup() {
+  if (stopTurnHeartbeat) stopTurnHeartbeat();
+  stopTurnHeartbeat = null;
   try {
     rmSync(PID);
   } catch {
@@ -242,26 +274,46 @@ setInterval(() => {
   // Unwrap the peer envelope (carries the sender's job key); bare text = legacy sender.
   curJob = JOB;
   curLast = LASTMSG;
+  curLease = null;
+  let curSk = SK;
+  let dispatchId = "";
   try {
     const env2 = JSON.parse(task);
     if (env2 && env2.__tandem === 1 && typeof env2.task === "string") {
       task = env2.task;
       const sk = String(env2.sk || "").replace(/[^a-zA-Z0-9._-]/g, "");
       if (sk) {
+        curSk = sk;
         curJob = join(STATE, "job-" + sk + ".json");
         curLast = join(STATE, "last-" + sk + ".txt");
       }
+      dispatchId = String(env2.dispatchId || "");
     }
   } catch {
     /* bare text task */
   }
   if (!task.trim()) return;
+  if (dispatchId) {
+    curLease = leaseFrom(STATE, curSk, dispatchId);
+    if (
+      !updateDispatch(curLease, {
+        workerPid: process.pid,
+        partnerPid: claude.pid || 0,
+        partner: "claude",
+      })
+    ) {
+      console.error(`tandem serve: discarded stale dispatch ${dispatchId.slice(0, 8)} (lease no longer owned)`);
+      curLease = null;
+      return;
+    }
+    stopTurnHeartbeat = startHeartbeat(curLease, { pid: process.pid });
+  }
   inTurn = true;
   turnStart = Date.now();
   writeFileSync(STATUS, "RUNNING");
   try {
     writeFileSync(TURNLOG, ""); // reset the live stream for this turn
-    writeFileSync(curJob, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
+    if (!curLease) writeFileSync(curJob, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
   } catch {
     /* ignore */
   }

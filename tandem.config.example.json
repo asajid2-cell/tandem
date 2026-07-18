@@ -6,6 +6,7 @@
   "autoCompact": true,
   "compactAtTokens": 300000,
   "maxTurnSec": 2400,
+  "wedgeAfterSec": 60,
   "codexModel": "gpt-5.6-sol",
   "codexEffort": "medium",
   "claudeModel": "opus",

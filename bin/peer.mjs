@@ -22,6 +22,18 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir, setLabel } from "./groups.mjs";
+import {
+  DispatchBusyError,
+  acquireDispatch,
+  finishDispatch,
+  forceFinishDispatch,
+  inspectDispatch,
+  isPidAlive,
+  jobPaths,
+  leaseFrom,
+  startHeartbeat,
+  updateDispatch,
+} from "./jobs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -129,6 +141,10 @@ function loadConfig() {
     // and the job reports an error naming the cap. 0 = no cap. (The Claude partner's levers are
     // stop/new — its daemon turn is not killed by this.)
     maxTurnSec: 0,
+    // A live worker writes an independent heartbeat. If the PID dies, status reports WEDGED
+    // immediately; if the PID survives but its heartbeat stops for this long, status also
+    // reports WEDGED. 0 disables heartbeat-age detection (dead-PID detection remains).
+    wedgeAfterSec: 60,
     // partner model selection. codexModel/codexEffort apply per-ask (fresh AND resume both
     // accept -m / -c model_reasoning_effort). claudeModel/claudeEffort bind when the serve
     // daemon starts — `stop` first to change. Empty = defer to each CLI's own config.
@@ -190,6 +206,7 @@ function loadConfig() {
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_MAX_TURN_SEC) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
+  if (process.env.TANDEM_WEDGE_AFTER_SEC) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
   return cfg;
 }
 
@@ -297,14 +314,53 @@ function digest(jsonlText) {
   return { commands: commands.slice(-12), files: [...files].slice(0, 20), tokens };
 }
 
-async function ask(task, cfg) {
+function acquireLaneDispatch(cfg, mode) {
+  try {
+    return acquireDispatch(STATE, SK, {
+      partner: cfg.partner,
+      mode,
+      wedgeAfterSec: cfg.wedgeAfterSec,
+    });
+  } catch (error) {
+    if (error instanceof DispatchBusyError) {
+      console.error(`tandem: ${error.message}`);
+      process.exitCode = 3;
+      return null;
+    }
+    throw error;
+  }
+}
+
+function codexJobRecord(res) {
+  if (!res) return { status: "error", partner: "codex", error: "partner returned no result" };
+  const failed = res.killed || res.code !== 0;
+  return {
+    status: failed ? "error" : "done",
+    error: res.killed
+      ? "turn tree-killed at the maxTurnSec cap - re-scope the ask; check the tree for partial edits"
+      : res.code !== 0
+        ? `codex exited with code ${res.code}${res.error ? ` - ${res.error}` : ""}`
+        : undefined,
+    partner: "codex",
+    durSec: res.dur,
+    verdict: res.verdict,
+    commands: res.d?.commands || [],
+    files: res.d?.files || [],
+    tokens: res.d?.tokens || null,
+    lowContext: res.lowContext || null,
+    workerPid: process.pid,
+    partnerPid: res.partnerPid || 0,
+  };
+}
+
+async function askUnlocked(task, cfg, lease) {
   ensureState();
   if (!task || !task.trim()) {
     console.error("tandem: empty task");
     process.exit(2);
   }
   // Claude partner → persistent, resumable session via the daemon (logs its own events)
-  if (cfg.partner === "claude") return askClaudeDaemon(task, cfg, false);
+  if (cfg.partner === "claude") return askClaudeDaemon(task, cfg, false, lease);
   // Codex partner → durable, resumable `codex exec resume`, coupled to this driver.
   // The resume target comes from the IMMUTABLE recorded pair (codexPartnerFor), never the
   // shared global — so concurrent tandems can't cross-wire to each other's Codex.
@@ -314,7 +370,7 @@ async function ask(task, cfg) {
   logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   // record now if the pair is already known (resumed); a fresh pair records after askCodex
   if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
-  const res = await askCodex(task, cfg, resumeSid);
+  const res = await askCodex(task, cfg, resumeSid, (partnerPid) => updateDispatch(lease, { partnerPid }));
   if (res) {
     printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
     logEvent({
@@ -332,11 +388,53 @@ async function ask(task, cfg) {
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
   }
+  return res;
+}
+
+async function ask(task, cfg) {
+  ensureState();
+  if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+    return;
+  }
+  const lease = acquireLaneDispatch(cfg, "foreground");
+  if (!lease) return;
+
+  if (cfg.partner === "claude") {
+    try {
+      if (!(await askUnlocked(task, cfg, lease))) {
+        finishDispatch(lease, { status: "error", partner: "claude", error: "persistent Claude daemon did not become ready" });
+        process.exitCode = 1;
+      }
+    } catch (error) {
+      finishDispatch(lease, { status: "error", partner: "claude", error: String(error) });
+      console.error(`tandem: Claude dispatch failed - ${error.message || error}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  updateDispatch(lease, { workerPid: process.pid, partner: "codex", mode: "foreground" });
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
+  try {
+    const res = await askUnlocked(task, cfg, lease);
+    const finalState = codexJobRecord(res);
+    finishDispatch(lease, finalState);
+    if (finalState.status === "error") process.exitCode = 1;
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: "codex", error: String(error) });
+    console.error(`tandem: codex dispatch failed - ${error.message || error}`);
+    process.exitCode = 1;
+  } finally {
+    stopHeartbeat();
+  }
 }
 
 const CLAUDE_SESSION = join(STATE, "claude.session"); // dedicated partner session id
 const CLAUDE_VERDICT = join(STATE, "claude_verdict.txt");
-const JOB = join(STATE, `job-${SK}.json`); // background turn state (for --bg + status/wait), per-driver
+const JOB_FILES = jobPaths(STATE, SK);
+const JOB = JOB_FILES.job; // foreground/background turn state, per-driver
 const JOB_TASK = join(STATE, "job.task");
 const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id ↔ codex id)
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon
@@ -345,16 +443,6 @@ const SERVE_PID = join(STATE, "serve.pid");
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
 
-function isAlive(pid) {
-  if (!pid) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return e.code === "EPERM";
-  }
-}
-
 // Definitively shut the serve daemon down and reset its state. On Windows process.kill
 // terminates without running the daemon's cleanup handler — leaving a stale serve.pid/STATUS
 // and an ORPHANED claude child that can re-process the next turn on the wrong session. So we
@@ -362,7 +450,7 @@ function isAlive(pid) {
 // the next ask is guaranteed to spawn a clean daemon (no reuse, no orphan, no re-glue).
 function killDaemon() {
   const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
-  if (pid && isAlive(pid)) {
+  if (pid && isPidAlive(pid)) {
     try {
       if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
       else process.kill(pid);
@@ -388,36 +476,40 @@ function killDaemon() {
 async function ensureClaudeDaemon() {
   const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
-  if (isAlive(pid) && status !== "DOWN") return true;
+  if (isPidAlive(pid) && status !== "DOWN") return true;
   console.error("tandem: opening persistent Claude session (serve)…");
   const child = spawn(process.execPath, [SERVE_SCRIPT], { detached: true, stdio: "ignore", env: { ...process.env, TANDEM_STATE: STATE } });
   child.unref();
   for (let i = 0; i < 70; i++) {
     await sleep(500);
     const s = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
-    if ((s === "IDLE" || s === "RUNNING") && isAlive(existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0)) return true;
+    if ((s === "IDLE" || s === "RUNNING") && isPidAlive(existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0)) return true;
   }
   console.error("tandem: serve did not become ready (check: node bin/serve.mjs)");
   return false;
 }
 
 // Send a turn to the OPEN Claude session via the relay; daemon logs delegate/verdict.
-async function askClaudeDaemon(task, cfg, bg) {
+async function askClaudeDaemon(task, cfg, bg, lease) {
+  const stopStartingHeartbeat = startHeartbeat(lease, { pid: process.pid });
   const ok = await ensureClaudeDaemon();
-  if (!ok) return;
-  try {
-    writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
-  } catch {
-    /* ignore */
-  }
+  stopStartingHeartbeat();
+  if (!ok) return false;
+  const daemonPid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+  updateDispatch(lease, {
+    workerPid: daemonPid,
+    partner: "claude",
+    mode: bg ? "background" : "foreground",
+  });
   // Envelope carries OUR job key so the daemon answers under it even if the daemon was started
   // by an earlier driver session (restart re-key) or a different driver id derivation.
-  writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, task }));
+  writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, dispatchId: lease.dispatchId, task }));
   if (bg) {
     console.log("tandem: sent to the open Claude session (bg). poll: peer.mjs status  ·  block: peer.mjs wait");
-    return;
+    return true;
   }
-  await waitJob(cfg.claudeMaxSec || 1800);
+  await waitJob(cfg.claudeMaxSec || 1800, cfg);
+  return true;
 }
 
 // Driver-crafted compaction of the Claude partner: take a handoff summary from the open
@@ -428,11 +520,11 @@ async function compactClaude(prompt, cfg) {
   writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
   writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, task: prompt && prompt.trim() ? prompt : COMPACT_PROMPT }));
   console.error("tandem: asking the Claude partner for a handoff summary…");
-  await waitJob(cfg.claudeMaxSec || 1800);
+  await waitJob(cfg.claudeMaxSec || 1800, cfg);
   const summary = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
   // close the session + detach the old pairing so the next start is genuinely fresh
   const dpid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
-  if (isAlive(dpid)) {
+  if (isPidAlive(dpid)) {
     try {
       process.kill(dpid);
     } catch {
@@ -452,8 +544,27 @@ async function compactClaude(prompt, cfg) {
 // the driver's shell. The driver then polls `status` (instant) or blocks on `wait`.
 async function startJob(task, cfg) {
   ensureState();
+  if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+    return;
+  }
+  const lease = acquireLaneDispatch(cfg, "background");
+  if (!lease) return;
   // Claude partner → relay into the persistent open session (daemon does the work)
-  if (cfg.partner === "claude") return askClaudeDaemon(task, cfg, true);
+  if (cfg.partner === "claude") {
+    try {
+      if (!(await askClaudeDaemon(task, cfg, true, lease))) {
+        finishDispatch(lease, { status: "error", partner: "claude", error: "persistent Claude daemon did not become ready" });
+        process.exitCode = 1;
+      }
+    } catch (error) {
+      finishDispatch(lease, { status: "error", partner: "claude", error: String(error) });
+      console.error(`tandem: Claude dispatch failed - ${error.message || error}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
   // Codex partner → detached exec-resume worker (resumable session, survives shell timeouts).
   // Pass the driver id + IMMUTABLE resume id (from the recorded pair) + task path by ARGV so
   // concurrent bg tandems are fully isolated and can NEVER cross-wire via shared global files.
@@ -463,84 +574,179 @@ async function startJob(task, cfg) {
   // record on delegate if the pair is already known (resumed) so it shows live DURING the turn
   if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
   for (const f of [TURNLOG, LASTMSG]) if (existsSync(f)) rmSync(f);
-  const taskFile = join(STATE, "job-" + (driverId || "anon").replace(/[^a-zA-Z0-9-]/g, "") + ".task");
+  const taskFile = join(STATE, `job-${lease.dispatchId}.task`);
   writeFileSync(taskFile, task);
-  writeFileSync(JOB, JSON.stringify({ status: "running", partner: "codex", driverId, ts: Date.now() }));
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "__runjob", driverId, resumeSid, taskFile], {
-    detached: true,
-    stdio: "ignore",
-    env: process.env,
-  });
-  child.unref();
-  console.log(`tandem: codex turn started in background (pid ${child.pid}). poll: peer.mjs status  ·  block: peer.mjs wait`);
+  updateDispatch(lease, { driverId, partner: "codex", mode: "background", workerPid: process.pid });
+  try {
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "__runjob", driverId, resumeSid, taskFile, lease.dispatchId], {
+      detached: true,
+      stdio: "ignore",
+      env: process.env,
+    });
+    await new Promise((resolveSpawn, rejectSpawn) => {
+      child.once("spawn", resolveSpawn);
+      child.once("error", rejectSpawn);
+    });
+    updateDispatch(lease, { workerPid: child.pid });
+    child.unref();
+    console.log(`tandem: codex turn started in background (pid ${child.pid}). poll: peer.mjs status  ·  block: peer.mjs wait`);
+  } catch (error) {
+    try {
+      if (existsSync(taskFile)) rmSync(taskFile);
+    } catch {
+      /* ignore */
+    }
+    finishDispatch(lease, { status: "error", partner: "codex", error: `cannot spawn background worker: ${error.message || error}` });
+    console.error(`tandem: cannot spawn background worker - ${error.message || error}`);
+    process.exitCode = 1;
+  }
 }
 
 async function runJob(cfg, jobArgv) {
-  // self-contained from argv (race-free): [driverId, resumeSid, taskFile]
+  // self-contained from argv: [driverId, resumeSid, taskFile, dispatchId]
   const driverId = jobArgv[0] || DRIVER_ID;
   const resumeSid = jobArgv[1] || "";
   const taskFile = jobArgv[2] || JOB_TASK;
+  const dispatchId = jobArgv[3] || "";
+  const lease = leaseFrom(STATE, SK, dispatchId);
+  if (!dispatchId || !updateDispatch(lease, { workerPid: process.pid, partner: "codex", mode: "background" })) {
+    try {
+      if (taskFile !== JOB_TASK && existsSync(taskFile)) rmSync(taskFile);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
   let task = "";
   try {
     task = readFileSync(taskFile, "utf8");
-  } catch {
+  } catch (error) {
+    stopHeartbeat();
+    finishDispatch(lease, { status: "error", partner: "codex", error: `cannot read queued task: ${error.message || error}` });
     return;
   }
-  // background worker is codex-only (claude bg goes through the persistent daemon)
   logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   let res = null;
   try {
-    res = await askCodex(task, cfg, resumeSid);
-  } catch (e) {
-    writeFileSync(JOB, JSON.stringify({ status: "error", partner: "codex", error: String(e), ts: Date.now() }));
-    return;
+    res = await askCodex(task, cfg, resumeSid, (partnerPid) => updateDispatch(lease, { partnerPid }));
+    const finalState = codexJobRecord(res);
+    finishDispatch(lease, finalState);
+    if (res) {
+      const cdx = res.codexId || resumeSid;
+      if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
+      logEvent({ type: "verdict", ts: Date.now(), partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null });
+    }
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: "codex", error: String(error) });
+  } finally {
+    stopHeartbeat();
+    try {
+      if (taskFile !== JOB_TASK && existsSync(taskFile)) rmSync(taskFile);
+    } catch {
+      /* ignore */
+    }
   }
-  const job = res
-    ? {
-        status: res.killed ? "error" : "done",
-        error: res.killed ? "turn tree-killed at the maxTurnSec cap — re-scope the ask; check the tree for partial edits" : undefined,
-        partner: "codex",
-        durSec: res.dur,
-        verdict: res.verdict,
-        commands: res.d?.commands || [],
-        files: res.d?.files || [],
-        tokens: res.d?.tokens || null,
-        lowContext: res.lowContext || null,
-        ts: Date.now(),
-      }
-    : { status: "error", partner: "codex", ts: Date.now() };
-  writeFileSync(JOB, JSON.stringify(job));
-  if (res) {
-    // Register the EXACT pair: the real driver ↔ the actual codex this turn used/created.
-    const cdx = res.codexId || resumeSid;
-    if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
-    logEvent({ type: "verdict", ts: Date.now(), partner: "codex", durSec: res.dur, verdict: res.verdict, commands: res.d?.commands || [], files: res.d?.files || [], tokens: res.d?.tokens || null });
-  }
+}
+
+function jobState(cfg) {
+  return inspectDispatch(STATE, SK, { wedgeAfterSec: cfg?.wedgeAfterSec });
+}
+
+function killProcessTree(pid) {
+  pid = Number(pid) || 0;
+  if (!pid || !isPidAlive(pid)) return;
   try {
-    if (taskFile !== JOB_TASK) rmSync(taskFile);
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    } else {
+      process.kill(pid, "SIGTERM");
+    }
+  } catch {
+    /* already gone */
+  }
+}
+
+function removeQueuedTask(dispatchId) {
+  if (!dispatchId) return;
+  const taskFile = join(STATE, `job-${dispatchId}.task`);
+  try {
+    if (existsSync(taskFile)) rmSync(taskFile);
   } catch {
     /* ignore */
   }
 }
 
-function jobState() {
-  if (!existsSync(JOB)) return null;
-  try {
-    return JSON.parse(readFileSync(JOB, "utf8"));
-  } catch {
-    return null;
+function cancelJob(cfg) {
+  const j = jobState(cfg);
+  if (!j) {
+    console.log("tandem: no active job to cancel");
+    return;
   }
+  if (j.status === "WEDGED") {
+    console.error("tandem: lane is WEDGED; use `peer.mjs reap` so recovery is explicit");
+    process.exitCode = 3;
+    return;
+  }
+  if (j.status !== "running") {
+    console.log(`tandem: no active job to cancel (last state: ${j.status})`);
+    return;
+  }
+  if (j.partner === "claude") killDaemon();
+  else {
+    if (j.partnerPid && j.partnerPid !== j.workerPid) killProcessTree(j.partnerPid);
+    killProcessTree(j.workerPid);
+  }
+  removeQueuedTask(j.dispatchId);
+  forceFinishDispatch(STATE, SK, {
+    status: "error",
+    partner: j.partner,
+    error: "turn cancelled by the driver; inspect the working tree for partial edits",
+    cancelled: true,
+  });
+  logEvent({ type: "cancel", ts: Date.now(), partner: j.partner, dispatchId: j.dispatchId });
+  console.log("tandem: active turn cancelled; the lane is dispatchable again after you inspect partial edits");
 }
 
-async function waitJob(maxSec) {
+function reapJob(cfg) {
+  const j = jobState(cfg);
+  if (!j) {
+    console.log("tandem: no wedged job to reap");
+    return;
+  }
+  if (j.status !== "WEDGED") {
+    console.error(`tandem: reap refused - lane state is ${j.status}; reap is only valid for WEDGED jobs`);
+    process.exitCode = 3;
+    return;
+  }
+  if (j.partner === "claude") killDaemon();
+  else {
+    if (j.partnerPid && j.partnerPid !== j.workerPid) killProcessTree(j.partnerPid);
+    killProcessTree(j.workerPid);
+  }
+  removeQueuedTask(j.dispatchId);
+  forceFinishDispatch(STATE, SK, {
+    status: "error",
+    partner: j.partner,
+    error: `reaped WEDGED lane: ${j.reason || "worker liveness failed"}; inspect partial edits before replacing the turn`,
+    reaped: true,
+  });
+  logEvent({ type: "reap", ts: Date.now(), partner: j.partner, dispatchId: j.dispatchId, reason: j.reason || "" });
+  console.log("tandem: WEDGED lane reaped; inspect partial edits, then dispatch the replacement");
+}
+
+async function waitJob(maxSec, cfg) {
   const deadline = Date.now() + maxSec * 1000;
   while (Date.now() < deadline) {
-    const j = jobState();
+    const j = jobState(cfg);
     if (j && j.status !== "running") {
       if (j.status === "done") {
         printVerdict(j.partner, j.verdict, { commands: j.commands, files: j.files, tokens: j.tokens }, j.durSec, "");
         if (j.lowContext) console.log(j.lowContext);
-      } else console.error(`tandem: job ${j.status}${j.error ? " — " + j.error : ""}`);
+      } else if (j.status === "WEDGED") {
+        console.error(`tandem: job WEDGED - ${j.reason || "worker liveness failed"}`);
+        console.error("tandem: inspect `peer.mjs status`, then run `peer.mjs reap` before dispatching a replacement");
+      } else console.error(`tandem: job ${j.status}${j.error ? " - " + j.error : ""}`);
       return;
     }
     await sleep(2000);
@@ -556,7 +762,7 @@ function sleep(ms) {
 // digest, duration, raw stream, exit code, and the EXACT codex id used/created.
 // outFile = where codex writes its last message; handoff/summary turns pass COMPACT_OUT so
 // they never overwrite the real verdict in LASTMSG.
-async function codexExec(sid, task, cfg, outFile = LASTMSG) {
+async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];
@@ -576,7 +782,13 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
     /* ignore */
   }
   const t0 = Date.now();
-  const { stdout: out, code, killed } = await runCodex(cfg.codexBin, args, task, cfg.maxTurnSec || 0);
+  const { stdout: out, code, killed, partnerPid, error } = await runCodex(
+    cfg.codexBin,
+    args,
+    task,
+    cfg.maxTurnSec || 0,
+    onSpawn,
+  );
   const dur = Math.round((Date.now() - t0) / 1000);
 
   // capture the session id for continuity — only on a successful fresh run, and
@@ -598,14 +810,14 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG) {
   let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
   if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
   const d = digest(out);
-  return { verdict, d, dur, raw: out, code, codexId, killed };
+  return { verdict, d, dur, raw: out, code, codexId, killed, partnerPid, error };
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
 //  - by default the driver is just NOTIFIED when the passenger runs low (so it can craft the
 //    handoff via `peer.mjs compact "<prompt>"`); set autoCompact to do it automatically.
 //  - REACTIVE net: if a turn still hits the wall, recover on a fresh session seeded with a summary.
-async function askCodex(task, cfg, sidOverride) {
+async function askCodex(task, cfg, sidOverride, onSpawn) {
   let sid = sidOverride !== undefined ? sidOverride : readSession();
   const limit = cfg.compactAtTokens || 0;
 
@@ -613,7 +825,7 @@ async function askCodex(task, cfg, sidOverride) {
     const used = readUsage()[sid] || 0;
     console.error(`tandem: codex ${sid.slice(0, 8)} near context limit (${used} tok) — auto-compacting`);
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, tokens: used });
-    const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT); // summary → temp file, not the verdict slot
+    const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, onSpawn); // summary → temp file, not the verdict slot
     task = handoffSeed(s.verdict) + task;
     sid = "";
   }
@@ -628,18 +840,18 @@ async function askCodex(task, cfg, sidOverride) {
     }
   }
 
-  let r = await codexExec(sid, task, cfg);
+  let r = await codexExec(sid, task, cfg, LASTMSG, onSpawn);
 
   if (r.code !== 0 && sid && isContextError(r.raw)) {
     console.error(`tandem: codex ${sid.slice(0, 8)} hit its context limit — recovering on a fresh session`);
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "reactive", from: sid });
     let summary = "";
     try {
-      summary = (await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT)).verdict; // best-effort; may itself be over the wall
+      summary = (await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, onSpawn)).verdict; // best-effort; may itself be over the wall
     } catch {
       /* ignore */
     }
-    r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg);
+    r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg, LASTMSG, onSpawn);
   }
 
   if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
@@ -669,7 +881,7 @@ async function compactCodex(task, cfg) {
   console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
-function runCodex(bin, args, stdin, maxSec = 0) {
+function runCodex(bin, args, stdin, maxSec = 0, onSpawn) {
   // a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
   if (/\.[mc]?js$/i.test(bin)) {
     args = [bin, ...args];
@@ -681,15 +893,29 @@ function runCodex(bin, args, stdin, maxSec = 0) {
     let child;
     let killed = false;
     let timer = null;
+    let settled = false;
+    const settle = (value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolveP(value);
+    };
     try {
       child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
-    } catch (e) {
-      console.error(`tandem: cannot spawn ${bin}: ${e.message}`);
-      process.exit(1);
+    } catch (error) {
+      settle({ stdout, code: 1, killed: false, partnerPid: 0, error: `cannot spawn ${bin}: ${error.message}` });
+      return;
     }
-    child.on("error", (e) => {
-      console.error(`tandem: partner spawn error: ${e.message} (is codex installed + logged in?)`);
-      process.exit(1);
+    const partnerPid = child.pid || 0;
+    if (partnerPid && onSpawn) onSpawn(partnerPid);
+    child.on("error", (error) => {
+      settle({
+        stdout,
+        code: 1,
+        killed: false,
+        partnerPid,
+        error: `partner spawn error: ${error.message} (is codex installed + logged in?)`,
+      });
     });
     // real runaway-turn cap: tree-kill (child + its processes) so a spin can't run unbounded
     if (maxSec > 0) {
@@ -715,9 +941,14 @@ function runCodex(bin, args, stdin, maxSec = 0) {
     child.stdin.write(stdin);
     child.stdin.end();
     child.on("exit", (code) => {
-      if (timer) clearTimeout(timer);
       if (!killed && code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
-      resolveP({ stdout, code: code ?? 0, killed });
+      settle({
+        stdout,
+        code: code ?? 0,
+        killed,
+        partnerPid,
+        error: !killed && code !== 0 ? stderr.trim().slice(-1500) : "",
+      });
     });
   });
 }
@@ -783,12 +1014,21 @@ function printVerdict(partner, verdict, d, dur, raw) {
 function status(cfg) {
   const sid = readSession();
   console.log(`partner: ${cfg.partner} | session: ${sid || "(none — next ask starts fresh)"} | cwd: ${cfg.cwd} | posture: ${cfg.posture}`);
-  const j = jobState();
+  const j = jobState(cfg);
   if (j) {
-    const age = Math.round((Date.now() - j.ts) / 1000);
-    console.log(`job: ${j.status}${j.status === "running" ? ` (${age}s elapsed)` : j.durSec != null ? ` (${j.durSec}s)` : ""}`);
+    const age = j.elapsedSec ?? Math.max(0, Math.round((Date.now() - (j.startedTs || j.ts || Date.now())) / 1000));
+    console.log(`job: ${j.status}${j.status === "running" || j.status === "WEDGED" ? ` (${age}s elapsed)` : j.durSec != null ? ` (${j.durSec}s)` : ""}`);
+    if (j.workerPid) {
+      console.log(
+        `worker: pid ${j.workerPid}${j.partnerPid ? ` | partner pid ${j.partnerPid}` : ""}${j.heartbeatAgeSec != null ? ` | heartbeat ${j.heartbeatAgeSec}s ago` : ""}`,
+      );
+    }
     if (j.status === "done") console.log(`\nverdict:\n${(j.verdict || "").slice(0, 1500)}`);
     else if (j.status === "error") console.log(`error: ${j.error || "unknown"}`);
+    else if (j.status === "WEDGED") {
+      console.log(`reason: ${j.reason || "worker liveness failed"}`);
+      console.log("recovery: run `peer.mjs reap`; only then dispatch a replacement");
+    }
   } else if (existsSync(LASTMSG)) {
     console.log(`\nlast verdict:\n${readFileSync(LASTMSG, "utf8").trim().slice(0, 1200)}`);
   }
@@ -844,7 +1084,7 @@ if (cmd === "ask") {
   // Open the persistent, resumable Claude session in the foreground (Ctrl+C to close).
   spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: { ...process.env, TANDEM_STATE: STATE } }).on("exit", (c) => process.exit(c || 0));
 } else if (cmd === "stop") {
-  const wasAlive = existsSync(SERVE_PID) && isAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
+  const wasAlive = existsSync(SERVE_PID) && isPidAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
   killDaemon(); // tree-kill + reset state (Windows-safe), so a later ask spawns a clean daemon
   console.log(wasAlive ? "tandem: closed the persistent session. The session id persists — reopen anytime with the same context." : "tandem: no persistent session running");
 } else if (cmd === "group") {
@@ -882,8 +1122,10 @@ if (cmd === "ask") {
     console.log(`  group ${r.n} | ${r.direction} | claude ${String(r.claudeId).slice(0, 8)} ↔ codex ${String(r.codexId).slice(0, 8)}${r.label ? " | " + r.label : ""}`),
   );
 } else if (cmd === "wait") {
-  await waitJob(Number(argv[0]) || 1800);
+  await waitJob(Number(argv[0]) || 1800, cfg);
 } else if (cmd === "status") status(cfg);
+else if (cmd === "cancel") cancelJob(cfg);
+else if (cmd === "reap") reapJob(cfg);
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
 else if (cmd === "result") result(Number(argv[0]) || 4);
 else if (cmd === "ledger") {
@@ -926,6 +1168,6 @@ else if (cmd === "new") {
       "  ledger [\"<entry>\"]    append to / print THIS tandem's own ledger (per-pair TANDEM.md)\n" +
       "  serve | stop          open / close the persistent Claude session (id persists, resumable)\n" +
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
-      "  wait [sec] | status | tail [n] | result [n] | new",
+      "  wait [sec] | status | cancel | reap | tail [n] | result [n] | new",
   );
 }

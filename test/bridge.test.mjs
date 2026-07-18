@@ -71,6 +71,16 @@ function stopDaemon(state) {
     /* already gone */
   }
 }
+function killTree(pid) {
+  if (!pid) return;
+  try {
+    if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    else process.kill(pid, "SIGKILL");
+  } catch {
+    /* already gone */
+  }
+}
+const sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 const readLast = (state, driver) => {
   const f = join(state, `last-${jobKey(driver)}.txt`);
   return existsSync(f) ? readFileSync(f, "utf8") : "";
@@ -292,4 +302,65 @@ test("genuinely concurrent codex tandems never clobber (parallel, overlapping)",
       if (other !== d) assert.doesNotMatch(readLast(s, d), new RegExp(`PARALLEL-${other}`), `${d} not clobbered by ${other}`);
     }
   }
+});
+
+test("same-lane double dispatch is atomically refused, including a foreground holder", async (t) => {
+  const s = freshState(t);
+  const opts = { state: s, driver: "lockedLane", env: { FAKE_DELAY: "1200" } };
+
+  const racing = await Promise.all([
+    peerAsync(["ask", "--bg", "LOCK-RACE-A"], opts),
+    peerAsync(["ask", "--bg", "LOCK-RACE-B"], opts),
+  ]);
+  assert.equal(racing.filter((r) => r.code === 0).length, 1, "exactly one background dispatch acquires the lane");
+  const refused = racing.find((r) => r.code !== 0);
+  assert.equal(refused?.code, 3);
+  assert.match(refused?.out || "", /dispatch refused: existing job is running/i);
+
+  const foregroundRefused = peer(["ask", "LOCK-FOREGROUND-REFUSED"], opts);
+  assert.equal(foregroundRefused.code, 3);
+  assert.match(foregroundRefused.out, /existing job is running/i);
+  assert.doesNotMatch(readLast(s, "lockedLane"), /LOCK-FOREGROUND-REFUSED/);
+
+  const waited = peer(["wait", "8"], opts);
+  assert.match(waited.out, /PARTNER VERDICT/);
+
+  const foreground = peerAsync(["ask", "LOCK-FOREGROUND-HOLDER"], opts);
+  await sleep(200);
+  const backgroundRefused = peer(["ask", "--bg", "LOCK-BG-REFUSED"], opts);
+  assert.equal(backgroundRefused.code, 3);
+  assert.match(backgroundRefused.out, /existing job is running/i);
+  await foreground;
+  assert.match(readLast(s, "lockedLane"), /LOCK-FOREGROUND-HOLDER/);
+  assert.doesNotMatch(readLast(s, "lockedLane"), /LOCK-BG-REFUSED/);
+});
+
+test("hard-killed worker becomes WEDGED and requires explicit reap before replacement", async (t) => {
+  const s = freshState(t);
+  const opts = { state: s, driver: "wedgedLane", env: { FAKE_DELAY: "10000" } };
+  const started = peer(["ask", "--bg", "WEDGE-ORIGINAL"], opts);
+  assert.equal(started.code, 0);
+
+  const jobFile = join(s, `job-${jobKey("wedgedLane")}.json`);
+  const job = JSON.parse(readFileSync(jobFile, "utf8"));
+  assert.ok(job.workerPid, "background job records its worker pid");
+  killTree(job.workerPid);
+  await sleep(250);
+
+  const status = peer(["status"], opts);
+  assert.match(status.out, /job: WEDGED/);
+  assert.match(status.out, /worker pid .* is not alive/i);
+
+  const blindRetry = peer(["ask", "--bg", "WEDGE-BLIND-RETRY"], opts);
+  assert.equal(blindRetry.code, 3);
+  assert.match(blindRetry.out, /existing job is WEDGED/i);
+
+  const reaped = peer(["reap"], opts);
+  assert.equal(reaped.code, 0);
+  assert.match(reaped.out, /WEDGED lane reaped/i);
+
+  const replacement = peer(["ask", "WEDGE-REPLACEMENT"], { state: s, driver: "wedgedLane" });
+  assert.equal(replacement.code, 0);
+  assert.match(replacement.out, /WEDGE-REPLACEMENT/);
+  assert.doesNotMatch(replacement.out, /WEDGE-BLIND-RETRY/);
 });
