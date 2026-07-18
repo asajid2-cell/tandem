@@ -192,10 +192,9 @@ function loadConfig() {
       }
     }
   }
-  const laneMetadata = readLaneMetadata(STATE);
-  if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   // Explicit env overrides win over the config file (standard precedence; also lets tests
-  // point the partner bin at a fake without touching the file).
+  // point the partner bin at a fake without touching the file). A persisted lane cwd is
+  // applied last below because worktree isolation is a lane invariant, not a soft default.
   const envBin = process.env.CEERELAY_CODEX_BIN || process.env.TANDEM_CODEX_BIN;
   if (envBin) cfg.codexBin = envBin;
   const envClaude = process.env.CEERELAY_CLAUDE_BIN || process.env.TANDEM_CLAUDE_BIN;
@@ -233,6 +232,8 @@ function loadConfig() {
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_MAX_TURN_SEC) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
   if (process.env.TANDEM_WEDGE_AFTER_SEC) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
+  const laneMetadata = readLaneMetadata(STATE);
+  if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   return cfg;
 }
 
@@ -867,7 +868,7 @@ function worktreeCommand(args, cfg) {
 
   const coupledCodex = codexPartnerFor(DRIVER_ID);
   const coupledClaude = existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "";
-  if ((coupledCodex || coupledClaude) && !metadata.worktree) {
+  if (coupledCodex || coupledClaude) {
     console.error("tandem: worktree change refused after coupling; run `peer.mjs new` first so the fresh session starts in the isolated cwd");
     process.exitCode = 3;
     return;

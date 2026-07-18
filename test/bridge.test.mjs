@@ -412,12 +412,67 @@ test("lane worktree provisioning persists an isolated cwd for fresh editing turn
     {
       state,
       driver: "worktreeDriver",
-      env: { TANDEM_CWD: "", TANDEM_LABEL: "edit-lane" },
+      env: { TANDEM_CWD: repo, TANDEM_LABEL: "edit-lane" },
     },
   );
   assert.equal(asked.code, 0);
   assert.match(asked.out, /EDIT-IN-ISOLATED-WORKTREE/);
   assert.match(asked.out, new RegExp(`cwd=${worktree.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"));
+});
+
+test("worktree binding is immutable after coupling and detached worktrees are rejected", (t) => {
+  const root = freshState(t);
+  const repo = join(root, "repo");
+  const state = join(root, "state");
+  const firstWorktree = join(root, "editing-one");
+  const secondWorktree = join(root, "editing-two");
+  const detachedWorktree = join(root, "detached");
+  mkdirSync(repo, { recursive: true });
+  mkdirSync(state, { recursive: true });
+  runGit(["init"], repo);
+  runGit(["config", "user.email", "tandem-test@example.invalid"], repo);
+  runGit(["config", "user.name", "Tandem Test"], repo);
+  writeFileSync(join(repo, "seed.txt"), "seed\n");
+  runGit(["add", "seed.txt"], repo);
+  runGit(["commit", "-m", "seed"], repo);
+
+  const opts = {
+    state,
+    driver: "immutableWorktreeDriver",
+    env: { TANDEM_CWD: repo, TANDEM_LABEL: "immutable-edit-lane" },
+  };
+  assert.equal(
+    peer(["worktree", "create", firstWorktree, "tandem/immutable-one", "HEAD"], opts).code,
+    0,
+  );
+  assert.equal(peer(["ask", "COUPLE-IN-FIRST-WORKTREE"], opts).code, 0);
+
+  const refused = peer(
+    ["worktree", "create", secondWorktree, "tandem/immutable-two", "HEAD"],
+    opts,
+  );
+  assert.equal(refused.code, 3);
+  assert.match(refused.out, /worktree change refused after coupling/i);
+  assert.ok(!existsSync(secondWorktree));
+
+  assert.equal(peer(["new"], opts).code, 0);
+  const moved = peer(
+    ["worktree", "create", secondWorktree, "tandem/immutable-two", "HEAD"],
+    opts,
+  );
+  assert.equal(moved.code, 0);
+  assert.ok(existsSync(join(secondWorktree, ".git")));
+
+  runGit(["worktree", "add", "--detach", detachedWorktree, "HEAD"], repo);
+  const detachedState = join(root, "detached-state");
+  mkdirSync(detachedState, { recursive: true });
+  const detached = peer(["worktree", "attach", detachedWorktree], {
+    state: detachedState,
+    driver: "detachedWorktreeDriver",
+    env: { TANDEM_CWD: repo, TANDEM_LABEL: "detached-edit-lane" },
+  });
+  assert.equal(detached.code, 2);
+  assert.match(detached.out, /worktree is detached/i);
 });
 
 test("swarm start auto-namespaces five same-driver lanes and aggregates their states", (t) => {

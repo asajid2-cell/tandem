@@ -115,10 +115,13 @@ export function ensureLaneWorktree({
       throw new Error(`existing worktree belongs to a different repository: ${target}`);
     }
     const existingBranch = worktreeBranch(target);
-    if (branch && existingBranch !== targetBranch) {
-      throw new Error(`existing worktree uses branch ${existingBranch || "(detached)"}, expected ${targetBranch}`);
+    if (!existingBranch) {
+      throw new Error(`existing worktree is detached; check out a dedicated branch before using it as an editing lane: ${target}`);
     }
-    branch = existingBranch || targetBranch;
+    if (branch && existingBranch !== targetBranch) {
+      throw new Error(`existing worktree uses branch ${existingBranch}, expected ${targetBranch}`);
+    }
+    branch = existingBranch;
   } else {
     mkdirSync(dirname(target), { recursive: true });
     if (branchExists(repo, targetBranch)) {
@@ -150,6 +153,9 @@ export function attachLaneWorktree({ state, label, path }) {
   if (!path) throw new Error("worktree path is required");
   const target = findGitRoot(path);
   const branch = worktreeBranch(target);
+  if (!branch) {
+    throw new Error(`worktree is detached; check out a dedicated branch before attaching it as an editing lane: ${target}`);
+  }
   return writeLaneMetadata(state, {
     version: 1,
     label: sanitizeLabel(label),
