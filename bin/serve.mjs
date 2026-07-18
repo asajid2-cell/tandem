@@ -8,13 +8,13 @@
 // queries. IPC is a file relay in .state (inbox/status/job), same shape as the
 // proven codex_relay. Run once; peer.mjs auto-starts it on the first Claude turn.
 
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, openSync, closeSync, rmSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
-import { finishDispatch, jobPaths, leaseFrom, leaseIsOwned, startHeartbeat, updateDispatch } from "./jobs.mjs";
+import { finishDispatch, isPidAlive, jobPaths, leaseFrom, leaseIsOwned, startHeartbeat, updateDispatch } from "./jobs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -40,6 +40,37 @@ const CODEX_DRIVER_ID =
 const SK = jobKey(process.env.CLAUDE_CODE_SESSION_ID || CODEX_DRIVER_ID);
 const LASTMSG = join(STATE, `last-${SK}.txt`);
 const JOB = jobPaths(STATE, SK).job;
+
+function claimDaemonPid() {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let fd;
+    try {
+      fd = openSync(PID, "wx");
+      writeFileSync(fd, String(process.pid));
+      closeSync(fd);
+      return;
+    } catch (error) {
+      if (fd !== undefined) {
+        try {
+          closeSync(fd);
+        } catch {
+          /* already closed */
+        }
+      }
+      if (error.code !== "EEXIST") throw error;
+      const existingPid = existsSync(PID) ? Number(readFileSync(PID, "utf8").trim()) : 0;
+      if (isPidAlive(existingPid)) {
+        throw new Error(`another tandem serve daemon already owns this lane (pid ${existingPid})`);
+      }
+      try {
+        rmSync(PID);
+      } catch {
+        /* retry or fail on the next exclusive open */
+      }
+    }
+  }
+  throw new Error("could not claim the tandem serve daemon pid file");
+}
 
 function cfg() {
   const p = join(ROOT, "tandem.config.json");
@@ -87,6 +118,12 @@ function lowNote(sid, used) {
 
 const C = cfg();
 if (!existsSync(STATE)) mkdirSync(STATE, { recursive: true });
+try {
+  claimDaemonPid();
+} catch (error) {
+  console.error(`tandem serve: ${error.message || error}`);
+  process.exit(2);
+}
 const present = apiRoutingVarsPresent(process.env);
 if (present.length) console.error(`tandem serve: scrubbing ${present.join(", ")} (subscription only)`);
 const env = scrubbedClaudeEnv(process.env);
@@ -123,7 +160,6 @@ if (/\.[mc]?js$/i.test(bin)) {
 }
 
 const claude = spawn(bin, args, { env, cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-writeFileSync(PID, String(process.pid));
 writeFileSync(STATUS, "IDLE");
 console.log(`tandem serve: persistent Claude partner OPEN (pid ${process.pid} / claude ${claude.pid})`);
 console.log(`  cwd ${cwd} · subscription · bypass · ${sessionId ? "resumed " + sessionId.slice(0, 8) : "new session"}`);

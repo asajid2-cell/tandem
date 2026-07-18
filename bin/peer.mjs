@@ -849,6 +849,18 @@ function currentLaneLabel() {
   return readLaneMetadata(STATE).label || process.env.TANDEM_LABEL || basename(STATE) || jobKey(DRIVER_ID);
 }
 
+function refuseLaneMutationWhileActive(cfg, action) {
+  const active = jobState(cfg);
+  if (active?.status !== "running" && active?.status !== "WEDGED") return false;
+  const recovery =
+    active.status === "WEDGED"
+      ? "inspect the lane and run `peer.mjs reap` first"
+      : "wait for it or run `peer.mjs interrupt` first";
+  console.error(`tandem: ${action} refused while lane is ${active.status}; ${recovery}`);
+  process.exitCode = 3;
+  return true;
+}
+
 function worktreeCommand(args, cfg) {
   const action = args[0] || "status";
   const metadata = readLaneMetadata(STATE);
@@ -865,12 +877,7 @@ function worktreeCommand(args, cfg) {
     return;
   }
 
-  const active = jobState(cfg);
-  if (active?.status === "running" || active?.status === "WEDGED") {
-    console.error(`tandem: worktree change refused while lane is ${active.status}; finish/cancel/reap the turn first`);
-    process.exitCode = 3;
-    return;
-  }
+  if (refuseLaneMutationWhileActive(cfg, "worktree change")) return;
 
   const coupledCodex = codexPartnerFor(DRIVER_ID);
   const coupledClaude = existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "";
@@ -1558,11 +1565,25 @@ if (cmd === "ask" || cmd === "continue") {
   await runJob(cfg, argv); // internal: the detached background worker (codex) — argv = [driverId, resumeSid, taskFile]
 } else if (cmd === "serve") {
   // Open the persistent, resumable Claude session in the foreground (Ctrl+C to close).
-  spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: { ...process.env, TANDEM_STATE: STATE } }).on("exit", (c) => process.exit(c || 0));
+  const daemonPid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+  if (isPidAlive(daemonPid)) {
+    console.log(`tandem: persistent Claude session is already open (daemon pid ${daemonPid})`);
+  } else {
+    killDaemon();
+    spawn(process.execPath, [SERVE_SCRIPT], { stdio: "inherit", env: { ...process.env, TANDEM_STATE: STATE } }).on("exit", (c) => process.exit(c || 0));
+  }
 } else if (cmd === "stop") {
-  const wasAlive = existsSync(SERVE_PID) && isPidAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
-  killDaemon(); // tree-kill + reset state (Windows-safe), so a later ask spawns a clean daemon
-  console.log(wasAlive ? "tandem: closed the persistent session. The session id persists — reopen anytime with the same context." : "tandem: no persistent session running");
+  const active = jobState(cfg);
+  if (active?.status === "WEDGED") {
+    console.error("tandem: stop refused while lane is WEDGED; inspect it and run `peer.mjs reap`");
+    process.exitCode = 3;
+  } else if (active?.status === "running" && active.partner === "claude") {
+    cancelJob(cfg);
+  } else {
+    const wasAlive = existsSync(SERVE_PID) && isPidAlive(Number(readFileSync(SERVE_PID, "utf8").trim()));
+    killDaemon(); // tree-kill + reset state (Windows-safe), so a later ask spawns a clean daemon
+    console.log(wasAlive ? "tandem: closed the persistent session. The session id persists — reopen anytime with the same context." : "tandem: no persistent session running");
+  }
 } else if (cmd === "group") {
   // peer.mjs group <claudeSessionId> <codexSessionId> [label]  — pin a matched pair
   const rec = recordGroup(GROUPS, {
@@ -1575,22 +1596,24 @@ if (cmd === "ask" || cmd === "continue") {
   });
   console.log(`tandem: group ${rec.n} = claude ${String(argv[0]).slice(0, 8)} ↔ codex ${String(argv[1]).slice(0, 8)}`);
 } else if (cmd === "resume") {
-  // peer.mjs resume [groupN] — reopen a tandem by its pair; no arg = most recent
-  // (for the current Claude driver if known, else the latest tandem overall).
-  const g = readGroups(GROUPS);
-  const all = Object.values(g.groups || {}).sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
-  let rec;
-  if (argv[0]) rec = all.find((r) => String(r.n) === String(argv[0]));
-  else {
-    const drv = DRIVER_ID;
-    rec = (drv && all.find((r) => r.claudeId === drv)) || all[0];
-  }
-  if (!rec) console.log(`tandem: ${argv[0] ? "no group " + argv[0] : "no tandems yet"}`);
-  else {
-    if (rec.codexId) writeFileSync(SESSION_FILE, rec.codexId);
-    if (rec.claudeId) writeFileSync(CLAUDE_SESSION, rec.claudeId);
-    recordGroup(GROUPS, { claudeId: rec.claudeId, codexId: rec.codexId, direction: rec.direction, label: rec.label });
-    console.log(`tandem: resumed group ${rec.n} — claude ${String(rec.claudeId).slice(0, 8)} ↔ codex ${String(rec.codexId).slice(0, 8)}. Next ask continues it.`);
+  if (!refuseLaneMutationWhileActive(cfg, "resume")) {
+    // peer.mjs resume [groupN] — reopen a tandem by its pair; no arg = most recent
+    // (for the current Claude driver if known, else the latest tandem overall).
+    const g = readGroups(GROUPS);
+    const all = Object.values(g.groups || {}).sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
+    let rec;
+    if (argv[0]) rec = all.find((r) => String(r.n) === String(argv[0]));
+    else {
+      const drv = DRIVER_ID;
+      rec = (drv && all.find((r) => r.claudeId === drv)) || all[0];
+    }
+    if (!rec) console.log(`tandem: ${argv[0] ? "no group " + argv[0] : "no tandems yet"}`);
+    else {
+      if (rec.codexId) writeFileSync(SESSION_FILE, rec.codexId);
+      if (rec.claudeId) writeFileSync(CLAUDE_SESSION, rec.claudeId);
+      recordGroup(GROUPS, { claudeId: rec.claudeId, codexId: rec.codexId, direction: rec.direction, label: rec.label });
+      console.log(`tandem: resumed group ${rec.n} — claude ${String(rec.claudeId).slice(0, 8)} ↔ codex ${String(rec.codexId).slice(0, 8)}. Next ask continues it.`);
+    }
   }
 } else if (cmd === "groups") {
   const g = readGroups(GROUPS);
@@ -1615,6 +1638,8 @@ else if (cmd === "ledger") {
   const name = argv.join(" ");
   if (!name.trim()) {
     console.log(`this tandem's folder: ${STATE}`);
+  } else if (refuseLaneMutationWhileActive(cfg, "label change")) {
+    // Renaming a state directory under a live worker would split the lane.
   } else if (!DRIVER_ID) {
     console.error("tandem: can't label — no driving session id in the environment");
   } else {
@@ -1623,19 +1648,21 @@ else if (cmd === "ledger") {
   }
 }
 else if (cmd === "new") {
-  // Tree-kill + reset the daemon (Windows-safe) so the next ask spawns a clean one — otherwise
-  // an orphaned/racing daemon re-processes the next turn on the old session and re-glues the pair.
-  killDaemon();
-  for (const f of [SESSION_FILE, CLAUDE_SESSION, CLAUDE_VERDICT, JOB, JOB_TASK]) if (existsSync(f)) rmSync(f);
-  // The coupling lives in groups.json (codexPartnerFor / claudePartnerFor), not just the
-  // files above — so detach this driver too, or the next ask re-resumes the same thread.
-  const driverId = DRIVER_ID; // any driver kind — same-model tandems detach correctly too
-  markDetached(DETACHED, driverId);
-  console.log(
-    driverId
-      ? `tandem: forgotten + daemon closed; driver ${String(driverId).slice(0, 8)} detached — next ask starts a genuinely fresh thread`
-      : "tandem: session forgotten + daemon closed; next ask starts a fresh session (new tandem group)",
-  );
+  if (!refuseLaneMutationWhileActive(cfg, "new session")) {
+    // Tree-kill + reset the daemon (Windows-safe) so the next ask spawns a clean one — otherwise
+    // an orphaned/racing daemon re-processes the next turn on the old session and re-glues the pair.
+    killDaemon();
+    for (const f of [SESSION_FILE, CLAUDE_SESSION, CLAUDE_VERDICT, JOB, JOB_TASK]) if (existsSync(f)) rmSync(f);
+    // The coupling lives in groups.json (codexPartnerFor / claudePartnerFor), not just the
+    // files above — so detach this driver too, or the next ask re-resumes the same thread.
+    const driverId = DRIVER_ID; // any driver kind — same-model tandems detach correctly too
+    markDetached(DETACHED, driverId);
+    console.log(
+      driverId
+        ? `tandem: forgotten + daemon closed; driver ${String(driverId).slice(0, 8)} detached — next ask starts a genuinely fresh thread`
+        : "tandem: session forgotten + daemon closed; next ask starts a fresh session (new tandem group)",
+    );
+  }
 } else {
   console.log(
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +

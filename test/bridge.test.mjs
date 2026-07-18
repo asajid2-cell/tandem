@@ -746,6 +746,41 @@ test("same-lane double dispatch is atomically refused, including a foreground ho
   assert.doesNotMatch(readLast(s, "lockedLane"), /LOCK-BG-REFUSED/);
 });
 
+test("session identity mutations are refused while a live turn owns the lane", (t) => {
+  const s = freshState(t);
+  const opts = { state: s, driver: "lifecycleLocked", env: { FAKE_DELAY: "1200" } };
+  assert.equal(peer(["ask", "--bg", "LIFECYCLE-LIVE-TURN"], opts).code, 0);
+
+  for (const command of [["new"], ["resume"], ["label", "must-not-move"]]) {
+    const result = peer(command, opts);
+    assert.equal(result.code, 3, `${command[0]} is refused`);
+    assert.match(result.out, /refused while lane is running/i);
+  }
+  assert.ok(!existsSync(join(s, "detached.json")));
+  assert.equal(peer(["wait", "8"], opts).code, 0);
+  assert.equal(peer(["new"], opts).code, 0);
+});
+
+test("`stop` cancels an active Claude turn without leaving a wedged lease", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  const opts = {
+    state: s,
+    driver: "claudeStop",
+    partner: "claude",
+    env: { FAKE_DELAY: "5000" },
+  };
+  assert.equal(peer(["ask", "--bg", "CLAUDE-STOP-LIVE"], opts).code, 0);
+  const stopped = peer(["stop"], opts);
+  assert.equal(stopped.code, 0);
+  assert.match(stopped.out, /active turn cancelled/i);
+
+  const status = peer(["status"], opts);
+  assert.match(status.out, /job: error/i);
+  assert.match(status.out, /cancelled by the driver/i);
+  assert.doesNotMatch(status.out, /WEDGED/);
+});
+
 test("hard-killed worker becomes WEDGED and requires explicit reap before replacement", async (t) => {
   const s = freshState(t);
   const opts = { state: s, driver: "wedgedLane", env: { FAKE_DELAY: "10000" } };

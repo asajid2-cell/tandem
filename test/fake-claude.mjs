@@ -24,18 +24,23 @@ rl.on("line", (line) => {
   const ne = task.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const first = (ne[0] || "").slice(0, 100);
   const last = (ne[ne.length - 1] || "").slice(0, 100);
-  if (firstTurn) {
-    process.stdout.write(JSON.stringify({ session_id: sid }) + "\n"); // daemon captures + records the pair
-    firstTurn = false;
-  }
-  const verdict = `FAKE-CLAUDE ok sid=${sid} first=${first} last=${last}`;
-  process.stdout.write(
-    JSON.stringify({
-      type: "result",
-      result: verdict,
-      usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 30, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
-    }) + "\n",
-  );
+  const reply = () => {
+    if (firstTurn) {
+      process.stdout.write(JSON.stringify({ session_id: sid }) + "\n"); // daemon captures + records the pair
+      firstTurn = false;
+    }
+    const verdict = `FAKE-CLAUDE ok sid=${sid} first=${first} last=${last}`;
+    process.stdout.write(
+      JSON.stringify({
+        type: "result",
+        result: verdict,
+        usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 30, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+      }) + "\n",
+    );
+  };
+  const delay = Number(process.env.FAKE_DELAY) || 0;
+  if (delay > 0) setTimeout(reply, delay);
+  else reply();
 });
 rl.on("close", () => process.exit(0)); // stdin EOF = daemon closed
 for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(sig, () => process.exit(0));
