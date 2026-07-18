@@ -17,9 +17,22 @@
 // the partner's turn completes), then read the printed verdict.
 
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, statSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir, setLabel } from "./groups.mjs";
 import {
@@ -34,6 +47,17 @@ import {
   startHeartbeat,
   updateDispatch,
 } from "./jobs.mjs";
+import { attachLaneWorktree, ensureLaneWorktree, readLaneMetadata } from "./worktrees.mjs";
+import {
+  findSwarmLane,
+  inspectSwarm,
+  laneEnvironment,
+  listSwarms,
+  prepareSwarm,
+  readSwarm,
+  updateSwarm,
+} from "./swarm.mjs";
+import { scrubbedClaudeEnv } from "./claudeEnv.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -168,6 +192,8 @@ function loadConfig() {
       }
     }
   }
+  const laneMetadata = readLaneMetadata(STATE);
+  if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   // Explicit env overrides win over the config file (standard precedence; also lets tests
   // point the partner bin at a fake without touching the file).
   const envBin = process.env.CEERELAY_CODEX_BIN || process.env.TANDEM_CODEX_BIN;
@@ -225,27 +251,70 @@ function ensureState() {
   if (!existsSync(STATE)) mkdirSync(STATE, { recursive: true });
 }
 
-// Newest codex rollout file (so we can recover the session id from its filename).
-function newestRollout() {
-  const root = join(homedir(), ".codex", "sessions");
-  if (!existsSync(root)) return null;
-  let best = null;
-  const walk = (d, depth) => {
-    if (depth > 5) return;
-    for (const name of readdirSync(d)) {
-      const p = join(d, name);
-      let st;
+function codexSessionsRoot() {
+  if (process.env.TANDEM_CODEX_SESSIONS) return resolve(process.env.TANDEM_CODEX_SESSIONS);
+  const codexHome = process.env.CODEX_HOME ? resolve(process.env.CODEX_HOME) : join(homedir(), ".codex");
+  return join(codexHome, "sessions");
+}
+
+function filePrefixContains(file, marker, maxBytes = 2 * 1024 * 1024) {
+  let fd;
+  try {
+    fd = openSync(file, "r");
+    const size = Math.min(statSync(file).size, maxBytes);
+    const buffer = Buffer.alloc(size);
+    const read = readSync(fd, buffer, 0, size, 0);
+    return buffer.subarray(0, read).includes(Buffer.from(marker));
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) {
       try {
-        st = statSync(p);
+        closeSync(fd);
+      } catch {
+        /* already closed */
+      }
+    }
+  }
+}
+
+function rolloutMatches(marker, startedAt) {
+  const root = codexSessionsRoot();
+  if (!existsSync(root)) return [];
+  const matches = [];
+  const walk = (dir, depth) => {
+    if (depth > 6) return;
+    for (const name of readdirSync(dir)) {
+      const file = join(dir, name);
+      let stat;
+      try {
+        stat = statSync(file);
       } catch {
         continue;
       }
-      if (st.isDirectory()) walk(p, depth + 1);
-      else if (/^rollout-.*\.jsonl$/.test(name) && (!best || st.mtimeMs > best.mtime)) best = { path: p, mtime: st.mtimeMs };
+      if (stat.isDirectory()) {
+        walk(file, depth + 1);
+      } else if (
+        /^rollout-.*\.jsonl$/i.test(name) &&
+        stat.mtimeMs >= startedAt - 2000 &&
+        filePrefixContains(file, marker)
+      ) {
+        matches.push(file);
+      }
     }
   };
   walk(root, 0);
-  return best?.path ?? null;
+  return matches;
+}
+
+async function rolloutForMarker(marker, startedAt) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const matches = rolloutMatches(marker, startedAt);
+    if (matches.length === 1) return matches[0];
+    if (matches.length > 1) return null;
+    await sleep(100);
+  }
+  return null;
 }
 
 function idFromRolloutName(p) {
@@ -348,6 +417,7 @@ function codexJobRecord(res) {
     files: res.d?.files || [],
     tokens: res.d?.tokens || null,
     lowContext: res.lowContext || null,
+    warning: res.couplingWarning || null,
     workerPid: process.pid,
     partnerPid: res.partnerPid || 0,
   };
@@ -387,6 +457,7 @@ async function askUnlocked(task, cfg, lease) {
     const cdx = res.codexId || resumeSid;
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
+    if (res.couplingWarning) console.error(`tandem: WARNING - ${res.couplingWarning}`);
   }
   return res;
 }
@@ -515,29 +586,61 @@ async function askClaudeDaemon(task, cfg, bg, lease) {
 // Driver-crafted compaction of the Claude partner: take a handoff summary from the open
 // session, close it, then reopen a FRESH session seeded with that summary (the daemon
 // prepends the seed on its first turn). Re-couples via the detached-stamp + recency.
-async function compactClaude(prompt, cfg) {
-  if (!(await ensureClaudeDaemon())) return;
-  writeFileSync(JOB, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
-  writeFileSync(INBOX, JSON.stringify({ __tandem: 1, sk: SK, task: prompt && prompt.trim() ? prompt : COMPACT_PROMPT }));
-  console.error("tandem: asking the Claude partner for a handoff summary…");
-  await waitJob(cfg.claudeMaxSec || 1800, cfg);
-  const summary = existsSync(LASTMSG) ? readFileSync(LASTMSG, "utf8").trim() : "";
-  // close the session + detach the old pairing so the next start is genuinely fresh
-  const dpid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
-  if (isPidAlive(dpid)) {
-    try {
-      process.kill(dpid);
-    } catch {
-      /* ignore */
+async function compactClaude(prompt, cfg, lease) {
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
+  try {
+    if (!(await ensureClaudeDaemon())) throw new Error("persistent Claude daemon did not become ready");
+    const daemonPid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+    updateDispatch(lease, {
+      workerPid: process.pid,
+      partnerPid: daemonPid,
+      partner: "claude",
+      mode: "compact",
+    });
+    writeFileSync(
+      INBOX,
+      JSON.stringify({
+        __tandem: 1,
+        sk: SK,
+        dispatchId: lease.dispatchId,
+        holdLease: true,
+        controllerPid: process.pid,
+        task: prompt && prompt.trim() ? prompt : COMPACT_PROMPT,
+      }),
+    );
+    console.error("tandem: asking the Claude partner for a handoff summary…");
+    const deadline = Date.now() + (cfg.claudeMaxSec || 1800) * 1000;
+    let summary = "";
+    while (Date.now() < deadline) {
+      const job = jobState(cfg);
+      if (job?.status === "WEDGED") throw new Error(`Claude compaction WEDGED: ${job.reason || "worker liveness failed"}`);
+      if (job?.dispatchId === lease.dispatchId && job.resultReady) {
+        summary = job.verdict || "";
+        break;
+      }
+      if (daemonPid && !isPidAlive(daemonPid)) throw new Error("persistent Claude daemon exited before returning the handoff summary");
+      await sleep(500);
     }
+    if (!summary) throw new Error("Claude compaction timed out without a handoff summary");
+
+    killDaemon();
+    if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
+    markDetached(DETACHED, DRIVER_ID);
+    writeFileSync(CLAUDE_SEED, handoffSeed(summary));
+    logEvent({ type: "compact", ts: Date.now(), partner: "claude", reason: "manual" });
+    finishDispatch(lease, {
+      status: "done",
+      partner: "claude",
+      verdict: "Claude handoff captured; the next ask opens a fresh seeded session.",
+    });
+    console.log("\ntandem: Claude partner compacted — closed and reseeded; the next ask opens a FRESH session with your handoff.");
+    console.log("\n----- handoff summary -----\n" + summary.slice(0, 2000));
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: "claude", error: String(error) });
+    throw error;
+  } finally {
+    stopHeartbeat();
   }
-  if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
-  const codexDriver = process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
-  markDetached(DETACHED, codexDriver);
-  writeFileSync(CLAUDE_SEED, handoffSeed(summary));
-  logEvent({ type: "compact", ts: Date.now(), partner: "claude", reason: "manual" });
-  console.log("\ntandem: Claude partner compacted — closed and reseeded; the next ask opens a FRESH session with your handoff.");
-  console.log("\n----- handoff summary -----\n" + (summary || "(none returned)").slice(0, 2000));
 }
 
 // Launch a turn in a DETACHED child so long delegations don't block (or time out)
@@ -735,6 +838,303 @@ function reapJob(cfg) {
   console.log("tandem: WEDGED lane reaped; inspect partial edits, then dispatch the replacement");
 }
 
+function currentLaneLabel() {
+  return readLaneMetadata(STATE).label || process.env.TANDEM_LABEL || basename(STATE) || jobKey(DRIVER_ID);
+}
+
+function worktreeCommand(args, cfg) {
+  const action = args[0] || "status";
+  const metadata = readLaneMetadata(STATE);
+  if (action === "status") {
+    if (!metadata.worktree) {
+      console.log(`tandem: lane ${currentLaneLabel()} has no configured worktree; cwd ${cfg.cwd}`);
+      return;
+    }
+    console.log(`lane: ${metadata.label || currentLaneLabel()}`);
+    console.log(`cwd: ${metadata.cwd}`);
+    console.log(`repo: ${metadata.worktree.repo}`);
+    console.log(`branch: ${metadata.worktree.branch || "(detached)"}`);
+    console.log(`created by tandem: ${metadata.worktree.createdByTandem ? "yes" : "no"}`);
+    return;
+  }
+
+  const active = jobState(cfg);
+  if (active?.status === "running" || active?.status === "WEDGED") {
+    console.error(`tandem: worktree change refused while lane is ${active.status}; finish/cancel/reap the turn first`);
+    process.exitCode = 3;
+    return;
+  }
+
+  const coupledCodex = codexPartnerFor(DRIVER_ID);
+  const coupledClaude = existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "";
+  if ((coupledCodex || coupledClaude) && !metadata.worktree) {
+    console.error("tandem: worktree change refused after coupling; run `peer.mjs new` first so the fresh session starts in the isolated cwd");
+    process.exitCode = 3;
+    return;
+  }
+
+  try {
+    if (action === "create") {
+      const info = ensureLaneWorktree({
+        state: STATE,
+        label: currentLaneLabel(),
+        baseCwd: metadata.worktree?.repo || cfg.cwd,
+        path: args[1] || metadata.worktree?.path || undefined,
+        branch: args[2] || metadata.worktree?.branch || undefined,
+        startPoint: args[3] || "HEAD",
+      });
+      console.log(`tandem: ${info.created ? "created" : "using"} worktree ${info.path}`);
+      console.log(`branch: ${info.branch} | next fresh ask cwd: ${info.cwd}`);
+    } else if (action === "attach") {
+      if (!args[1]) throw new Error("usage: peer.mjs worktree attach <path>");
+      const info = attachLaneWorktree({ state: STATE, label: currentLaneLabel(), path: args[1] });
+      console.log(`tandem: attached lane ${info.label} to worktree ${info.cwd}`);
+      console.log(`branch: ${info.worktree?.branch || "(detached)"}`);
+    } else {
+      throw new Error(`unknown worktree action "${action}" (use status, create, or attach)`);
+    }
+  } catch (error) {
+    console.error(`tandem: worktree ${action} failed - ${error.message || error}`);
+    process.exitCode = 2;
+  }
+}
+
+function interactiveSpec(cfg, sid) {
+  let bin;
+  let args;
+  let env = process.env;
+  if (cfg.partner === "claude") {
+    bin = cfg.claudeBin;
+    args = ["--resume", sid];
+    if (cfg.claudeModel) args.push("--model", cfg.claudeModel);
+    if (cfg.claudeEffort) args.push("--effort", cfg.claudeEffort);
+    env = scrubbedClaudeEnv(process.env);
+  } else {
+    bin = cfg.codexBin;
+    args = ["resume", "-C", cfg.cwd];
+    if (cfg.codexModel) args.push("-m", cfg.codexModel);
+    if (cfg.codexEffort) args.push("-c", `model_reasoning_effort="${cfg.codexEffort}"`);
+    args.push(sid);
+  }
+  if (/\.[mc]?js$/i.test(bin)) {
+    args = [bin, ...args];
+    bin = process.execPath;
+  }
+  return { bin, args, env, cwd: cfg.cwd };
+}
+
+async function attachInteractive(args, cfg) {
+  const sid =
+    cfg.partner === "claude"
+      ? existsSync(CLAUDE_SESSION)
+        ? readFileSync(CLAUDE_SESSION, "utf8").trim()
+        : ""
+      : codexPartnerFor(DRIVER_ID) || readSession();
+  if (!sid) {
+    console.error(`tandem: no ${cfg.partner} session is coupled to this lane yet`);
+    process.exitCode = 2;
+    return;
+  }
+  const spec = interactiveSpec(cfg, sid);
+  if (args.includes("--command")) {
+    console.log(`cwd: ${spec.cwd}`);
+    console.log(`command argv: ${JSON.stringify([spec.bin, ...spec.args])}`);
+    console.log("run through `peer.mjs attach` to retain lane locking while the interactive session is open");
+    return;
+  }
+  if (!process.stdin.isTTY && !args.includes("--force")) {
+    console.error("tandem: attach requires an interactive terminal; use `peer.mjs attach --command` to inspect the command");
+    process.exitCode = 2;
+    return;
+  }
+
+  const lease = acquireLaneDispatch(cfg, "interactive");
+  if (!lease) return;
+  if (cfg.partner === "claude") killDaemon();
+  updateDispatch(lease, { workerPid: process.pid, partner: cfg.partner, mode: "interactive" });
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
+  try {
+    const code = await new Promise((resolveExit, rejectExit) => {
+      const child = spawn(spec.bin, spec.args, {
+        cwd: spec.cwd,
+        env: spec.env,
+        stdio: "inherit",
+        windowsHide: false,
+      });
+      child.once("spawn", () => updateDispatch(lease, { partnerPid: child.pid || 0 }));
+      child.once("error", rejectExit);
+      child.once("exit", (exitCode) => resolveExit(exitCode ?? 0));
+    });
+    finishDispatch(lease, {
+      status: code === 0 ? "done" : "error",
+      partner: cfg.partner,
+      error: code === 0 ? undefined : `interactive continuation exited with code ${code}`,
+      verdict: `Interactive ${cfg.partner} continuation closed${code === 0 ? " normally" : ` with code ${code}`}.`,
+    });
+    if (code !== 0) process.exitCode = code;
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: cfg.partner, error: `interactive continuation failed: ${error.message || error}` });
+    console.error(`tandem: attach failed - ${error.message || error}`);
+    process.exitCode = 1;
+  } finally {
+    stopHeartbeat();
+  }
+}
+
+function runLanePeer(lane, args, input) {
+  const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), ...args], {
+    cwd: ROOT,
+    env: laneEnvironment(lane, process.env),
+    input,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return {
+    code: result.status ?? 1,
+    out: (result.stdout || "") + (result.stderr || ""),
+  };
+}
+
+function swarmSummary(snapshot) {
+  const order = ["running", "done", "error", "WEDGED", "idle"];
+  return order.filter((state) => snapshot.counts[state]).map((state) => `${state}=${snapshot.counts[state]}`).join(" ");
+}
+
+function printSwarmStatus(snapshot) {
+  const width = Math.max(4, ...snapshot.lanes.map((lane) => lane.name.length));
+  console.log(`swarm: ${snapshot.name} | ${snapshot.lanes.length} lanes | ${swarmSummary(snapshot) || "idle"}`);
+  for (const lane of snapshot.lanes) {
+    const pid = lane.job?.workerPid ? ` pid=${lane.job.workerPid}` : "";
+    const detail =
+      lane.status === "WEDGED"
+        ? ` - ${lane.job?.reason || "worker liveness failed"}`
+        : lane.status === "error"
+          ? ` - ${lane.job?.error || lane.lastError || "unknown"}`
+          : lane.status === "done" && lane.job?.durSec != null
+            ? ` (${lane.job.durSec}s)`
+            : "";
+    console.log(`  ${lane.name.padEnd(width)}  ${lane.status.padEnd(7)}${pid}${detail}`);
+  }
+}
+
+function requireSwarm(name) {
+  const record = readSwarm(ROOT, STATE, name);
+  if (!record) throw new Error(`unknown swarm "${name}"`);
+  return record;
+}
+
+async function swarmCommand(args, cfg) {
+  const action = args[0] || "list";
+  try {
+    if (action === "list") {
+      const records = listSwarms(ROOT, STATE);
+      if (!records.length) {
+        console.log("tandem: no swarms yet");
+        return;
+      }
+      for (const record of records) printSwarmStatus(inspectSwarm(record));
+      return;
+    }
+
+    const name = args[1];
+    if (!name) throw new Error(`usage: peer.mjs swarm ${action} <name>${action === "start" ? " <manifest.json>" : ""}`);
+
+    if (action === "start") {
+      const manifestPath = args[2];
+      const record = prepareSwarm({
+        root: ROOT,
+        parentState: STATE,
+        driverId: DRIVER_ID,
+        name,
+        manifestPath,
+        baseCwd: cfg.cwd,
+        wedgeAfterSec: cfg.wedgeAfterSec,
+      });
+      let failed = false;
+      for (const lane of record.lanes) {
+        const result = runLanePeer(lane, ["ask", "--bg", "-"], lane.task);
+        lane.dispatch = result.code === 0 ? "started" : "error";
+        lane.dispatchedTs = Date.now();
+        lane.lastError = result.code === 0 ? "" : result.out.trim().slice(-1200);
+        updateSwarm(ROOT, STATE, record);
+        console.log(`tandem: swarm ${record.name}/${lane.name} ${result.code === 0 ? "started" : "FAILED"}`);
+        if (result.code !== 0) {
+          failed = true;
+          if (result.out.trim()) console.error(result.out.trim());
+        }
+      }
+      printSwarmStatus(inspectSwarm(record));
+      if (failed) process.exitCode = 1;
+      return;
+    }
+
+    const record = requireSwarm(name);
+    if (action === "status") {
+      printSwarmStatus(inspectSwarm(record));
+      return;
+    }
+    if (action === "wait") {
+      const maxSec = Number(args[2]) || 1800;
+      const deadline = Date.now() + maxSec * 1000;
+      let snapshot = inspectSwarm(record);
+      while (snapshot.lanes.some((lane) => lane.status === "running") && Date.now() < deadline) {
+        await sleep(1000);
+        snapshot = inspectSwarm(record);
+      }
+      printSwarmStatus(snapshot);
+      if (snapshot.lanes.some((lane) => lane.status === "running")) {
+        console.error("tandem: swarm wait timed out with lanes still running");
+        process.exitCode = 1;
+      } else if (snapshot.lanes.some((lane) => lane.status === "error" || lane.status === "WEDGED")) {
+        process.exitCode = 1;
+      }
+      return;
+    }
+    if (action === "results" || action === "result") {
+      const snapshot = inspectSwarm(record);
+      for (const lane of snapshot.lanes) {
+        console.log(`\n===== ${record.name}/${lane.name} (${lane.status}) =====`);
+        if (lane.status === "done") console.log(lane.job?.verdict || "(empty verdict)");
+        else if (lane.status === "WEDGED") console.log(lane.job?.reason || "worker liveness failed");
+        else console.log(lane.job?.error || lane.lastError || "(no result yet)");
+      }
+      return;
+    }
+    if (action === "ask") {
+      const lane = findSwarmLane(record, args[2]);
+      if (!lane) throw new Error(`unknown lane "${args[2]}" in swarm "${record.name}"`);
+      const foreground = args.includes("--fg");
+      let task = args.slice(3).filter((arg) => arg !== "--fg" && arg !== "--bg").join(" ");
+      if (task === "-" || !task) task = readFileSync(0, "utf8");
+      const result = runLanePeer(lane, ["ask", ...(foreground ? [] : ["--bg"]), "-"], task);
+      process.stdout.write(result.out);
+      if (result.code !== 0) process.exitCode = result.code;
+      return;
+    }
+    if (action === "cancel" || action === "reap") {
+      const selector = args[2];
+      const targets =
+        !selector || selector === "--all"
+          ? record.lanes
+          : [findSwarmLane(record, selector)].filter(Boolean);
+      if (!targets.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
+      let failed = false;
+      for (const lane of targets) {
+        const result = runLanePeer(lane, [action]);
+        console.log(`\n[${record.name}/${lane.name}]`);
+        process.stdout.write(result.out);
+        if (result.code !== 0) failed = true;
+      }
+      if (failed) process.exitCode = 1;
+      return;
+    }
+    throw new Error(`unknown swarm action "${action}"`);
+  } catch (error) {
+    console.error(`tandem: swarm ${action} failed - ${error.message || error}`);
+    process.exitCode = 2;
+  }
+}
+
 async function waitJob(maxSec, cfg) {
   const deadline = Date.now() + maxSec * 1000;
   while (Date.now() < deadline) {
@@ -775,6 +1175,10 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
   if (!sid) args.push("-C", cfg.cwd);
   if (sid) args.push(sid);
   args.push("-");
+  const couplingMarker = sid ? "" : `tandem-coupling:${randomUUID()}`;
+  const dispatchedTask = couplingMarker
+    ? `[${couplingMarker}; internal continuity marker - ignore this line]\n${task}`
+    : task;
 
   try {
     if (existsSync(outFile)) rmSync(outFile); // clear so a failed turn can't leak a stale verdict
@@ -785,7 +1189,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
   const { stdout: out, code, killed, partnerPid, error } = await runCodex(
     cfg.codexBin,
     args,
-    task,
+    dispatchedTask,
     cfg.maxTurnSec || 0,
     onSpawn,
   );
@@ -794,15 +1198,16 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
   // capture the session id for continuity — only on a successful fresh run, and
   // only from THIS run (parse the stream first; fall back to a rollout created now)
   let codexId = sid || "";
+  let couplingWarning = "";
   if (!sid && code === 0) {
     let id = parseSessionId(out);
-    if (!id) {
-      const roll = newestRollout();
-      if (roll && statSync(roll).mtimeMs >= t0 - 1000) id = idFromRolloutName(roll);
-    }
+    if (!id) id = idFromRolloutName((await rolloutForMarker(couplingMarker, t0)) || "");
     if (id) {
       codexId = id;
       writeFileSync(SESSION_FILE, id); // global, for the watcher's display only
+    } else {
+      couplingWarning =
+        "fresh Codex turn completed, but tandem could not prove its session id; continuity was left uncoupled rather than guessing another lane's rollout";
     }
   }
 
@@ -810,7 +1215,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
   let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
   if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
   const d = digest(out);
-  return { verdict, d, dur, raw: out, code, codexId, killed, partnerPid, error };
+  return { verdict, d, dur, raw: out, code, codexId, killed, partnerPid, error, couplingWarning };
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
@@ -1012,7 +1417,12 @@ function printVerdict(partner, verdict, d, dur, raw) {
 }
 
 function status(cfg) {
-  const sid = readSession();
+  const sid =
+    cfg.partner === "claude"
+      ? existsSync(CLAUDE_SESSION)
+        ? readFileSync(CLAUDE_SESSION, "utf8").trim()
+        : ""
+      : codexPartnerFor(DRIVER_ID) || readSession();
   console.log(`partner: ${cfg.partner} | session: ${sid || "(none — next ask starts fresh)"} | cwd: ${cfg.cwd} | posture: ${cfg.posture}`);
   const j = jobState(cfg);
   if (j) {
@@ -1029,6 +1439,7 @@ function status(cfg) {
       console.log(`reason: ${j.reason || "worker liveness failed"}`);
       console.log("recovery: run `peer.mjs reap`; only then dispatch a replacement");
     }
+    if (j.warning) console.log(`warning: ${j.warning}`);
   } else if (existsSync(LASTMSG)) {
     console.log(`\nlast verdict:\n${readFileSync(LASTMSG, "utf8").trim().slice(0, 1200)}`);
   }
@@ -1067,7 +1478,7 @@ const cfg = loadConfig();
 const cmd = process.argv[2];
 const argv = process.argv.slice(3);
 const bg = argv.includes("--bg");
-if (cmd === "ask") {
+if (cmd === "ask" || cmd === "continue") {
   let task = argv.filter((a) => a !== "--bg").join(" ");
   if (task === "-" || !task) task = readFileSync(0, "utf8"); // stdin
   if (bg) await startJob(task, cfg);
@@ -1124,8 +1535,11 @@ if (cmd === "ask") {
 } else if (cmd === "wait") {
   await waitJob(Number(argv[0]) || 1800, cfg);
 } else if (cmd === "status") status(cfg);
-else if (cmd === "cancel") cancelJob(cfg);
+else if (cmd === "cancel" || cmd === "interrupt") cancelJob(cfg);
 else if (cmd === "reap") reapJob(cfg);
+else if (cmd === "worktree") worktreeCommand(argv, cfg);
+else if (cmd === "swarm") await swarmCommand(argv, cfg);
+else if (cmd === "attach") await attachInteractive(argv, cfg);
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
 else if (cmd === "result") result(Number(argv[0]) || 4);
 else if (cmd === "ledger") {
@@ -1161,6 +1575,7 @@ else if (cmd === "new") {
   console.log(
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +
       "  ask \"<task>\" [--bg]   delegate a turn (Claude partner = open session; --bg = background)\n" +
+      "  continue \"<task>\"      explicit alias for another turn on the same coupled session\n" +
       "  ask -                 read task from stdin (long/multiline)\n" +
       "  compact [\"<prompt>\"]  hand the near-full partner off to a FRESH thread, seeded with a\n" +
       "                        handoff summary you craft (omit prompt for the default summary)\n" +
@@ -1168,6 +1583,9 @@ else if (cmd === "new") {
       "  ledger [\"<entry>\"]    append to / print THIS tandem's own ledger (per-pair TANDEM.md)\n" +
       "  serve | stop          open / close the persistent Claude session (id persists, resumable)\n" +
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
-      "  wait [sec] | status | cancel | reap | tail [n] | result [n] | new",
+      "  worktree status | create [path] [branch] [start] | attach <path>\n" +
+      "  swarm start <name> <manifest.json> | status/wait/results/ask/cancel/reap <name>\n" +
+      "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
+      "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result [n] | new",
   );
 }

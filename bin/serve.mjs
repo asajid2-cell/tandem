@@ -138,6 +138,8 @@ let curJob = JOB;
 let curLast = LASTMSG;
 let curLease = null;
 let stopTurnHeartbeat = null;
+let curHoldLease = false;
+let curControllerPid = 0;
 
 claude.stdout.on("data", (b) => {
   buf += b.toString();
@@ -177,15 +179,16 @@ claude.stdout.on("data", (b) => {
       try {
         if (!curLease || leaseIsOwned(curLease)) writeFileSync(curLast, verdict);
         if (curLease) {
-          finishDispatch(curLease, {
-            status: "done",
+          const result = {
             partner: "claude",
-            workerPid: process.pid,
+            workerPid: curHoldLease ? curControllerPid : process.pid,
             partnerPid: claude.pid || 0,
             durSec: dur,
             verdict,
             lowContext: low,
-          });
+          };
+          if (curHoldLease) updateDispatch(curLease, { ...result, resultReady: true });
+          else finishDispatch(curLease, { ...result, status: "done" });
         } else {
           writeFileSync(curJob, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
         }
@@ -195,6 +198,8 @@ claude.stdout.on("data", (b) => {
       if (stopTurnHeartbeat) stopTurnHeartbeat();
       stopTurnHeartbeat = null;
       curLease = null;
+      curHoldLease = false;
+      curControllerPid = 0;
       log({ type: "verdict", ts: Date.now(), partner: "claude", durSec: dur, verdict });
       if (low) console.log(low);
       // register this Codex→Claude pair as a tandem group (codex driver id best-effort)
@@ -275,6 +280,8 @@ setInterval(() => {
   curJob = JOB;
   curLast = LASTMSG;
   curLease = null;
+  curHoldLease = false;
+  curControllerPid = 0;
   let curSk = SK;
   let dispatchId = "";
   try {
@@ -288,6 +295,8 @@ setInterval(() => {
         curLast = join(STATE, "last-" + sk + ".txt");
       }
       dispatchId = String(env2.dispatchId || "");
+      curHoldLease = env2.holdLease === true;
+      curControllerPid = Number(env2.controllerPid || 0) || 0;
     }
   } catch {
     /* bare text task */
@@ -297,7 +306,7 @@ setInterval(() => {
     curLease = leaseFrom(STATE, curSk, dispatchId);
     if (
       !updateDispatch(curLease, {
-        workerPid: process.pid,
+        workerPid: curHoldLease && curControllerPid ? curControllerPid : process.pid,
         partnerPid: claude.pid || 0,
         partner: "claude",
       })
@@ -306,7 +315,7 @@ setInterval(() => {
       curLease = null;
       return;
     }
-    stopTurnHeartbeat = startHeartbeat(curLease, { pid: process.pid });
+    if (!curHoldLease) stopTurnHeartbeat = startHeartbeat(curLease, { pid: process.pid });
   }
   inTurn = true;
   turnStart = Date.now();

@@ -81,6 +81,11 @@ function killTree(pid) {
   }
 }
 const sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
+function runGit(args, cwd) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+  assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
 const readLast = (state, driver) => {
   const f = join(state, `last-${jobKey(driver)}.txt`);
   return existsSync(f) ? readFileSync(f, "utf8") : "";
@@ -302,6 +307,208 @@ test("genuinely concurrent codex tandems never clobber (parallel, overlapping)",
       if (other !== d) assert.doesNotMatch(readLast(s, d), new RegExp(`PARALLEL-${other}`), `${d} not clobbered by ${other}`);
     }
   }
+});
+
+test("concurrent fresh turns couple only to the rollout carrying their lane nonce", async (t) => {
+  const root = freshState(t);
+  const stateA = join(root, "lane-a");
+  const stateB = join(root, "lane-b");
+  const rollouts = join(root, "rollouts");
+  mkdirSync(stateA, { recursive: true });
+  mkdirSync(stateB, { recursive: true });
+  const env = {
+    FAKE_DELAY: "300",
+    FAKE_OMIT_SESSION_ID: "1",
+    FAKE_WRITE_ROLLOUT: "1",
+    TANDEM_CODEX_SESSIONS: rollouts,
+  };
+
+  const [a1, b1] = await Promise.all([
+    peerAsync(["ask", "COUPLE-LANE-A"], { state: stateA, driver: "sharedDriver", env }),
+    peerAsync(["ask", "COUPLE-LANE-B"], { state: stateB, driver: "sharedDriver", env }),
+  ]);
+  const sidA = sidOf(a1.out);
+  const sidB = sidOf(b1.out);
+  assert.ok(sidA && sidB, "both fake turns report their actual session ids");
+  assert.notEqual(sidA, sidB);
+
+  const a2 = peer(["ask", "COUPLE-LANE-A-CONTINUE"], { state: stateA, driver: "sharedDriver", env });
+  const b2 = peer(["ask", "COUPLE-LANE-B-CONTINUE"], { state: stateB, driver: "sharedDriver", env });
+  assert.match(a2.out, /mode=resume/);
+  assert.match(b2.out, /mode=resume/);
+  assert.equal(sidOf(a2.out), sidA, "lane A resumes the rollout containing A's nonce");
+  assert.equal(sidOf(b2.out), sidB, "lane B resumes the rollout containing B's nonce");
+});
+
+test("lane worktree provisioning persists an isolated cwd for fresh editing turns", (t) => {
+  const root = freshState(t);
+  const repo = join(root, "repo");
+  const state = join(root, "state");
+  const worktree = join(root, "editing-worktree");
+  mkdirSync(repo, { recursive: true });
+  mkdirSync(state, { recursive: true });
+  runGit(["init"], repo);
+  runGit(["config", "user.email", "tandem-test@example.invalid"], repo);
+  runGit(["config", "user.name", "Tandem Test"], repo);
+  writeFileSync(join(repo, "seed.txt"), "seed\n");
+  runGit(["add", "seed.txt"], repo);
+  runGit(["commit", "-m", "seed"], repo);
+
+  const created = peer(
+    ["worktree", "create", worktree, "tandem/edit-lane", "HEAD"],
+    {
+      state,
+      driver: "worktreeDriver",
+      env: { TANDEM_CWD: repo, TANDEM_LABEL: "edit-lane" },
+    },
+  );
+  assert.equal(created.code, 0);
+  assert.match(created.out, /created worktree/i);
+  assert.ok(existsSync(join(worktree, ".git")));
+  const worktreeList = runGit(["worktree", "list", "--porcelain"], repo).replaceAll("/", "\\");
+  assert.ok(worktreeList.toLowerCase().includes(resolve(worktree).toLowerCase()));
+
+  const metadata = JSON.parse(readFileSync(join(state, "lane.json"), "utf8"));
+  assert.equal(resolve(metadata.cwd), resolve(worktree));
+  assert.equal(metadata.worktree.branch, "tandem/edit-lane");
+
+  const asked = peer(
+    ["ask", "EDIT-IN-ISOLATED-WORKTREE"],
+    {
+      state,
+      driver: "worktreeDriver",
+      env: { TANDEM_CWD: "", TANDEM_LABEL: "edit-lane" },
+    },
+  );
+  assert.equal(asked.code, 0);
+  assert.match(asked.out, /EDIT-IN-ISOLATED-WORKTREE/);
+  assert.match(asked.out, new RegExp(`cwd=${worktree.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"));
+});
+
+test("swarm start auto-namespaces five same-driver lanes and aggregates their states", (t) => {
+  const state = freshState(t);
+  const manifest = join(state, "swarm.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      lanes: Array.from({ length: 5 }, (_, index) => ({
+        name: `lane-${index + 1}`,
+        task: `SWARM-TASK-${index + 1}`,
+      })),
+    }),
+  );
+  const opts = { state, driver: "swarmDriver", env: { FAKE_DELAY: "1500", TANDEM_CWD: "" } };
+
+  const started = peer(["swarm", "start", "hardening", manifest], opts);
+  assert.equal(started.code, 0);
+  for (let index = 1; index <= 5; index++) assert.match(started.out, new RegExp(`hardening/lane-${index} started`));
+
+  const record = JSON.parse(readFileSync(join(state, "swarms", "hardening.json"), "utf8"));
+  assert.equal(record.lanes.length, 5);
+  assert.equal(new Set(record.lanes.map((lane) => lane.label)).size, 5);
+  assert.equal(new Set(record.lanes.map((lane) => lane.state)).size, 5);
+  for (const lane of record.lanes) {
+    assert.match(lane.label, /^hardening--lane-[1-5]$/);
+    assert.ok(existsSync(lane.state));
+  }
+
+  const status = peer(["swarm", "status", "hardening"], opts);
+  for (let index = 1; index <= 5; index++) assert.match(status.out, new RegExp(`lane-${index}\\s+(running|done)`));
+
+  const waited = peer(["swarm", "wait", "hardening", "12"], opts);
+  assert.equal(waited.code, 0);
+  assert.match(waited.out, /done=5/);
+  const results = peer(["swarm", "results", "hardening"], opts);
+  for (let index = 1; index <= 5; index++) assert.match(results.out, new RegExp(`SWARM-TASK-${index}`));
+});
+
+test("swarm rejects duplicate labels after sanitization before dispatching any lane", (t) => {
+  const state = freshState(t);
+  const manifest = join(state, "duplicate-swarm.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      lanes: [
+        { name: "same lane", task: "one" },
+        { name: "same-lane", task: "two" },
+      ],
+    }),
+  );
+  const result = peer(["swarm", "start", "duplicates", manifest], {
+    state,
+    driver: "swarmDriver",
+    env: { TANDEM_CWD: "" },
+  });
+  assert.equal(result.code, 2);
+  assert.match(result.out, /duplicate lane label after sanitization/i);
+  assert.ok(!existsSync(join(state, "swarms", "duplicates.json")));
+});
+
+test("editing swarm provisions a distinct git worktree and branch per lane", (t) => {
+  const state = freshState(t);
+  const repo = join(state, "repo");
+  mkdirSync(repo, { recursive: true });
+  runGit(["init"], repo);
+  runGit(["config", "user.email", "tandem-test@example.invalid"], repo);
+  runGit(["config", "user.name", "Tandem Test"], repo);
+  writeFileSync(join(repo, "seed.txt"), "seed\n");
+  runGit(["add", "seed.txt"], repo);
+  runGit(["commit", "-m", "seed"], repo);
+
+  const manifest = join(state, "editing-swarm.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      lanes: [
+        { name: "editor-a", task: "EDIT-SWARM-A", worktree: true },
+        { name: "editor-b", task: "EDIT-SWARM-B", worktree: true },
+      ],
+    }),
+  );
+  const opts = { state, driver: "editingSwarmDriver", env: { TANDEM_CWD: repo } };
+  const started = peer(["swarm", "start", "edit-swarm", manifest], opts);
+  assert.equal(started.code, 0);
+  assert.equal(peer(["swarm", "wait", "edit-swarm", "10"], opts).code, 0);
+
+  const record = JSON.parse(readFileSync(join(state, "swarms", "edit-swarm.json"), "utf8"));
+  assert.equal(record.lanes.length, 2);
+  assert.notEqual(resolve(record.lanes[0].cwd), resolve(record.lanes[1].cwd));
+  assert.notEqual(record.lanes[0].worktree?.branch, record.lanes[1].worktree?.branch);
+  for (const lane of record.lanes) {
+    assert.ok(existsSync(join(lane.cwd, ".git")), `${lane.name} has a linked worktree`);
+    assert.equal(runGit(["branch", "--show-current"], lane.cwd), `tandem/${lane.label}`);
+  }
+
+  const results = peer(["swarm", "results", "edit-swarm"], opts);
+  assert.match(results.out, /EDIT-SWARM-A/);
+  assert.match(results.out, /EDIT-SWARM-B/);
+  for (const lane of record.lanes) {
+    const normalizedOutput = results.out.replaceAll("/", "\\").toLowerCase();
+    assert.ok(normalizedOutput.includes(resolve(lane.cwd).toLowerCase()), `${lane.name} ran in its own cwd`);
+  }
+});
+
+test("human attach resumes the exact lane session and head continue reuses it", (t) => {
+  const state = freshState(t);
+  const first = peer(["ask", "ATTACH-ESTABLISH"], { state, driver: "attachDriver" });
+  const sid = sidOf(first.out);
+  assert.ok(sid);
+
+  const command = peer(["attach", "--command"], { state, driver: "attachDriver" });
+  assert.equal(command.code, 0);
+  assert.match(command.out, new RegExp(sid));
+  assert.match(command.out, /command argv:/);
+
+  const attached = peer(["attach", "--force"], { state, driver: "attachDriver" });
+  assert.equal(attached.code, 0);
+  assert.match(attached.out, /mode=resume/);
+  assert.equal(sidOf(attached.out), sid);
+
+  const continued = peer(["continue", "ATTACH-CONTINUE"], { state, driver: "attachDriver" });
+  assert.equal(continued.code, 0);
+  assert.match(continued.out, /mode=resume/);
+  assert.equal(sidOf(continued.out), sid);
+  assert.match(continued.out, /ATTACH-CONTINUE/);
 });
 
 test("same-lane double dispatch is atomically refused, including a foreground holder", async (t) => {
