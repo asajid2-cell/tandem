@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync, spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -477,6 +477,69 @@ test("swarm rejects duplicate labels after sanitization before dispatching any l
   assert.equal(result.code, 2);
   assert.match(result.out, /duplicate lane label after sanitization/i);
   assert.ok(!existsSync(join(state, "swarms", "duplicates.json")));
+});
+
+test("concurrent swarm creation atomically reserves one namespace and dispatches once", async (t) => {
+  const state = freshState(t);
+  const manifest = join(state, "race-swarm.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      lanes: [
+        { name: "one", task: "RACE-SWARM-ONE" },
+        { name: "two", task: "RACE-SWARM-TWO" },
+      ],
+    }),
+  );
+  const opts = { state, driver: "swarmRaceDriver", env: { FAKE_DELAY: "500", TANDEM_CWD: "" } };
+  const starts = await Promise.all([
+    peerAsync(["swarm", "start", "same-name", manifest], opts),
+    peerAsync(["swarm", "start", "same-name", manifest], opts),
+  ]);
+  assert.equal(starts.filter((result) => result.code === 0).length, 1);
+  const rejected = starts.find((result) => result.code !== 0);
+  assert.equal(rejected?.code, 2);
+  assert.match(rejected?.out || "", /swarm "same-name" already exists/i);
+
+  const waited = peer(["swarm", "wait", "same-name", "8"], opts);
+  assert.equal(waited.code, 0);
+  assert.match(waited.out, /done=2/);
+});
+
+test("swarm refuses to reuse a pre-existing lane state and preserves lane identity in long names", (t) => {
+  const state = freshState(t);
+  const longName = "long-swarm-name-that-would-otherwise-truncate-away-every-lane-suffix";
+  const manifest = join(state, "long-swarm.json");
+  writeFileSync(
+    manifest,
+    JSON.stringify({
+      lanes: [
+        { name: "alpha", task: "LONG-ALPHA" },
+        { name: "beta", task: "LONG-BETA" },
+      ],
+    }),
+  );
+  const opts = { state, driver: "longSwarmDriver", env: { TANDEM_CWD: "" } };
+  const started = peer(["swarm", "start", longName, manifest], opts);
+  assert.equal(started.code, 0);
+  assert.equal(peer(["swarm", "wait", longName, "8"], opts).code, 0);
+
+  const file = readdirSync(join(state, "swarms")).find((name) => name.endsWith(".json"));
+  const record = JSON.parse(readFileSync(join(state, "swarms", file), "utf8"));
+  assert.equal(new Set(record.lanes.map((lane) => lane.label)).size, 2);
+  assert.ok(record.lanes.every((lane) => lane.label.length <= 60));
+
+  const collisionManifest = join(state, "collision-swarm.json");
+  writeFileSync(collisionManifest, JSON.stringify({ lanes: [{ name: "lane", task: "MUST-NOT-DISPATCH" }] }));
+  const occupied = join(state, "lanes", "occupied--lane");
+  mkdirSync(occupied, { recursive: true });
+  writeFileSync(join(occupied, "groups.json"), JSON.stringify({ stale: true }));
+  const collision = peer(["swarm", "start", "occupied", collisionManifest], opts);
+  assert.equal(collision.code, 2);
+  assert.match(collision.out, /lane state already exists/i);
+  const failed = JSON.parse(readFileSync(join(state, "swarms", "occupied.json"), "utf8"));
+  assert.equal(failed.setupStatus, "error");
+  assert.ok(!existsSync(join(occupied, `job-${jobKey("longSwarmDriver")}.json`)));
 });
 
 test("editing swarm provisions a distinct git worktree and branch per lane", (t) => {

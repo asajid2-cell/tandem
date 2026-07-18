@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { inspectDispatch, readJson, writeJsonAtomic } from "./jobs.mjs";
 import { jobKey, sanitizeLabel } from "./groups.mjs";
@@ -37,6 +38,38 @@ function laneTask(lane, manifestDir) {
   throw new Error(`lane "${lane.name || lane.label || "?"}" needs a non-empty task or taskFile`);
 }
 
+function scopedLaneLabel(swarmName, laneName) {
+  const combined = `${swarmName}--${laneName}`;
+  if (combined.length <= 60) return combined;
+  const hash = createHash("sha256").update(combined).digest("hex").slice(0, 8);
+  const prefix = combined.slice(0, 51).replace(/^[-.]+|[-.]+$/g, "") || "swarm-lane";
+  return `${prefix}-${hash}`;
+}
+
+function reserveSwarm(file, record) {
+  mkdirSync(dirname(file), { recursive: true });
+  try {
+    writeFileSync(file, JSON.stringify(record), { flag: "wx" });
+  } catch (error) {
+    if (error.code === "EEXIST") {
+      throw new Error(`swarm "${record.name}" already exists; use its status/ask commands or choose a new name`);
+    }
+    throw error;
+  }
+}
+
+function claimLaneState(state, laneId) {
+  mkdirSync(dirname(state), { recursive: true });
+  try {
+    mkdirSync(state);
+  } catch (error) {
+    if (error.code === "EEXIST") {
+      throw new Error(`lane state already exists for ${laneId}: ${state}; refusing to reuse a possibly coupled lane`);
+    }
+    throw error;
+  }
+}
+
 export function prepareSwarm({
   root,
   parentState,
@@ -50,9 +83,6 @@ export function prepareSwarm({
   if (!manifestPath) throw new Error("manifest path is required");
   const cleanName = sanitizeLabel(name);
   const file = swarmFile(root, parentState, cleanName);
-  if (existsSync(file)) {
-    throw new Error(`swarm "${cleanName}" already exists; use its status/ask commands or choose a new name`);
-  }
 
   const absoluteManifest = resolve(manifestPath);
   const manifestDir = dirname(absoluteManifest);
@@ -65,7 +95,7 @@ export function prepareSwarm({
   const laneRoot = storage(root, parentState).lanes;
   const runtime = source.lanes.map((lane, index) => {
     const laneName = sanitizeLabel(lane.name || lane.label || `lane-${index + 1}`);
-    const label = sanitizeLabel(`${cleanName}--${laneName}`);
+    const label = scopedLaneLabel(cleanName, laneName);
     if (seen.has(label)) {
       throw new Error(`duplicate lane label after sanitization: "${label}"`);
     }
@@ -92,37 +122,13 @@ export function prepareSwarm({
     };
   });
 
-  for (const lane of runtime) {
-    mkdirSync(lane.state, { recursive: true });
-    if (lane.worktree) {
-      const spec = lane.worktree === true ? {} : lane.worktree;
-      const info = ensureLaneWorktree({
-        state: lane.state,
-        label: lane.label,
-        baseCwd: lane.cwd,
-        path: resolveFrom(manifestDir, spec.path),
-        branch: spec.branch || undefined,
-        startPoint: spec.startPoint || source.startPoint || "HEAD",
-      });
-      lane.cwd = info.cwd;
-      lane.worktree = info;
-    }
-    writeLaneMetadata(lane.state, {
-      version: 1,
-      label: lane.label,
-      lane: lane.name,
-      swarm: cleanName,
-      laneId: lane.laneId,
-      cwd: lane.cwd,
-    });
-  }
-
   const record = {
     version: 1,
     name: cleanName,
     driverId,
     manifestPath: absoluteManifest,
     createdTs: Date.now(),
+    setupStatus: "preparing",
     lanes: runtime.map((lane) => ({
       name: lane.name,
       label: lane.label,
@@ -142,9 +148,49 @@ export function prepareSwarm({
       dispatch: "pending",
     })),
   };
-  mkdirSync(dirname(file), { recursive: true });
-  writeJsonAtomic(file, record);
-  return record;
+  reserveSwarm(file, record);
+
+  try {
+    for (const lane of runtime) {
+      claimLaneState(lane.state, lane.laneId);
+      if (lane.worktree) {
+        const spec = lane.worktree === true ? {} : lane.worktree;
+        const info = ensureLaneWorktree({
+          state: lane.state,
+          label: lane.label,
+          baseCwd: lane.cwd,
+          path: resolveFrom(manifestDir, spec.path),
+          branch: spec.branch || undefined,
+          startPoint: spec.startPoint || source.startPoint || "HEAD",
+        });
+        lane.cwd = info.cwd;
+        lane.worktree = info;
+      }
+      writeLaneMetadata(lane.state, {
+        version: 1,
+        label: lane.label,
+        lane: lane.name,
+        swarm: cleanName,
+        laneId: lane.laneId,
+        cwd: lane.cwd,
+      });
+      const stored = record.lanes[lane.index];
+      stored.cwd = lane.cwd;
+      stored.worktree = lane.worktree || null;
+      stored.setup = "ready";
+      writeJsonAtomic(file, record);
+    }
+    record.setupStatus = "ready";
+    record.readyTs = Date.now();
+    writeJsonAtomic(file, record);
+    return record;
+  } catch (error) {
+    record.setupStatus = "error";
+    record.setupError = String(error.message || error);
+    record.setupFailedTs = Date.now();
+    writeJsonAtomic(file, record);
+    throw new Error(`${record.setupError}; swarm "${cleanName}" remains reserved for inspection`);
+  }
 }
 
 export function updateSwarm(root, parentState, record) {

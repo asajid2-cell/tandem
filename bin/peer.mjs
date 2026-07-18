@@ -1002,9 +1002,14 @@ function swarmSummary(snapshot) {
 
 function printSwarmStatus(snapshot) {
   const width = Math.max(4, ...snapshot.lanes.map((lane) => lane.name.length));
-  console.log(`swarm: ${snapshot.name} | ${snapshot.lanes.length} lanes | ${swarmSummary(snapshot) || "idle"}`);
+  const setup = snapshot.setupStatus && snapshot.setupStatus !== "ready" ? ` | setup=${snapshot.setupStatus}` : "";
+  console.log(`swarm: ${snapshot.name} | ${snapshot.lanes.length} lanes | ${swarmSummary(snapshot) || "idle"}${setup}`);
+  if (snapshot.setupError) console.log(`  setup error: ${snapshot.setupError}`);
   for (const lane of snapshot.lanes) {
-    const pid = lane.job?.workerPid ? ` pid=${lane.job.workerPid}` : "";
+    const pid =
+      (lane.status === "running" || lane.status === "WEDGED") && lane.job?.workerPid
+        ? ` pid=${lane.job.workerPid}`
+        : "";
     const detail =
       lane.status === "WEDGED"
         ? ` - ${lane.job?.reason || "worker liveness failed"}`
@@ -1074,6 +1079,11 @@ async function swarmCommand(args, cfg) {
       return;
     }
     if (action === "wait") {
+      if (record.setupStatus && record.setupStatus !== "ready") {
+        printSwarmStatus(inspectSwarm(record));
+        process.exitCode = 1;
+        return;
+      }
       const maxSec = Number(args[2]) || 1800;
       const deadline = Date.now() + maxSec * 1000;
       let snapshot = inspectSwarm(record);
