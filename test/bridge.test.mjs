@@ -226,6 +226,20 @@ test("`compact` hands off to a fresh seeded thread without polluting the verdict
   assert.match(readLast(s, "drvA"), /REALWORK-two/);
 });
 
+test("`compact` is refused while the lane already owns a live partner turn", async (t) => {
+  const s = freshState(t);
+  peer(["ask", "establish compact target"], { state: s, driver: "compactLocked" });
+  const opts = { state: s, driver: "compactLocked", env: { FAKE_DELAY: "1200" } };
+
+  const active = peerAsync(["ask", "LONG-LIVE-TURN"], opts);
+  await sleep(200);
+  const compact = peer(["compact", "must not race the live turn"], opts);
+  assert.equal(compact.code, 3);
+  assert.match(compact.out, /dispatch refused: existing job is running/i);
+  assert.ok(!existsSync(join(s, "codex.seed")), "a refused compact must not detach or seed a replacement");
+  await active;
+});
+
 test("reactive net recovers on a fresh session when a turn hits the context wall", (t) => {
   const s = freshState(t);
   peer(["ask", "establish"], { state: s, driver: "drvA" }); // couples fresh
@@ -293,6 +307,27 @@ test("codex→claude: `new` yields a FRESH claude session (no re-glue to the old
   const sid2 = sidOf(r2.stdout) || sidOf(readLast(s, "cdxN"));
   assert.ok(sid1 && sid2, "both turns should report a claude sid");
   assert.notEqual(sid2, sid1, "`new` must give a fresh claude session, not re-glue the old pairing");
+});
+
+test("codex→claude: `compact` is lane-locked, preserves the last real verdict, and reseeds fresh", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  const base = { state: s, driver: "claudeCompact", partner: "claude" };
+  const first = peer(["ask", "CLAUDE-REALWORK-one"], base);
+  const sid1 = sidOf(first.stdout) || sidOf(readLast(s, "claudeCompact"));
+  const last1 = readLast(s, "claudeCompact");
+
+  const compacted = peer(["compact", "preserve the Claude plan"], base);
+  assert.equal(compacted.code, 0);
+  assert.match(compacted.out, /Claude partner compacted/i);
+  assert.equal(readLast(s, "claudeCompact"), last1, "Claude compact must not overwrite the last real verdict");
+
+  const second = peer(["ask", "CLAUDE-REALWORK-two"], base);
+  const sid2 = sidOf(second.stdout) || sidOf(readLast(s, "claudeCompact"));
+  assert.ok(sid1 && sid2);
+  assert.notEqual(sid2, sid1);
+  assert.match(readLast(s, "claudeCompact"), /CLAUDE-REALWORK-two/);
+  assert.match(readLast(s, "claudeCompact"), /Handoff from a previous session/i);
 });
 
 // ---------- true parallelism (overlapping turns, not sequential) ----------

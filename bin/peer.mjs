@@ -1267,23 +1267,56 @@ async function askCodex(task, cfg, sidOverride, onSpawn) {
 // Driver-crafted compaction: summarize the current codex partner with the driver's prompt, stash
 // the summary as a seed, and detach the old pairing. The NEXT ask starts a fresh session with the
 // seed prepended and re-couples to it — no wasted "ack" turn, and the real verdict slot stays clean.
-async function compactCodex(task, cfg) {
+async function compactCodex(task, cfg, lease) {
+  updateDispatch(lease, { workerPid: process.pid, partner: "codex", mode: "compact" });
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
   const driverId = DRIVER_ID;
-  // Only ever compact THIS driver's own coupled codex. Never fall back to the shared global
-  // for a known driver — that could compact an unrelated tandem's session.
-  const sid = driverId ? codexPartnerFor(driverId) : readSession();
-  if (!sid) {
-    console.error("tandem: no codex session to compact for this driver (nothing coupled yet)");
-    return;
+  try {
+    // Only ever compact THIS driver's own coupled codex. Never fall back to the shared global
+    // for a known driver - that could compact an unrelated tandem's session.
+    const sid = driverId ? codexPartnerFor(driverId) : readSession();
+    if (!sid) {
+      const verdict = "No Codex session is coupled to this lane yet; nothing was compacted.";
+      finishDispatch(lease, { status: "done", partner: "codex", verdict });
+      console.error("tandem: no codex session to compact for this driver (nothing coupled yet)");
+      return;
+    }
+    const prompt = task && task.trim() ? task : COMPACT_PROMPT;
+    console.error(`tandem: compacting codex ${sid.slice(0, 8)} (driver-crafted handoff)...`);
+    const summaryTurn = await codexExec(
+      sid,
+      prompt,
+      cfg,
+      COMPACT_OUT,
+      (partnerPid) => updateDispatch(lease, { partnerPid }),
+    );
+    if (summaryTurn.killed || summaryTurn.code !== 0) {
+      throw new Error(
+        summaryTurn.killed
+          ? "Codex handoff turn hit the maxTurnSec cap"
+          : `Codex handoff turn exited with code ${summaryTurn.code}${summaryTurn.error ? ` - ${summaryTurn.error}` : ""}`,
+      );
+    }
+    const summary = (summaryTurn.verdict || "").trim();
+    if (!summary) throw new Error("Codex handoff turn returned an empty summary; the existing session remains coupled");
+
+    writeFileSync(CODEX_SEED, handoffSeed(summary));
+    if (driverId) markDetached(DETACHED, driverId); // next ask won't resume the old thread
+    logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "manual", from: sid });
+    finishDispatch(lease, {
+      status: "done",
+      partner: "codex",
+      verdict: "Codex handoff captured; the next ask opens a fresh seeded session.",
+    });
+    console.log("\ntandem: compacted - the next ask starts a FRESH codex seeded with your handoff (re-couples automatically).");
+    console.log("\n----- handoff summary -----\n" + summary.slice(0, 2000));
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: "codex", error: String(error) });
+    console.error(`tandem: Codex compaction failed - ${error.message || error}`);
+    process.exitCode = 1;
+  } finally {
+    stopHeartbeat();
   }
-  const prompt = task && task.trim() ? task : COMPACT_PROMPT;
-  console.error(`tandem: compacting codex ${sid.slice(0, 8)} (driver-crafted handoff)…`);
-  const s = await codexExec(sid, prompt, cfg, COMPACT_OUT); // summary → temp file, never the verdict slot
-  writeFileSync(CODEX_SEED, handoffSeed(s.verdict));
-  if (driverId) markDetached(DETACHED, driverId); // next ask won't resume the old thread
-  logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "manual", from: sid });
-  console.log("\ntandem: compacted — the next ask starts a FRESH codex seeded with your handoff (re-couples automatically).");
-  console.log("\n----- handoff summary -----\n" + (s.verdict || "(none returned)").slice(0, 2000));
 }
 
 function runCodex(bin, args, stdin, maxSec = 0, onSpawn) {
@@ -1487,8 +1520,19 @@ if (cmd === "ask" || cmd === "continue") {
   // hand the near-full partner off to a fresh session, with a driver-crafted handoff prompt
   let prompt = argv.join(" ");
   if (prompt === "-") prompt = readFileSync(0, "utf8");
-  if (cfg.partner === "claude") await compactClaude(prompt, cfg);
-  else await compactCodex(prompt, cfg);
+  const lease = acquireLaneDispatch(cfg, "compact");
+  if (lease) {
+    if (cfg.partner === "claude") {
+      try {
+        await compactClaude(prompt, cfg, lease);
+      } catch (error) {
+        console.error(`tandem: Claude compaction failed - ${error.message || error}`);
+        process.exitCode = 1;
+      }
+    } else {
+      await compactCodex(prompt, cfg, lease);
+    }
+  }
 } else if (cmd === "__runjob") {
   await runJob(cfg, argv); // internal: the detached background worker (codex) — argv = [driverId, resumeSid, taskFile]
 } else if (cmd === "serve") {

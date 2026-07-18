@@ -177,7 +177,7 @@ claude.stdout.on("data", (b) => {
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
       try {
-        if (!curLease || leaseIsOwned(curLease)) writeFileSync(curLast, verdict);
+        if (!curHoldLease && (!curLease || leaseIsOwned(curLease))) writeFileSync(curLast, verdict);
         if (curLease) {
           const result = {
             partner: "claude",
