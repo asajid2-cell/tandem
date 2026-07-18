@@ -287,6 +287,32 @@ test("codex→claude (daemon): the driver's verdict is captured from the result 
   assert.match(readLast(s, "codexDrvA"), /CLAUDEUI/);
 });
 
+test("codex→claude spawn failure releases the lane instead of wedging it", (t) => {
+  const s = freshState(t);
+  t.after(() => stopDaemon(s));
+  const failed = peer(["ask", "CLAUDE-SPAWN-FAIL"], {
+    state: s,
+    driver: "claudeSpawnFail",
+    partner: "claude",
+    env: { TANDEM_CLAUDE_BIN: join(s, "missing-claude.exe") },
+  });
+  assert.equal(failed.code, 1);
+  assert.match(failed.out, /did not become ready|exited before the Claude partner became ready/i);
+
+  const status = peer(["status"], {
+    state: s,
+    driver: "claudeSpawnFail",
+    partner: "claude",
+  });
+  assert.match(status.out, /job: error/i);
+  assert.doesNotMatch(status.out, /WEDGED/);
+  assert.equal(peer(["ask", "CLAUDE-SPAWN-RECOVERED"], {
+    state: s,
+    driver: "claudeSpawnFail",
+    partner: "claude",
+  }).code, 0);
+});
+
 test("codex→claude and claude→codex do NOT clobber each other (cross-direction — the field bug)", (t) => {
   const s = freshState(t);
   t.after(() => stopDaemon(s));
@@ -561,6 +587,20 @@ test("swarm start auto-namespaces five same-driver lanes and aggregates their st
   assert.match(waited.out, /done=5/);
   const results = peer(["swarm", "results", "hardening"], opts);
   for (let index = 1; index <= 5; index++) assert.match(results.out, new RegExp(`SWARM-TASK-${index}`));
+
+  const laneOne = record.lanes[0];
+  const attached = peer(["swarm", "attach", "hardening", "lane-1", "--command"], opts);
+  assert.equal(attached.code, 0);
+  assert.match(attached.out, new RegExp(readFileSync(join(laneOne.state, "peer.session"), "utf8").trim()));
+
+  const continued = peer(["swarm", "continue", "hardening", "lane-1", "SWARM-FOLLOWUP"], opts);
+  assert.equal(continued.code, 0);
+  assert.equal(peer(["swarm", "wait", "hardening", "8"], opts).code, 0);
+  const oneResult = peer(["swarm", "result", "hardening", "lane-1"], opts);
+  assert.match(oneResult.out, /SWARM-FOLLOWUP/);
+  assert.doesNotMatch(oneResult.out, /SWARM-TASK-2/);
+  const oneTail = peer(["swarm", "tail", "hardening", "lane-1", "10"], opts);
+  assert.match(oneTail.out, /SWARM-FOLLOWUP/);
 });
 
 test("swarm rejects duplicate labels after sanitization before dispatching any lane", (t) => {
@@ -768,8 +808,10 @@ test("`stop` cancels an active Claude turn without leaving a wedged lease", (t) 
     state: s,
     driver: "claudeStop",
     partner: "claude",
-    env: { FAKE_DELAY: "5000" },
+    env: { FAKE_DELAY: "1200" },
   };
+  assert.equal(peer(["ask", "CLAUDE-PREVIOUS-RESULT"], opts).code, 0);
+  assert.match(readLast(s, "claudeStop"), /CLAUDE-PREVIOUS-RESULT/);
   assert.equal(peer(["ask", "--bg", "CLAUDE-STOP-LIVE"], opts).code, 0);
   const stopped = peer(["stop"], opts);
   assert.equal(stopped.code, 0);
@@ -779,6 +821,18 @@ test("`stop` cancels an active Claude turn without leaving a wedged lease", (t) 
   assert.match(status.out, /job: error/i);
   assert.match(status.out, /cancelled by the driver/i);
   assert.doesNotMatch(status.out, /WEDGED/);
+  const result = peer(["result"], opts);
+  assert.equal(result.code, 1);
+  assert.match(result.out, /cancelled by the driver/i);
+  assert.doesNotMatch(result.out, /CLAUDE-PREVIOUS-RESULT/);
+  assert.equal(peer(["wait", "1"], opts).code, 1);
+});
+
+test("`wait` fails immediately when a lane has no job", (t) => {
+  const s = freshState(t);
+  const waited = peer(["wait", "30"], { state: s, driver: "emptyWait" });
+  assert.equal(waited.code, 2);
+  assert.match(waited.out, /no job exists for this lane/i);
 });
 
 test("hard-killed worker becomes WEDGED and requires explicit reap before replacement", async (t) => {

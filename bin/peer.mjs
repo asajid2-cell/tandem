@@ -554,7 +554,20 @@ function killDaemon() {
 async function ensureClaudeDaemon() {
   const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
-  if (isPidAlive(pid) && status !== "DOWN") return true;
+  if (isPidAlive(pid) && (status === "IDLE" || status === "RUNNING")) return true;
+  if (isPidAlive(pid)) {
+    for (let i = 0; i < 70; i++) {
+      await sleep(500);
+      const current = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
+      if ((current === "IDLE" || current === "RUNNING") && isPidAlive(pid)) return true;
+      if (!isPidAlive(pid)) {
+        console.error("tandem: existing serve daemon exited before the Claude partner became ready");
+        return false;
+      }
+    }
+    console.error("tandem: existing serve daemon did not become ready");
+    return false;
+  }
   console.error("tandem: opening persistent Claude session (serve)…");
   const child = spawn(process.execPath, [SERVE_SCRIPT], { detached: true, stdio: "ignore", env: { ...process.env, TANDEM_STATE: STATE } });
   child.unref();
@@ -562,6 +575,10 @@ async function ensureClaudeDaemon() {
     await sleep(500);
     const s = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
     if ((s === "IDLE" || s === "RUNNING") && isPidAlive(existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0)) return true;
+    if (!isPidAlive(child.pid)) {
+      console.error("tandem: serve exited before the Claude partner became ready");
+      return false;
+    }
   }
   console.error("tandem: serve did not become ready (check: node bin/serve.mjs)");
   return false;
@@ -569,6 +586,13 @@ async function ensureClaudeDaemon() {
 
 // Send a turn to the OPEN Claude session via the relay; daemon logs delegate/verdict.
 async function askClaudeDaemon(task, cfg, bg, lease) {
+  for (const file of [LASTMSG, TURNLOG]) {
+    try {
+      if (existsSync(file)) rmSync(file);
+    } catch {
+      /* ignore */
+    }
+  }
   const stopStartingHeartbeat = startHeartbeat(lease, { pid: process.pid });
   const ok = await ensureClaudeDaemon();
   stopStartingHeartbeat();
@@ -1009,6 +1033,19 @@ function runLanePeer(lane, args, input) {
   };
 }
 
+function runLanePeerInteractive(lane, args) {
+  return new Promise((resolveExit) => {
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...args], {
+      cwd: ROOT,
+      env: laneEnvironment(lane, process.env),
+      stdio: "inherit",
+      windowsHide: false,
+    });
+    child.once("error", () => resolveExit(1));
+    child.once("exit", (code) => resolveExit(code ?? 0));
+  });
+}
+
 function swarmSummary(snapshot) {
   const order = ["running", "done", "error", "WEDGED", "idle"];
   return order.filter((state) => snapshot.counts[state]).map((state) => `${state}=${snapshot.counts[state]}`).join(" ");
@@ -1116,7 +1153,10 @@ async function swarmCommand(args, cfg) {
     }
     if (action === "results" || action === "result") {
       const snapshot = inspectSwarm(record);
-      for (const lane of snapshot.lanes) {
+      const selector = args[2];
+      const lanes = selector ? [findSwarmLane(snapshot, selector)].filter(Boolean) : snapshot.lanes;
+      if (!lanes.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
+      for (const lane of lanes) {
         console.log(`\n===== ${record.name}/${lane.name} (${lane.status}) =====`);
         if (lane.status === "done") console.log(lane.job?.verdict || "(empty verdict)");
         else if (lane.status === "WEDGED") console.log(lane.job?.reason || "worker liveness failed");
@@ -1124,7 +1164,29 @@ async function swarmCommand(args, cfg) {
       }
       return;
     }
-    if (action === "ask") {
+    if (action === "tail") {
+      const lane = findSwarmLane(record, args[2]);
+      if (!lane) throw new Error(`unknown lane "${args[2]}" in swarm "${record.name}"`);
+      const result = runLanePeer(lane, ["tail", args[3] || "40"]);
+      process.stdout.write(result.out);
+      if (result.code !== 0) process.exitCode = result.code;
+      return;
+    }
+    if (action === "attach") {
+      const lane = findSwarmLane(record, args[2]);
+      if (!lane) throw new Error(`unknown lane "${args[2]}" in swarm "${record.name}"`);
+      const attachArgs = args.slice(3);
+      if (attachArgs.includes("--command")) {
+        const result = runLanePeer(lane, ["attach", ...attachArgs]);
+        process.stdout.write(result.out);
+        if (result.code !== 0) process.exitCode = result.code;
+      } else {
+        const code = await runLanePeerInteractive(lane, ["attach", ...attachArgs]);
+        if (code !== 0) process.exitCode = code;
+      }
+      return;
+    }
+    if (action === "ask" || action === "continue") {
       const lane = findSwarmLane(record, args[2]);
       if (!lane) throw new Error(`unknown lane "${args[2]}" in swarm "${record.name}"`);
       const foreground = args.includes("--fg");
@@ -1135,7 +1197,8 @@ async function swarmCommand(args, cfg) {
       if (result.code !== 0) process.exitCode = result.code;
       return;
     }
-    if (action === "cancel" || action === "reap") {
+    if (action === "cancel" || action === "interrupt" || action === "reap") {
+      const laneAction = action === "interrupt" ? "interrupt" : action;
       const selector = args[2];
       const targets =
         !selector || selector === "--all"
@@ -1144,7 +1207,7 @@ async function swarmCommand(args, cfg) {
       if (!targets.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
       let failed = false;
       for (const lane of targets) {
-        const result = runLanePeer(lane, [action]);
+        const result = runLanePeer(lane, [laneAction]);
         console.log(`\n[${record.name}/${lane.name}]`);
         process.stdout.write(result.out);
         if (result.code !== 0) failed = true;
@@ -1160,6 +1223,11 @@ async function swarmCommand(args, cfg) {
 }
 
 async function waitJob(maxSec, cfg) {
+  if (!jobState(cfg)) {
+    console.error("tandem: no job exists for this lane");
+    process.exitCode = 2;
+    return;
+  }
   const deadline = Date.now() + maxSec * 1000;
   while (Date.now() < deadline) {
     const j = jobState(cfg);
@@ -1170,12 +1238,17 @@ async function waitJob(maxSec, cfg) {
       } else if (j.status === "WEDGED") {
         console.error(`tandem: job WEDGED - ${j.reason || "worker liveness failed"}`);
         console.error("tandem: inspect `peer.mjs status`, then run `peer.mjs reap` before dispatching a replacement");
-      } else console.error(`tandem: job ${j.status}${j.error ? " - " + j.error : ""}`);
+        process.exitCode = 3;
+      } else {
+        console.error(`tandem: job ${j.status}${j.error ? " - " + j.error : ""}`);
+        process.exitCode = 1;
+      }
       return;
     }
     await sleep(2000);
   }
   console.error("tandem: wait timed out — job still running; poll `peer.mjs status`");
+  process.exitCode = 1;
 }
 
 function sleep(ms) {
@@ -1484,7 +1557,10 @@ function status(cfg) {
         ? readFileSync(CLAUDE_SESSION, "utf8").trim()
         : ""
       : codexPartnerFor(DRIVER_ID) || readSession();
+  const lane = readLaneMetadata(STATE);
+  const laneName = lane.laneId || lane.label || currentLaneLabel();
   console.log(`partner: ${cfg.partner} | session: ${sid || "(none — next ask starts fresh)"} | cwd: ${cfg.cwd} | posture: ${cfg.posture}`);
+  console.log(`lane: ${laneName}`);
   const j = jobState(cfg);
   if (j) {
     const age = j.elapsedSec ?? Math.max(0, Math.round((Date.now() - (j.startedTs || j.ts || Date.now())) / 1000));
@@ -1517,10 +1593,27 @@ function tail(n) {
   console.log(lines.slice(-n).join("\n"));
 }
 
-function result(n) {
-  if (!existsSync(LASTMSG)) return console.log("(no result yet)");
-  console.log(readFileSync(LASTMSG, "utf8").trim());
-  void n;
+function result(cfg) {
+  if (existsSync(LASTMSG)) {
+    console.log(readFileSync(LASTMSG, "utf8").trim());
+    return;
+  }
+  const job = jobState(cfg);
+  if (!job) {
+    console.log("(no result yet)");
+    return;
+  }
+  if (job.status === "error") {
+    console.error(`tandem: job error - ${job.error || "unknown"}`);
+    process.exitCode = 1;
+  } else if (job.status === "WEDGED") {
+    console.error(`tandem: job WEDGED - ${job.reason || "worker liveness failed"}`);
+    process.exitCode = 3;
+  } else if (job.status === "running") {
+    console.log(`(no result yet - job running for ${job.elapsedSec || 0}s)`);
+  } else {
+    console.log(job.verdict || "(empty verdict)");
+  }
 }
 
 // Per-tandem ledger (this pair's own TANDEM.md, in its state folder — never shared across pairs).
@@ -1629,7 +1722,7 @@ else if (cmd === "worktree") worktreeCommand(argv, cfg);
 else if (cmd === "swarm") await swarmCommand(argv, cfg);
 else if (cmd === "attach") await attachInteractive(argv, cfg);
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
-else if (cmd === "result") result(Number(argv[0]) || 4);
+else if (cmd === "result") result(cfg);
 else if (cmd === "ledger") {
   let t = argv.join(" ");
   if (t === "-") t = readFileSync(0, "utf8");
@@ -1676,8 +1769,9 @@ else if (cmd === "new") {
       "  serve | stop          open / close the persistent Claude session (id persists, resumable)\n" +
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
       "  worktree status | create [path] [branch] [start] | attach <path>\n" +
-      "  swarm start <name> <manifest.json> | status/wait/results/ask/cancel/reap <name>\n" +
+      "  swarm start <name> <manifest.json> | status/wait/results <name>\n" +
+      "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
-      "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result [n] | new",
+      "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",
   );
 }

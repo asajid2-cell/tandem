@@ -160,10 +160,7 @@ if (/\.[mc]?js$/i.test(bin)) {
 }
 
 const claude = spawn(bin, args, { env, cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-writeFileSync(STATUS, "IDLE");
-console.log(`tandem serve: persistent Claude partner OPEN (pid ${process.pid} / claude ${claude.pid})`);
-console.log(`  cwd ${cwd} · subscription · bypass · ${sessionId ? "resumed " + sessionId.slice(0, 8) : "new session"}`);
-console.log("  feed it turns with:  peer.mjs ask \"<task>\"   (Ctrl+C to close the session)");
+writeFileSync(STATUS, "STARTING");
 
 let buf = "";
 let turnStart = 0;
@@ -176,6 +173,31 @@ let curLease = null;
 let stopTurnHeartbeat = null;
 let curHoldLease = false;
 let curControllerPid = 0;
+let terminalHandled = false;
+
+claude.once("spawn", () => {
+  writeFileSync(STATUS, "IDLE");
+  console.log(`tandem serve: persistent Claude partner OPEN (pid ${process.pid} / claude ${claude.pid})`);
+  console.log(`  cwd ${cwd} · subscription · bypass · ${sessionId ? "resumed " + sessionId.slice(0, 8) : "new session"}`);
+  console.log("  feed it turns with:  peer.mjs ask \"<task>\"   (Ctrl+C to close the session)");
+});
+
+claude.on("error", (error) => {
+  if (terminalHandled) return;
+  terminalHandled = true;
+  console.error(`tandem serve: cannot spawn Claude partner - ${error.message || error}`);
+  if (curLease) {
+    finishDispatch(curLease, {
+      status: "error",
+      partner: "claude",
+      workerPid: process.pid,
+      error: `cannot spawn Claude partner: ${error.message || error}`,
+    });
+    curLease = null;
+  }
+  cleanup();
+  process.exit(1);
+});
 
 claude.stdout.on("data", (b) => {
   buf += b.toString();
@@ -254,6 +276,8 @@ claude.stdout.on("data", (b) => {
 });
 claude.stderr.on("data", (b) => process.stderr.write(b));
 claude.on("exit", (code) => {
+  if (terminalHandled) return;
+  terminalHandled = true;
   console.error(`tandem serve: claude session ended (${code})`);
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
