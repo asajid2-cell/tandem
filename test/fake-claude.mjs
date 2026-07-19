@@ -4,7 +4,30 @@
 // session_id on the first turn), and stays alive — no real model, no API. Env: FAKE_SID, FAKE_TOKENS.
 import { createInterface } from "node:readline";
 import { randomUUID } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+let testProcessRecord = "";
+if (process.env.TANDEM_TEST_PROCESS_DIR) {
+  try {
+    mkdirSync(process.env.TANDEM_TEST_PROCESS_DIR, { recursive: true });
+    testProcessRecord = join(process.env.TANDEM_TEST_PROCESS_DIR, `${process.pid}.json`);
+    writeFileSync(
+      testProcessRecord,
+      JSON.stringify({ pid: process.pid, ppid: process.ppid }),
+    );
+  } catch {
+    /* test cleanup still has the daemon/job pid records */
+  }
+}
+process.once("exit", () => {
+  if (!testProcessRecord) return;
+  try {
+    rmSync(testProcessRecord, { force: true });
+  } catch {
+    /* test root cleanup removes stale records after a forced kill */
+  }
+});
 
 const args = process.argv.slice(2);
 const ri = args.indexOf("--resume");

@@ -8,9 +8,31 @@
 //   FAKE_STREAM_INTERVAL_MS / FAKE_STREAM_COUNT emit periodic tool activity before the verdict
 //   FAKE_HANG_AFTER_SESSION=1 emit the session id, then stay silent until tandem stops the process
 //   FAKE_SIGNAL_FILE     record a graceful signal observed by the fake
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+
+let testProcessRecord = "";
+if (process.env.TANDEM_TEST_PROCESS_DIR) {
+  try {
+    mkdirSync(process.env.TANDEM_TEST_PROCESS_DIR, { recursive: true });
+    testProcessRecord = join(process.env.TANDEM_TEST_PROCESS_DIR, `${process.pid}.json`);
+    writeFileSync(
+      testProcessRecord,
+      JSON.stringify({ pid: process.pid, ppid: process.ppid }),
+    );
+  } catch {
+    /* test cleanup still has the peer/job pid records */
+  }
+}
+process.once("exit", () => {
+  if (!testProcessRecord) return;
+  try {
+    rmSync(testProcessRecord, { force: true });
+  } catch {
+    /* test root cleanup removes stale records after a forced kill */
+  }
+});
 
 const argv = process.argv.slice(2); // codex args: exec [resume] --json … -o <file> [-C <cwd>] [<sid>] -
 const resume = argv.includes("resume");
