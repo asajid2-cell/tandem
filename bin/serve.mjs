@@ -14,7 +14,21 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
-import { finishDispatch, isPidAlive, jobPaths, leaseFrom, leaseIsOwned, startHeartbeat, updateDispatch } from "./jobs.mjs";
+import {
+  finishDispatch,
+  isPidAlive,
+  jobPaths,
+  leaseFrom,
+  leaseIsOwned,
+  markDispatchActivity,
+  startHeartbeat,
+  updateDispatch,
+} from "./jobs.mjs";
+import {
+  hardKillProcessTree,
+  requestGracefulStop,
+  supervisionDecision,
+} from "./process-control.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -31,6 +45,22 @@ const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → sta
 const USAGE = join(STATE, "usage.json"); // per-session context size → low-context notice
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on a fresh session's first turn
 const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
+const STALL_SEC =
+  process.env.TANDEM_STALL_SEC !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_STALL_SEC) || 0)
+    : Math.max(0, Number(cfg().stallSec ?? 240) || 0);
+const MAX_TURN_SEC =
+  process.env.TANDEM_MAX_TURN_SEC !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_MAX_TURN_SEC) || 0)
+    : Math.max(0, Number(cfg().maxTurnSec) || 0);
+const STOP_GRACE_SEC =
+  process.env.TANDEM_STOP_GRACE_SEC !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_STOP_GRACE_SEC) || 0)
+    : Math.max(0, Number(cfg().stopGraceSec ?? 5) || 0);
+const ACTIVITY_PERSIST_MS = Math.max(
+  20,
+  Math.min(1000, STALL_SEC > 0 ? (STALL_SEC * 1000) / 4 : 1000),
+);
 const CODEX_DRIVER_ID =
   process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "";
 // Per-driver verdict/status files so concurrent tandems don't clobber each other. MUST use the
@@ -159,7 +189,13 @@ if (/\.[mc]?js$/i.test(bin)) {
   bin = process.execPath;
 }
 
-const claude = spawn(bin, args, { env, cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+const claude = spawn(bin, args, {
+  env,
+  cwd,
+  windowsHide: true,
+  stdio: ["pipe", "pipe", "pipe"],
+  detached: process.platform !== "win32",
+});
 writeFileSync(STATUS, "STARTING");
 
 let buf = "";
@@ -174,6 +210,85 @@ let stopTurnHeartbeat = null;
 let curHoldLease = false;
 let curControllerPid = 0;
 let terminalHandled = false;
+let turnLastActivity = 0;
+let lastPersistedActivity = 0;
+let turnTermination = null;
+let turnHardStopTimer = null;
+let supervisionTimer = null;
+
+function stopError(stop) {
+  const warm = sessionId
+    ? `session ${sessionId} remains persisted; the next ask resumes it warm`
+    : "no session id was captured; inspect the turn log before continuing";
+  if (stop?.kind === "stall") {
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; graceful stop requested before tree-kill; ${warm}`;
+  }
+  return `turn stopped at the optional maxTurnSec backstop after ${stop?.elapsedSec || 0}s; graceful stop requested before tree-kill; ${warm}`;
+}
+
+function clearTurnSupervision() {
+  if (turnHardStopTimer) clearTimeout(turnHardStopTimer);
+  turnHardStopTimer = null;
+  turnTermination = null;
+  turnLastActivity = 0;
+  lastPersistedActivity = 0;
+}
+
+function noteTurnActivity(kind) {
+  if (!inTurn) return;
+  turnLastActivity = Date.now();
+  if (
+    curLease &&
+    (kind === "dispatch" || turnLastActivity - lastPersistedActivity >= ACTIVITY_PERSIST_MS)
+  ) {
+    lastPersistedActivity = turnLastActivity;
+    markDispatchActivity(curLease, {
+      pid: curHoldLease && curControllerPid ? curControllerPid : process.pid,
+      ts: turnLastActivity,
+      kind,
+    });
+  }
+}
+
+function beginTurnStop(decision) {
+  if (!inTurn || turnTermination || terminalHandled || !claude.pid) return;
+  const now = Date.now();
+  turnTermination = {
+    ...decision,
+    triggeredTs: now,
+    graceSec: STOP_GRACE_SEC,
+    gracefulAttempted: true,
+    gracefulSignalAccepted: requestGracefulStop(claude.pid),
+    hardKilled: false,
+  };
+  if (curLease) updateDispatch(curLease, { terminationPending: turnTermination });
+  const hardStop = () => {
+    if (terminalHandled || claude.exitCode !== null) return;
+    turnTermination.hardKilled = hardKillProcessTree(claude.pid);
+  };
+  if (STOP_GRACE_SEC > 0) turnHardStopTimer = setTimeout(hardStop, STOP_GRACE_SEC * 1000);
+  else hardStop();
+}
+
+const supervisionWindows = [STALL_SEC, MAX_TURN_SEC].filter((seconds) => seconds > 0);
+if (supervisionWindows.length) {
+  const checkMs = Math.max(
+    20,
+    Math.min(250, ...supervisionWindows.map((seconds) => (seconds * 1000) / 4)),
+  );
+  supervisionTimer = setInterval(() => {
+    if (!inTurn || turnTermination) return;
+    const now = Date.now();
+    const decision = supervisionDecision({
+      now,
+      startedAt: turnStart,
+      lastActivityAt: turnLastActivity,
+      stallSec: STALL_SEC,
+      maxSec: MAX_TURN_SEC,
+    });
+    if (decision) beginTurnStop(decision);
+  }, checkMs);
+}
 
 claude.once("spawn", () => {
   writeFileSync(STATUS, "IDLE");
@@ -200,6 +315,7 @@ claude.on("error", (error) => {
 });
 
 claude.stdout.on("data", (b) => {
+  noteTurnActivity("stdout");
   buf += b.toString();
   let i;
   while ((i = buf.indexOf("\n")) >= 0) {
@@ -228,6 +344,7 @@ claude.stdout.on("data", (b) => {
       recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
     }
     if (o.type === "result") {
+      const stopped = turnTermination;
       const verdict = o.result || "";
       const dur = Math.round((Date.now() - turnStart) / 1000);
       const u = o.usage || {};
@@ -246,9 +363,31 @@ claude.stdout.on("data", (b) => {
             lowContext: low,
           };
           if (curHoldLease) updateDispatch(curLease, { ...result, resultReady: true });
-          else finishDispatch(curLease, { ...result, status: "done" });
+          else {
+            finishDispatch(curLease, {
+              ...result,
+              status: stopped ? "error" : "done",
+              error: stopped ? stopError(stopped) : undefined,
+              termination: stopped,
+              terminationPending: null,
+              stalled: stopped?.kind === "stall",
+            });
+          }
         } else {
-          writeFileSync(curJob, JSON.stringify({ status: "done", partner: "claude", durSec: dur, verdict, lowContext: low, ts: Date.now() }));
+          writeFileSync(
+            curJob,
+            JSON.stringify({
+              status: stopped ? "error" : "done",
+              partner: "claude",
+              durSec: dur,
+              verdict,
+              lowContext: low,
+              error: stopped ? stopError(stopped) : undefined,
+              termination: stopped,
+              stalled: stopped?.kind === "stall",
+              ts: Date.now(),
+            }),
+          );
         }
       } catch {
         /* ignore */
@@ -269,15 +408,20 @@ claude.stdout.on("data", (b) => {
         direction: "codex->claude",
       });
       inTurn = false;
-      writeFileSync(STATUS, "IDLE");
+      if (!stopped) clearTurnSupervision();
+      writeFileSync(STATUS, stopped ? "STOPPING" : "IDLE");
       console.log(`  ◂ turn done (${dur}s): ${verdict.replace(/\s+/g, " ").slice(0, 80)}`);
     }
   }
 });
-claude.stderr.on("data", (b) => process.stderr.write(b));
+claude.stderr.on("data", (b) => {
+  noteTurnActivity("stderr");
+  process.stderr.write(b);
+});
 claude.on("exit", (code) => {
   if (terminalHandled) return;
   terminalHandled = true;
+  const stopped = turnTermination;
   console.error(`tandem serve: claude session ended (${code})`);
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
@@ -286,7 +430,12 @@ claude.on("exit", (code) => {
       partner: "claude",
       workerPid: process.pid,
       partnerPid: claude.pid || 0,
-      error: `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
+      error: stopped
+        ? stopError(stopped)
+        : `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
+      termination: stopped,
+      terminationPending: null,
+      stalled: stopped?.kind === "stall",
     });
     curLease = null;
     stopTurnHeartbeat = null;
@@ -298,6 +447,9 @@ claude.on("exit", (code) => {
 function cleanup() {
   if (stopTurnHeartbeat) stopTurnHeartbeat();
   stopTurnHeartbeat = null;
+  if (supervisionTimer) clearInterval(supervisionTimer);
+  supervisionTimer = null;
+  clearTurnSupervision();
   try {
     rmSync(PID);
   } catch {
@@ -377,8 +529,11 @@ setInterval(() => {
     }
     if (!curHoldLease) stopTurnHeartbeat = startHeartbeat(curLease, { pid: process.pid });
   }
+  clearTurnSupervision();
   inTurn = true;
   turnStart = Date.now();
+  turnLastActivity = turnStart;
+  noteTurnActivity("dispatch");
   writeFileSync(STATUS, "RUNNING");
   try {
     writeFileSync(TURNLOG, ""); // reset the live stream for this turn

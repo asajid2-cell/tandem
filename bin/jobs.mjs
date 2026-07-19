@@ -80,7 +80,11 @@ function matchingHeartbeat(paths, dispatchId) {
 export function inspectDispatch(
   state,
   sk,
-  { wedgeAfterSec = DEFAULT_WEDGE_AFTER_SEC, spawnGraceSec = DEFAULT_SPAWN_GRACE_SEC } = {},
+  {
+    wedgeAfterSec = DEFAULT_WEDGE_AFTER_SEC,
+    stallSec = 0,
+    spawnGraceSec = DEFAULT_SPAWN_GRACE_SEC,
+  } = {},
 ) {
   const paths = jobPaths(state, sk);
   const job = readJson(paths.job);
@@ -104,7 +108,8 @@ export function inspectDispatch(
   const now = Date.now();
   const dispatchId = job?.dispatchId || lock?.dispatchId || "";
   const startedTs = job?.startedTs || job?.ts || lock?.startedTs || lock?.ts || now;
-  const elapsedSec = Math.max(0, Math.round((now - startedTs) / 1000));
+  const elapsedMs = Math.max(0, now - startedTs);
+  const elapsedSec = Math.round(elapsedMs / 1000);
   const workerPid = Number(job?.workerPid || lock?.ownerPid || 0) || 0;
   const partnerPid = Number(job?.partnerPid || 0) || 0;
   const heartbeat = matchingHeartbeat(paths, dispatchId);
@@ -117,6 +122,10 @@ export function inspectDispatch(
     }
   }
   const heartbeatAgeSec = heartbeatTs ? Math.max(0, Math.round((now - heartbeatTs) / 1000)) : null;
+  const lastActivityTs = job?.lastActivityTs || heartbeat?.activityTs || startedTs;
+  const activityAgeSec = lastActivityTs
+    ? Math.max(0, Math.round((now - lastActivityTs) / 1000))
+    : null;
 
   let reason = "";
   if (finishedLeaseMismatch) {
@@ -135,6 +144,14 @@ export function inspectDispatch(
     reason = heartbeatTs
       ? `worker heartbeat is ${heartbeatAgeSec}s old (limit ${wedgeAfterSec}s)`
       : `worker heartbeat was never recorded (limit ${wedgeAfterSec}s)`;
+  } else if (
+    stallSec > 0 &&
+    !job?.terminationPending &&
+    elapsedMs > stallSec * 1000 &&
+    lastActivityTs &&
+    now - lastActivityTs > stallSec * 1000
+  ) {
+    reason = `partner activity stalled ${activityAgeSec}s ago (limit ${stallSec}s)`;
   }
 
   return {
@@ -148,6 +165,9 @@ export function inspectDispatch(
     ts: job?.ts || startedTs,
     elapsedSec,
     heartbeatAgeSec,
+    lastActivityTs,
+    activityAgeSec,
+    activityKind: job?.activityKind || heartbeat?.activityKind || "",
     reason,
     lockPresent: !!lock,
     partner: job?.partner || lock?.partner || "",
@@ -231,6 +251,8 @@ export function acquireDispatch(state, sk, meta = {}) {
       mode: meta.mode || "",
       workerPid: lock.ownerPid,
       startedTs,
+      lastActivityTs: startedTs,
+      activityKind: "dispatch",
       ts: startedTs,
     });
     touchHeartbeat(lease, lock.ownerPid);
@@ -272,10 +294,38 @@ export function updateDispatch(lease, patch = {}) {
 
 export function touchHeartbeat(lease, pid = process.pid) {
   if (!leaseIsOwned(lease)) return false;
+  const current = matchingHeartbeat(lease.paths, lease.dispatchId) || {};
   writeJsonAtomic(lease.paths.heartbeat, {
+    ...current,
     dispatchId: lease.dispatchId,
     pid: Number(pid) || process.pid,
     ts: Date.now(),
+  });
+  return true;
+}
+
+export function markDispatchActivity(
+  lease,
+  { pid = process.pid, ts = Date.now(), kind = "partner-output" } = {},
+) {
+  if (!leaseIsOwned(lease)) return false;
+  const job = readJson(lease.paths.job) || {};
+  writeJsonAtomic(lease.paths.job, {
+    ...job,
+    dispatchId: lease.dispatchId,
+    status: "running",
+    lastActivityTs: ts,
+    activityKind: kind,
+    activityCount: Number(job.activityCount || 0) + 1,
+  });
+  const heartbeat = matchingHeartbeat(lease.paths, lease.dispatchId) || {};
+  writeJsonAtomic(lease.paths.heartbeat, {
+    ...heartbeat,
+    dispatchId: lease.dispatchId,
+    pid: Number(pid) || process.pid,
+    ts: Date.now(),
+    activityTs: ts,
+    activityKind: kind,
   });
   return true;
 }

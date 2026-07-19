@@ -4,11 +4,18 @@
 // session_id on the first turn), and stays alive — no real model, no API. Env: FAKE_SID, FAKE_TOKENS.
 import { createInterface } from "node:readline";
 import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
 const ri = args.indexOf("--resume");
 const sid = (ri >= 0 ? args[ri + 1] : null) || process.env.FAKE_SID || randomUUID();
 let firstTurn = true;
+
+function emitSession() {
+  if (!firstTurn) return;
+  process.stdout.write(JSON.stringify({ session_id: sid }) + "\n");
+  firstTurn = false;
+}
 
 const rl = createInterface({ input: process.stdin });
 rl.on("line", (line) => {
@@ -24,11 +31,15 @@ rl.on("line", (line) => {
   const ne = task.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   const first = (ne[0] || "").slice(0, 100);
   const last = (ne[ne.length - 1] || "").slice(0, 100);
+  const shouldHang =
+    process.env.FAKE_HANG_AFTER_SESSION === "1" &&
+    (!process.env.FAKE_HANG_MATCH || task.includes(process.env.FAKE_HANG_MATCH));
+  if (shouldHang) {
+    emitSession();
+    return;
+  }
   const reply = () => {
-    if (firstTurn) {
-      process.stdout.write(JSON.stringify({ session_id: sid }) + "\n"); // daemon captures + records the pair
-      firstTurn = false;
-    }
+    emitSession(); // daemon captures + records the pair
     const verdict = `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}`;
     process.stdout.write(
       JSON.stringify({
@@ -45,4 +56,15 @@ rl.on("line", (line) => {
   else reply();
 });
 rl.on("close", () => process.exit(0)); // stdin EOF = daemon closed
-for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(sig, () => process.exit(0));
+for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+  process.on(sig, () => {
+    if (process.env.FAKE_SIGNAL_FILE) {
+      try {
+        writeFileSync(process.env.FAKE_SIGNAL_FILE, sig);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (process.env.FAKE_IGNORE_TERM !== "1") process.exit(0);
+  });
+}

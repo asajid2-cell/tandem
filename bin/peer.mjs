@@ -44,9 +44,15 @@ import {
   isPidAlive,
   jobPaths,
   leaseFrom,
+  markDispatchActivity,
   startHeartbeat,
   updateDispatch,
 } from "./jobs.mjs";
+import {
+  hardKillProcessTree,
+  requestGracefulStop,
+  supervisionDecision,
+} from "./process-control.mjs";
 import { attachLaneWorktree, ensureLaneWorktree, readLaneMetadata } from "./worktrees.mjs";
 import {
   findSwarmLane,
@@ -161,10 +167,11 @@ function loadConfig() {
     compactAtTokens: Number(process.env.TANDEM_COMPACT_AT) || 300000,
     // if true, the bridge compacts automatically (default summary) instead of just notifying.
     autoCompact: process.env.TANDEM_AUTO_COMPACT === "1" || false,
-    // hard cap on a single CODEX-partner turn: after this many seconds the turn is tree-killed
-    // and the job reports an error naming the cap. 0 = no cap. (The Claude partner's levers are
-    // stop/new — its daemon turn is not killed by this.)
+    // Stop only after a full quiet window; output and tool events refresh activity. The optional
+    // absolute backstop is off by default. Both paths request graceful shutdown before tree-kill.
+    stallSec: 240,
     maxTurnSec: 0,
+    stopGraceSec: 5,
     // A live worker writes an independent heartbeat. If the PID dies, status reports WEDGED
     // immediately; if the PID survives but its heartbeat stops for this long, status also
     // reports WEDGED. 0 disables heartbeat-age detection (dead-PID detection remains).
@@ -230,8 +237,14 @@ function loadConfig() {
   }
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
-  if (process.env.TANDEM_MAX_TURN_SEC) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
-  if (process.env.TANDEM_WEDGE_AFTER_SEC) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
+  if (process.env.TANDEM_STALL_SEC !== undefined) cfg.stallSec = Number(process.env.TANDEM_STALL_SEC) || 0;
+  if (process.env.TANDEM_MAX_TURN_SEC !== undefined) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
+  if (process.env.TANDEM_STOP_GRACE_SEC !== undefined) cfg.stopGraceSec = Number(process.env.TANDEM_STOP_GRACE_SEC) || 0;
+  if (process.env.TANDEM_WEDGE_AFTER_SEC !== undefined) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
+  cfg.stallSec = Math.max(0, Number(cfg.stallSec) || 0);
+  cfg.maxTurnSec = Math.max(0, Number(cfg.maxTurnSec) || 0);
+  cfg.stopGraceSec = Math.max(0, Number(cfg.stopGraceSec) || 0);
+  cfg.wedgeAfterSec = Math.max(0, Number(cfg.wedgeAfterSec) || 0);
   const laneMetadata = readLaneMetadata(STATE);
   if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   return cfg;
@@ -396,6 +409,7 @@ function acquireLaneDispatch(cfg, mode) {
       partner: cfg.partner,
       mode,
       wedgeAfterSec: cfg.wedgeAfterSec,
+      stallSec: cfg.stallSec,
     });
   } catch (error) {
     if (error instanceof DispatchBusyError) {
@@ -407,13 +421,49 @@ function acquireLaneDispatch(cfg, mode) {
   }
 }
 
+function codexLeaseHooks(lease, cfg) {
+  const persistEveryMs = Math.max(
+    20,
+    Math.min(1000, cfg.stallSec > 0 ? (cfg.stallSec * 1000) / 4 : 1000),
+  );
+  let lastPersistedActivity = 0;
+  return {
+    onSpawn: (partnerPid) => updateDispatch(lease, { partnerPid }),
+    onActivity: ({ ts, kind }) => {
+      if (kind !== "spawn" && ts - lastPersistedActivity < persistEveryMs) return;
+      lastPersistedActivity = ts;
+      markDispatchActivity(lease, {
+        pid: process.pid,
+        ts,
+        kind,
+      });
+    },
+    onTermination: (termination) =>
+      updateDispatch(lease, {
+        terminationPending: termination,
+      }),
+  };
+}
+
+function supervisedStopError(res) {
+  const stop = res?.termination;
+  if (!stop) return "";
+  const warm = res.codexId
+    ? `session ${res.codexId} remains coupled; continue resumes it warm`
+    : "no session id was captured; inspect the turn log before continuing";
+  if (stop.kind === "stall") {
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; graceful stop requested before tree-kill; ${warm}`;
+  }
+  return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; graceful stop requested before tree-kill; ${warm}`;
+}
+
 function codexJobRecord(res) {
   if (!res) return { status: "error", partner: "codex", error: "partner returned no result" };
   const failed = res.killed || res.code !== 0;
   return {
     status: failed ? "error" : "done",
     error: res.killed
-      ? "turn tree-killed at the maxTurnSec cap - re-scope the ask; check the tree for partial edits"
+      ? supervisedStopError(res)
       : res.code !== 0
         ? `codex exited with code ${res.code}${res.error ? ` - ${res.error}` : ""}`
         : undefined,
@@ -425,6 +475,9 @@ function codexJobRecord(res) {
     tokens: res.d?.tokens || null,
     lowContext: res.lowContext || null,
     warning: res.couplingWarning || null,
+    termination: res.termination || null,
+    terminationPending: null,
+    stalled: res.termination?.kind === "stall",
     workerPid: process.pid,
     partnerPid: res.partnerPid || 0,
   };
@@ -447,7 +500,7 @@ async function askUnlocked(task, cfg, lease) {
   logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   // record now if the pair is already known (resumed); a fresh pair records after askCodex
   if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
-  const res = await askCodex(task, cfg, resumeSid, (partnerPid) => updateDispatch(lease, { partnerPid }));
+  const res = await askCodex(task, cfg, resumeSid, codexLeaseHooks(lease, cfg));
   if (res) {
     printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
     logEvent({
@@ -556,17 +609,20 @@ async function ensureClaudeDaemon(cfg) {
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
   if (isPidAlive(pid) && (status === "IDLE" || status === "RUNNING")) return true;
   if (isPidAlive(pid)) {
+    let exitedWhileWaiting = false;
     for (let i = 0; i < 70; i++) {
       await sleep(500);
       const current = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
       if ((current === "IDLE" || current === "RUNNING") && isPidAlive(pid)) return true;
       if (!isPidAlive(pid)) {
-        console.error("tandem: existing serve daemon exited before the Claude partner became ready");
-        return false;
+        exitedWhileWaiting = true;
+        break;
       }
     }
-    console.error("tandem: existing serve daemon did not become ready");
-    return false;
+    if (!exitedWhileWaiting) {
+      console.error("tandem: existing serve daemon did not become ready");
+      return false;
+    }
   }
   console.error("tandem: opening persistent Claude session (serve)…");
   const child = spawn(process.execPath, [SERVE_SCRIPT], {
@@ -767,7 +823,7 @@ async function runJob(cfg, jobArgv) {
   logEvent({ type: "delegate", ts: Date.now(), driver: DRIVER_KIND, partner: "codex", driverId, partnerId: resumeSid, task });
   let res = null;
   try {
-    res = await askCodex(task, cfg, resumeSid, (partnerPid) => updateDispatch(lease, { partnerPid }));
+    res = await askCodex(task, cfg, resumeSid, codexLeaseHooks(lease, cfg));
     const finalState = codexJobRecord(res);
     finishDispatch(lease, finalState);
     if (res) {
@@ -788,21 +844,16 @@ async function runJob(cfg, jobArgv) {
 }
 
 function jobState(cfg) {
-  return inspectDispatch(STATE, SK, { wedgeAfterSec: cfg?.wedgeAfterSec });
+  return inspectDispatch(STATE, SK, {
+    wedgeAfterSec: cfg?.wedgeAfterSec,
+    stallSec: cfg?.stallSec,
+  });
 }
 
 function killProcessTree(pid) {
   pid = Number(pid) || 0;
   if (!pid || !isPidAlive(pid)) return;
-  try {
-    if (process.platform === "win32") {
-      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
-    } else {
-      process.kill(pid, "SIGTERM");
-    }
-  } catch {
-    /* already gone */
-  }
+  hardKillProcessTree(pid);
 }
 
 function removeQueuedTask(dispatchId) {
@@ -1109,6 +1160,7 @@ async function swarmCommand(args, cfg) {
         manifestPath,
         baseCwd: cfg.cwd,
         wedgeAfterSec: cfg.wedgeAfterSec,
+        stallSec: cfg.stallSec,
       });
       let failed = false;
       for (const lane of record.lanes) {
@@ -1263,7 +1315,28 @@ function sleep(ms) {
 // digest, duration, raw stream, exit code, and the EXACT codex id used/created.
 // outFile = where codex writes its last message; handoff/summary turns pass COMPACT_OUT so
 // they never overwrite the real verdict in LASTMSG.
-async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
+function persistCodexCoupling(id) {
+  if (
+    !id ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
+    return false;
+  }
+  ensureState();
+  writeFileSync(SESSION_FILE, id);
+  if (DRIVER_ID) {
+    recordGroup(GROUPS, {
+      claudeId: DRIVER_ID,
+      codexId: id,
+      claudeRole: "driver",
+      codexRole: "partner",
+      direction: DRIVER_KIND + "->codex",
+    });
+  }
+  return true;
+}
+
+async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];
@@ -1287,43 +1360,92 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, onSpawn) {
     /* ignore */
   }
   const t0 = Date.now();
-  const { stdout: out, code, killed, partnerPid, error } = await runCodex(
-    cfg.codexBin,
-    args,
-    dispatchedTask,
-    cfg.maxTurnSec || 0,
-    onSpawn,
-  );
+  let streamedCodexId = sid || "";
+  const captureSession = (text) => {
+    if (sid || streamedCodexId) return;
+    const id = parseSessionId(text);
+    if (!id) return;
+    streamedCodexId = id;
+    persistCodexCoupling(id);
+  };
+  const {
+    stdout: out,
+    code,
+    killed,
+    partnerPid,
+    error,
+    termination,
+  } = await runCodex(cfg.codexBin, args, dispatchedTask, {
+    stallSec: cfg.stallSec || 0,
+    maxSec: cfg.maxTurnSec || 0,
+    graceSec: cfg.stopGraceSec ?? 5,
+    onSpawn: hooks.onSpawn,
+    onActivity: hooks.onActivity,
+    onTermination: hooks.onTermination,
+    onStdout: ({ stdout }) => captureSession(stdout),
+  });
   const dur = Math.round((Date.now() - t0) / 1000);
 
   // capture the session id for continuity — only on a successful fresh run, and
   // only from THIS run (parse the stream first; fall back to a rollout created now)
-  let codexId = sid || "";
+  let codexId = sid || streamedCodexId || "";
   let couplingWarning = "";
-  if (!sid && code === 0) {
+  if (!sid && !codexId) {
     let id = parseSessionId(out);
     if (!id) id = idFromRolloutName((await rolloutForMarker(couplingMarker, t0)) || "");
     if (id) {
       codexId = id;
-      writeFileSync(SESSION_FILE, id); // global, for the watcher's display only
-    } else {
+      persistCodexCoupling(id);
+    } else if (code === 0) {
       couplingWarning =
         "fresh Codex turn completed, but tandem could not prove its session id; continuity was left uncoupled rather than guessing another lane's rollout";
+    } else {
+      couplingWarning =
+        "fresh Codex turn ended before tandem could prove its session id; inspect the turn log because a warm continuation cannot be guaranteed";
     }
   }
 
   // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
   let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
   if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
+  if (termination?.kind === "stall") {
+    verdict =
+      `(turn STALLED/WEDGED after ${termination.idleSec}s with no partner activity. ` +
+      `A graceful stop was requested before hard tree-kill. ` +
+      (codexId
+        ? `Session ${codexId} is persisted; continue resumes it warm.`
+        : "No session id was captured; inspect the turn log before continuing.") +
+      ")";
+  } else if (termination?.kind === "absolute") {
+    verdict =
+      `(turn stopped at the optional maxTurnSec backstop after ${termination.elapsedSec}s. ` +
+      `A graceful stop was requested before hard tree-kill. ` +
+      (codexId
+        ? `Session ${codexId} is persisted; continue resumes it warm.`
+        : "No session id was captured; inspect the turn log before continuing.") +
+      ")";
+  }
   const d = digest(out);
-  return { verdict, d, dur, raw: out, code, codexId, killed, partnerPid, error, couplingWarning };
+  return {
+    verdict,
+    d,
+    dur,
+    raw: out,
+    code,
+    codexId,
+    killed,
+    partnerPid,
+    error,
+    couplingWarning,
+    termination,
+  };
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
 //  - by default the driver is just NOTIFIED when the passenger runs low (so it can craft the
 //    handoff via `peer.mjs compact "<prompt>"`); set autoCompact to do it automatically.
 //  - REACTIVE net: if a turn still hits the wall, recover on a fresh session seeded with a summary.
-async function askCodex(task, cfg, sidOverride, onSpawn) {
+async function askCodex(task, cfg, sidOverride, hooks = {}) {
   let sid = sidOverride !== undefined ? sidOverride : readSession();
   const limit = cfg.compactAtTokens || 0;
 
@@ -1331,7 +1453,7 @@ async function askCodex(task, cfg, sidOverride, onSpawn) {
     const used = readUsage()[sid] || 0;
     console.error(`tandem: codex ${sid.slice(0, 8)} near context limit (${used} tok) — auto-compacting`);
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "auto", from: sid, tokens: used });
-    const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, onSpawn); // summary → temp file, not the verdict slot
+    const s = await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, hooks); // summary → temp file, not the verdict slot
     task = handoffSeed(s.verdict) + task;
     sid = "";
   }
@@ -1346,18 +1468,18 @@ async function askCodex(task, cfg, sidOverride, onSpawn) {
     }
   }
 
-  let r = await codexExec(sid, task, cfg, LASTMSG, onSpawn);
+  let r = await codexExec(sid, task, cfg, LASTMSG, hooks);
 
   if (r.code !== 0 && sid && isContextError(r.raw)) {
     console.error(`tandem: codex ${sid.slice(0, 8)} hit its context limit — recovering on a fresh session`);
     logEvent({ type: "compact", ts: Date.now(), partner: "codex", reason: "reactive", from: sid });
     let summary = "";
     try {
-      summary = (await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, onSpawn)).verdict; // best-effort; may itself be over the wall
+      summary = (await codexExec(sid, COMPACT_PROMPT, cfg, COMPACT_OUT, hooks)).verdict; // best-effort; may itself be over the wall
     } catch {
       /* ignore */
     }
-    r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg, LASTMSG, onSpawn);
+    r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg, LASTMSG, hooks);
   }
 
   if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
@@ -1389,12 +1511,12 @@ async function compactCodex(task, cfg, lease) {
       prompt,
       cfg,
       COMPACT_OUT,
-      (partnerPid) => updateDispatch(lease, { partnerPid }),
+      codexLeaseHooks(lease, cfg),
     );
     if (summaryTurn.killed || summaryTurn.code !== 0) {
       throw new Error(
         summaryTurn.killed
-          ? "Codex handoff turn hit the maxTurnSec cap"
+          ? supervisedStopError(summaryTurn)
           : `Codex handoff turn exited with code ${summaryTurn.code}${summaryTurn.error ? ` - ${summaryTurn.error}` : ""}`,
       );
     }
@@ -1420,7 +1542,20 @@ async function compactCodex(task, cfg, lease) {
   }
 }
 
-function runCodex(bin, args, stdin, maxSec = 0, onSpawn) {
+function runCodex(
+  bin,
+  args,
+  stdin,
+  {
+    stallSec = 0,
+    maxSec = 0,
+    graceSec = 5,
+    onSpawn,
+    onActivity,
+    onTermination,
+    onStdout,
+  } = {},
+) {
   // a .mjs/.js bin (e.g. a test fake) runs via node — cross-platform, no shell. Real .exe bins unaffected.
   if (/\.[mc]?js$/i.test(bin)) {
     args = [bin, ...args];
@@ -1430,63 +1565,127 @@ function runCodex(bin, args, stdin, maxSec = 0, onSpawn) {
     let stdout = "";
     let stderr = "";
     let child;
-    let killed = false;
-    let timer = null;
+    let termination = null;
+    let supervisorTimer = null;
+    let hardStopTimer = null;
     let settled = false;
+    const startedAt = Date.now();
+    let lastActivityAt = startedAt;
+
+    const invoke = (fn, value) => {
+      if (!fn) return;
+      try {
+        fn(value);
+      } catch {
+        /* observer failures must not take down the supervised partner */
+      }
+    };
+    const noteActivity = (kind, bytes = 0) => {
+      lastActivityAt = Date.now();
+      invoke(onActivity, { ts: lastActivityAt, kind, bytes });
+    };
     const settle = (value) => {
       if (settled) return;
       settled = true;
-      if (timer) clearTimeout(timer);
+      if (supervisorTimer) clearInterval(supervisorTimer);
+      if (hardStopTimer) clearTimeout(hardStopTimer);
       resolveP(value);
     };
+    const hardStop = () => {
+      if (settled || !child?.pid || child.exitCode !== null) return;
+      if (termination) termination.hardKilled = hardKillProcessTree(child.pid);
+    };
+    const beginStop = (decision) => {
+      if (termination || settled || !child?.pid) return;
+      const now = Date.now();
+      termination = {
+        ...decision,
+        triggeredTs: now,
+        graceSec,
+        gracefulAttempted: true,
+        gracefulSignalAccepted: false,
+        hardKilled: false,
+      };
+      invoke(onTermination, termination);
+      termination.gracefulSignalAccepted = requestGracefulStop(child.pid);
+      if (graceSec > 0) {
+        hardStopTimer = setTimeout(hardStop, graceSec * 1000);
+      } else {
+        hardStop();
+      }
+    };
+
     try {
-      child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+      child = spawn(bin, args, {
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+        detached: process.platform !== "win32",
+      });
     } catch (error) {
       settle({ stdout, code: 1, killed: false, partnerPid: 0, error: `cannot spawn ${bin}: ${error.message}` });
       return;
     }
     const partnerPid = child.pid || 0;
-    if (partnerPid && onSpawn) onSpawn(partnerPid);
+    invoke(onSpawn, partnerPid);
+    noteActivity("spawn");
+
     child.on("error", (error) => {
       settle({
         stdout,
         code: 1,
-        killed: false,
+        killed: !!termination,
         partnerPid,
+        termination,
         error: `partner spawn error: ${error.message} (is codex installed + logged in?)`,
       });
     });
-    // real runaway-turn cap: tree-kill (child + its processes) so a spin can't run unbounded
-    if (maxSec > 0) {
-      timer = setTimeout(() => {
-        killed = true;
-        try {
-          if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true });
-          else child.kill("SIGKILL");
-        } catch {
-          /* already gone */
-        }
-      }, maxSec * 1000);
+
+    const enabledWindows = [stallSec, maxSec].filter((seconds) => seconds > 0);
+    if (enabledWindows.length) {
+      const checkMs = Math.max(20, Math.min(250, ...enabledWindows.map((seconds) => (seconds * 1000) / 4)));
+      supervisorTimer = setInterval(() => {
+        if (termination || settled) return;
+        const now = Date.now();
+        const decision = supervisionDecision({
+          now,
+          startedAt,
+          lastActivityAt,
+          stallSec,
+          maxSec,
+        });
+        if (decision) beginStop(decision);
+      }, checkMs);
     }
+
     child.stdout.on("data", (b) => {
-      stdout += b.toString();
+      const text = b.toString();
+      stdout += text;
+      noteActivity("stdout", b.length);
+      invoke(onStdout, { chunk: text, stdout, ts: lastActivityAt });
       try {
         writeFileSync(TURNLOG, stdout);
       } catch {
         /* ignore */
       }
     });
-    child.stderr.on("data", (b) => (stderr += b.toString()));
+    child.stderr.on("data", (b) => {
+      stderr += b.toString();
+      noteActivity("stderr", b.length);
+    });
+    child.stdin.on("error", () => {
+      /* a supervised stop can close stdin while the initial task is flushing */
+    });
     child.stdin.write(stdin);
     child.stdin.end();
     child.on("exit", (code) => {
-      if (!killed && code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
+      if (!termination && code !== 0 && stderr.trim()) console.error(`tandem: partner stderr:\n${stderr.slice(-1500)}`);
       settle({
         stdout,
         code: code ?? 0,
-        killed,
+        killed: !!termination,
         partnerPid,
-        error: !killed && code !== 0 ? stderr.trim().slice(-1500) : "",
+        termination,
+        error: !termination && code !== 0 ? stderr.trim().slice(-1500) : "",
       });
     });
   });
@@ -1564,6 +1763,9 @@ function status(cfg) {
   const lane = readLaneMetadata(STATE);
   const laneName = lane.laneId || lane.label || currentLaneLabel();
   console.log(`partner: ${cfg.partner} | session: ${sid || "(none — next ask starts fresh)"} | cwd: ${cfg.cwd} | posture: ${cfg.posture}`);
+  console.log(
+    `supervision: stall ${cfg.stallSec > 0 ? `${cfg.stallSec}s` : "off"} | absolute max ${cfg.maxTurnSec > 0 ? `${cfg.maxTurnSec}s` : "off"}`,
+  );
   console.log(`lane: ${laneName}`);
   const j = jobState(cfg);
   if (j) {
@@ -1571,7 +1773,7 @@ function status(cfg) {
     console.log(`job: ${j.status}${j.status === "running" || j.status === "WEDGED" ? ` (${age}s elapsed)` : j.durSec != null ? ` (${j.durSec}s)` : ""}`);
     if (j.workerPid) {
       console.log(
-        `worker: pid ${j.workerPid}${j.partnerPid ? ` | partner pid ${j.partnerPid}` : ""}${j.heartbeatAgeSec != null ? ` | heartbeat ${j.heartbeatAgeSec}s ago` : ""}`,
+        `worker: pid ${j.workerPid}${j.partnerPid ? ` | partner pid ${j.partnerPid}` : ""}${j.heartbeatAgeSec != null ? ` | heartbeat ${j.heartbeatAgeSec}s ago` : ""}${j.activityAgeSec != null ? ` | partner activity ${j.activityAgeSec}s ago` : ""}`,
       );
     }
     if (j.status === "done") console.log(`\nverdict:\n${(j.verdict || "").slice(0, 1500)}`);

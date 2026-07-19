@@ -78,6 +78,7 @@ export function prepareSwarm({
   manifestPath,
   baseCwd,
   wedgeAfterSec = 60,
+  stallSec = 240,
 }) {
   if (!name || !name.trim()) throw new Error("swarm name is required");
   if (!manifestPath) throw new Error("manifest path is required");
@@ -116,6 +117,7 @@ export function prepareSwarm({
       model: lane.model || "",
       effort: lane.effort || "",
       posture: lane.posture || "",
+      stallSec: lane.stallSec ?? stallSec,
       maxTurnSec: lane.maxTurnSec ?? null,
       wedgeAfterSec: lane.wedgeAfterSec ?? wedgeAfterSec,
       worktree: lane.worktree || null,
@@ -142,6 +144,7 @@ export function prepareSwarm({
       model: lane.model,
       effort: lane.effort,
       posture: lane.posture,
+      stallSec: lane.stallSec,
       maxTurnSec: lane.maxTurnSec,
       wedgeAfterSec: lane.wedgeAfterSec,
       worktree: lane.worktree || null,
@@ -211,6 +214,7 @@ export function laneEnvironment(lane, baseEnv = process.env) {
   if (lane.model) env.TANDEM_MODEL = lane.model;
   if (lane.effort) env.TANDEM_EFFORT = lane.effort;
   if (lane.posture) env.TANDEM_POSTURE = lane.posture;
+  if (lane.stallSec != null) env.TANDEM_STALL_SEC = String(lane.stallSec);
   if (lane.maxTurnSec != null) env.TANDEM_MAX_TURN_SEC = String(lane.maxTurnSec);
   if (lane.wedgeAfterSec != null) env.TANDEM_WEDGE_AFTER_SEC = String(lane.wedgeAfterSec);
   return env;
@@ -218,7 +222,10 @@ export function laneEnvironment(lane, baseEnv = process.env) {
 
 export function inspectSwarm(record) {
   const lanes = record.lanes.map((lane) => {
-    const job = inspectDispatch(lane.state, lane.sk, { wedgeAfterSec: lane.wedgeAfterSec });
+    const job = inspectDispatch(lane.state, lane.sk, {
+      wedgeAfterSec: lane.wedgeAfterSec,
+      stallSec: lane.stallSec,
+    });
     return {
       ...lane,
       job,

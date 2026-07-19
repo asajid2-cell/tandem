@@ -20,7 +20,8 @@
     },
     {
       "name": "review",
-      "task": "Independently review the other planned changes for correctness risks and missing verification."
+      "task": "Independently review the other planned changes for correctness risks and missing verification.",
+      "stallSec": 300
     }
   ]
 }

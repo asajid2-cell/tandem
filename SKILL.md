@@ -106,7 +106,8 @@ project with `TANDEM_CWD=<path>` (or `cwd` in `tandem.config.json`).
 foreground `ask` also works; a hand-rolled detached shell (Start-Process / nohup wrappers) does
 NOT — it has broken here before. Do your own analysis in parallel — never just idle waiting on
 the partner. `wait` exits `0` on done, `1` on partner error/timeout, `2` when no job exists, and
-`3` when the lane is wedged.
+`3` when the lane is wedged. Total elapsed time is not a reason to stop productive work: streamed
+output/tool events keep the turn alive even when it runs for hours.
 
 **Reliability (set in `tandem.config.json`):**
 - **One active dispatch per lane is enforced.** `ask`, `continue`, `compact`, and `attach` share an
@@ -115,17 +116,23 @@ the partner. `wait` exits `0` on done, `1` on partner error/timeout, `2` when no
 - **`wedgeAfterSec`** (shipped 60, env `TANDEM_WEDGE_AFTER_SEC`) backs the worker PID check with a
   heartbeat. A hard-killed worker becomes `WEDGED`; inspect partial edits and run `reap` before
   replacement. Never blind-retry a wedged lane.
+- **`stallSec`** (shipped 240, env `TANDEM_STALL_SEC`, 0 = off) is the primary runaway guard for
+  both partners. It stops only after no partner output or tool activity for the full window. Tandem
+  requests graceful shutdown first, waits `stopGraceSec` (shipped 5), then hard-kills the tree only
+  if needed. A completed supervised stop is reported as an error labeled `STALLED/WEDGED`; it does
+  not need `reap` because the bridge already terminated and released the lane.
+- **`maxTurnSec`** (shipped 0/off, env `TANDEM_MAX_TURN_SEC`) is only an optional absolute
+  backstop. Set both `TANDEM_STALL_SEC=0` and `TANDEM_MAX_TURN_SEC=0` to disable automatic turn
+  stops. `wait` timing out still does not stop a turn.
+- **Warm recovery is the default.** A fresh session ID is persisted the moment it appears in the
+  stream, before the turn finishes. After a stall, cap, or crash, `continue` resumes that exact
+  session with its context intact; use `new` only when you intentionally want to abandon it.
 - **`autoCompact`** (on in the shipped config; code default off) + **`compactAtTokens`** (default
   300000 input tokens, env `TANDEM_COMPACT_AT`) — when the partner's tracked input tokens cross
   the threshold, the next **Codex-partner** ask auto-hands-off to a fresh session first,
   preserving continuity via a summary. The **Claude partner is never auto-compacted** — `ask`/
   `status` warn "running low"; run `compact "<handoff>"` yourself. Hard-context-error recovery
   (fresh session seeded with a summary) is always on for the Codex partner only.
-- **`maxTurnSec`** (shipped 2400, env `TANDEM_MAX_TURN_SEC`, 0 = off) — a runaway CODEX-partner
-  turn is tree-killed at the cap and the job reports an error naming it. `wait` giving up does
-  NOT stop a turn — only the cap does. A runaway Claude-partner turn has no timer: use
-  `interrupt` (or `stop`, which cleanly cancels a live Claude turn). Scope asks small (~20 min of
-  work) regardless.
 - Project context for a fresh partner session goes **in the ask itself** (there is no preamble
   mechanism) — state repo root and key paths so the partner doesn't recurse a huge workspace.
 - **Partner tier/model/effort:** doctrine is model-agnostic — select by TIER via env

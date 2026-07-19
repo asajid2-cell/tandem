@@ -5,6 +5,9 @@
 //   FAKE_TOKENS         input-token count to report (drives the compaction/low-context path)
 //   FAKE_FAIL_CONTEXT=1 simulate hitting the context wall on RESUME (fresh still succeeds)
 //   FAKE_SID            force the fresh session id (otherwise a random uuid)
+//   FAKE_STREAM_INTERVAL_MS / FAKE_STREAM_COUNT emit periodic tool activity before the verdict
+//   FAKE_HANG_AFTER_SESSION=1 emit the session id, then stay silent until tandem stops the process
+//   FAKE_SIGNAL_FILE     record a graceful signal observed by the fake
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -40,14 +43,21 @@ if (process.env.FAKE_FAIL_CONTEXT === "1" && resume) {
 
 const sid = resume ? sidArg : process.env.FAKE_SID || randomUUID();
 const verdict = `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
-const lines = [];
+const sessionLines = [];
 if (!resume && process.env.FAKE_DECOY_ID) {
-  lines.push(JSON.stringify({ type: "item.started", id: process.env.FAKE_DECOY_ID }));
+  sessionLines.push(JSON.stringify({ type: "item.started", id: process.env.FAKE_DECOY_ID }));
 }
-if (!resume && process.env.FAKE_OMIT_SESSION_ID !== "1") lines.push(JSON.stringify({ session_id: sid })); // peer.mjs parseSessionId picks this up
-lines.push(JSON.stringify({ item: { type: "agent_message", text: verdict } }));
-lines.push(JSON.stringify({ usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 1000, output_tokens: 40 } }));
-function emit() {
+if (!resume && process.env.FAKE_OMIT_SESSION_ID !== "1") sessionLines.push(JSON.stringify({ session_id: sid })); // peer.mjs parseSessionId picks this up
+const finalLines = [
+  JSON.stringify({ item: { type: "agent_message", text: verdict } }),
+  JSON.stringify({ usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 1000, output_tokens: 40 } }),
+];
+
+function writeLines(lines) {
+  if (lines.length) process.stdout.write(lines.join("\n") + "\n");
+}
+
+function finish() {
   if (!resume && process.env.FAKE_WRITE_ROLLOUT === "1" && process.env.TANDEM_CODEX_SESSIONS) {
     mkdirSync(process.env.TANDEM_CODEX_SESSIONS, { recursive: true });
     writeFileSync(
@@ -55,7 +65,7 @@ function emit() {
       JSON.stringify({ type: "user_message", task }) + "\n",
     );
   }
-  process.stdout.write(lines.join("\n") + "\n");
+  writeLines(finalLines);
   if (outFile) {
     try {
       writeFileSync(outFile, verdict);
@@ -65,6 +75,50 @@ function emit() {
   }
   process.exit(0);
 }
+
+for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+  process.on(signal, () => {
+    if (process.env.FAKE_SIGNAL_FILE) {
+      try {
+        writeFileSync(process.env.FAKE_SIGNAL_FILE, signal);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (process.env.FAKE_IGNORE_TERM !== "1") process.exit(143);
+  });
+}
+
+const streamIntervalMs = Number(process.env.FAKE_STREAM_INTERVAL_MS) || 0;
+const streamCount = Math.max(0, Number(process.env.FAKE_STREAM_COUNT) || 0);
 const delay = Number(process.env.FAKE_DELAY) || 0; // let concurrent turns genuinely overlap in tests
-if (delay) setTimeout(emit, delay);
-else emit();
+
+if (process.env.FAKE_HANG_AFTER_SESSION === "1") {
+  writeLines(sessionLines);
+  setInterval(() => {}, 1000);
+} else if (streamIntervalMs > 0 && streamCount > 0) {
+  writeLines(sessionLines);
+  let emitted = 0;
+  const timer = setInterval(() => {
+    emitted += 1;
+    writeLines([
+      JSON.stringify({
+        item: {
+          type: "command_execution",
+          command: `fake-stream-activity-${emitted}`,
+        },
+      }),
+    ]);
+    if (emitted >= streamCount) {
+      clearInterval(timer);
+      finish();
+    }
+  }, streamIntervalMs);
+} else {
+  const emit = () => {
+    writeLines(sessionLines);
+    finish();
+  };
+  if (delay) setTimeout(emit, delay);
+  else emit();
+}

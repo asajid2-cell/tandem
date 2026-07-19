@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { jobKey, readGroups, recordGroup, readDetached, markDetached, stateDir, listStateDirs, setLabel } from "../bin/groups.mjs";
+import { supervisionDecision } from "../bin/process-control.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -938,4 +939,165 @@ test("mismatched finished job and stale lease become WEDGED and can be reaped", 
   const replacement = peer(["ask", "MISMATCH-RECOVERED"], opts);
   assert.equal(replacement.code, 0);
   assert.match(replacement.out, /MISMATCH-RECOVERED/);
+});
+
+test("streaming fake partner remains alive past the former 2400-second elapsed cap", (t) => {
+  const s = freshState(t);
+  const sid = "11111111-2222-4333-8444-555555555555";
+  assert.equal(
+    supervisionDecision({
+      now: 2_401_000,
+      startedAt: 0,
+      lastActivityAt: 2_400_950,
+      stallSec: 240,
+      maxSec: 0,
+    }),
+    null,
+    "recent activity must keep a turn alive after 2400 total seconds",
+  );
+  assert.equal(
+    supervisionDecision({
+      now: 2_401_000,
+      startedAt: 0,
+      lastActivityAt: 2_400_950,
+      stallSec: 240,
+      maxSec: 2400,
+    })?.kind,
+    "absolute",
+    "an explicitly configured absolute backstop still wins",
+  );
+  const started = Date.now();
+  const turn = peer(["ask", "STREAMING-LONG-TURN"], {
+    state: s,
+    driver: "streamingLane",
+    env: {
+      FAKE_SID: sid,
+      FAKE_STREAM_INTERVAL_MS: "40",
+      FAKE_STREAM_COUNT: "8",
+      TANDEM_STALL_SEC: "0.12",
+      TANDEM_MAX_TURN_SEC: "0",
+    },
+  });
+
+  assert.equal(turn.code, 0);
+  assert.ok(Date.now() - started >= 250, "the turn should outlive multiple configured stall windows");
+  assert.match(turn.out, /STREAMING-LONG-TURN/);
+  assert.doesNotMatch(turn.out, /STALLED|WEDGED|KILLED/i);
+  assert.match(peer(["status"], { state: s, driver: "streamingLane" }).out, /job: done/i);
+});
+
+test("a silent partner is gracefully stopped and reported as STALLED/WEDGED", (t) => {
+  const s = freshState(t);
+  const sid = "22222222-3333-4444-8555-666666666666";
+  const turn = peer(["ask", "STALL-THIS-TURN"], {
+    state: s,
+    driver: "stalledLane",
+    env: {
+      FAKE_SID: sid,
+      FAKE_HANG_AFTER_SESSION: "1",
+      TANDEM_STALL_SEC: "0.15",
+      TANDEM_MAX_TURN_SEC: "1.5",
+      TANDEM_STOP_GRACE_SEC: "0.1",
+    },
+  });
+
+  assert.equal(turn.code, 1);
+  assert.match(turn.out, /STALLED\/WEDGED/i);
+  assert.match(turn.out, /no partner activity/i);
+  const status = peer(["status"], { state: s, driver: "stalledLane" });
+  assert.match(status.out, /job: error/i);
+  assert.match(status.out, /STALLED\/WEDGED/i);
+});
+
+test("continuation after a stall resumes the durably persisted session", (t) => {
+  const s = freshState(t);
+  const driver = "warmAfterStall";
+  const sid = "33333333-4444-4555-8666-777777777777";
+  const first = peer(["ask", "STALL-BUT-KEEP-CONTEXT"], {
+    state: s,
+    driver,
+    env: {
+      FAKE_SID: sid,
+      FAKE_HANG_AFTER_SESSION: "1",
+      TANDEM_STALL_SEC: "0.15",
+      TANDEM_MAX_TURN_SEC: "1.5",
+      TANDEM_STOP_GRACE_SEC: "0.1",
+    },
+  });
+  assert.equal(first.code, 1);
+  assert.equal(readFileSync(join(s, "peer.session"), "utf8").trim(), sid);
+
+  const continued = peer(["continue", "WARM-CONTINUATION"], {
+    state: s,
+    driver,
+    env: {
+      TANDEM_STALL_SEC: "1",
+      TANDEM_MAX_TURN_SEC: "0",
+    },
+  });
+  assert.equal(continued.code, 0);
+  assert.match(continued.out, new RegExp(`sid=${sid}`));
+  assert.match(continued.out, /mode=resume/);
+  assert.match(continued.out, /WARM-CONTINUATION/);
+});
+
+test("Claude daemon stall recovery reopens the same persisted session", async (t) => {
+  const s = freshState(t);
+  const driver = "claudeWarmAfterStall";
+  const sid = "44444444-5555-4666-8777-888888888888";
+  t.after(() => stopDaemon(s));
+  const started = peer(["ask", "--bg", "CLAUDE-STALL-BUT-KEEP-CONTEXT"], {
+    state: s,
+    driver,
+    partner: "claude",
+    env: {
+      FAKE_SID: sid,
+      FAKE_HANG_AFTER_SESSION: "1",
+      TANDEM_STALL_SEC: "0.15",
+      TANDEM_MAX_TURN_SEC: "1.5",
+      TANDEM_STOP_GRACE_SEC: "0.1",
+    },
+  });
+  assert.equal(started.code, 0);
+
+  let status = null;
+  for (let attempt = 0; attempt < 30; attempt++) {
+    await sleep(200);
+    status = peer(["status"], { state: s, driver, partner: "claude" });
+    if (/job: error/i.test(status.out)) break;
+  }
+  assert.match(status.out, /job: error/i);
+  assert.match(status.out, /STALLED\/WEDGED/i);
+  assert.equal(readFileSync(join(s, "claude.session"), "utf8").trim(), sid);
+
+  const continued = peer(["continue", "CLAUDE-WARM-CONTINUATION"], {
+    state: s,
+    driver,
+    partner: "claude",
+    env: {
+      TANDEM_STALL_SEC: "1",
+      TANDEM_MAX_TURN_SEC: "0",
+    },
+  });
+  assert.equal(continued.code, 0);
+  assert.match(continued.out, new RegExp(`sid=${sid}`));
+  assert.match(continued.out, /CLAUDE-WARM-CONTINUATION/);
+});
+
+test("zero absolute cap plus zero stall window leaves long turns unsupervised", (t) => {
+  const s = freshState(t);
+  const started = Date.now();
+  const turn = peer(["ask", "UNLIMITED-TURN"], {
+    state: s,
+    driver: "unlimitedLane",
+    env: {
+      FAKE_DELAY: "350",
+      TANDEM_STALL_SEC: "0",
+      TANDEM_MAX_TURN_SEC: "0",
+    },
+  });
+
+  assert.equal(turn.code, 0);
+  assert.ok(Date.now() - started >= 300);
+  assert.match(turn.out, /UNLIMITED-TURN/);
 });

@@ -57,6 +57,11 @@ breaking at its context limit without losing the thread.
 **Important — long turns:** a foreground `ask` can exceed your shell's command timeout. For
 anything non-trivial use `ask --bg` then poll `status` (instant) in a loop until done — don't try to
 background it with detached PowerShell (that broke before). The bridge owns the backgrounding.
+Productive streaming turns have no elapsed-time deadline: `stallSec` (default 240, env
+`TANDEM_STALL_SEC`) stops only after a full quiet window, while `maxTurnSec` is an optional absolute
+backstop that defaults off. A stop first asks Claude to shut down gracefully, then hard-kills only
+after `stopGraceSec`. The persisted Claude session ID survives, so the next `continue` reopens the
+same context warm.
 
 **For 4–5 concurrent lanes, use a swarm manifest.** `peer.mjs swarm start <name> <manifest.json>`
 atomically reserves unique lane folders and starts each turn in the background. Track and steer it
@@ -76,7 +81,8 @@ on every call is still required.
 
 The lane lock is enforced, not advisory: a second `ask`/`continue`/`compact`/`attach` exits `3`.
 If the recorded worker dies, `status` reports `WEDGED`; inspect partial edits and run `reap` before
-dispatching a replacement.
+dispatching a replacement. A supervised idle stop is already terminated and released, so it reports
+an error labeled `STALLED/WEDGED` and can be followed directly by `continue`.
 
 **Never idle on a partner turn — drive like a master planner.** Don't hand Claude one 30+ min task
 and sleep until the verdict; that makes you its subagent. While lanes run: advance your own track,

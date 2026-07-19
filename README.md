@@ -102,14 +102,29 @@ peer.mjs status                                         # running / done / error
 peer.mjs reap                                           # only for WEDGED; inspect edits first
 ```
 
-Background jobs record the controller and partner PIDs plus a heartbeat. If a worker is hard-killed,
-`status` reports `WEDGED` instead of pretending the lane is busy forever. Replacement is explicit:
-inspect partial edits, run `reap`, then dispatch again. `new`, `resume`, label changes, and worktree
-changes are refused while a turn is running or wedged.
+Background jobs record the controller and partner PIDs, a worker heartbeat, and the most recent
+partner output/tool activity. If a worker is hard-killed, `status` reports `WEDGED` instead of
+pretending the lane is busy forever. Replacement is explicit: inspect partial edits, run `reap`,
+then dispatch again. `new`, `resume`, label changes, and worktree changes are refused while a turn
+is running or wedged.
 
 `wait` now has automation-friendly exits: `0` done, `1` partner error or timeout, `2` no job, `3`
 wedged. `result` reports the current error when no verdict was produced; it does not print an older
 Claude result after a failed turn.
+
+## Long turns stop on stalls, not elapsed time
+
+Productive turns are allowed to run for hours. Tandem refreshes the activity clock on partner
+output, including streamed tool events, and stops a turn only after `stallSec` of silence (default
+240 seconds, env `TANDEM_STALL_SEC`). A supervised stop first requests graceful shutdown so the
+partner can flush and commit, waits `stopGraceSec` (default 5), then hard-kills the process tree only
+if needed.
+
+`maxTurnSec` is now only an optional absolute backstop and defaults to `0` (off); override it with
+`TANDEM_MAX_TURN_SEC`. Set both `TANDEM_STALL_SEC=0` and `TANDEM_MAX_TURN_SEC=0` for no automatic
+turn stop. The fresh partner session ID is persisted as soon as it appears in the stream, so a
+stall, crash, or absolute stop does not cold-reset the lane: the next `continue` resumes the same
+session warm. This supervision applies to both Codex turns and the persistent Claude daemon.
 
 ## Run 4–5 lanes as a swarm
 
@@ -122,7 +137,7 @@ turn in the background. A setup race cannot dispatch the same namespace twice.
   "lanes": [
     { "name": "runtime", "task": "Measure the real failure from the running build." },
     { "name": "tests", "task": "Find the highest-risk missing regression tests." },
-    { "name": "api", "taskFile": "tasks/api.md", "worktree": true },
+    { "name": "api", "taskFile": "tasks/api.md", "worktree": true, "stallSec": 300 },
     { "name": "ui", "taskFile": "tasks/ui.md", "worktree": true }
   ]
 }
