@@ -1,7 +1,7 @@
 // Regression tests for the tandem bridge. Every bug we hit in the field gets a test here so it
 // can't come back. Fully isolated: a temp .state per test (TANDEM_STATE) + a fake codex partner
 // (TANDEM_CODEX_BIN) — no real sessions, no API, no cost, never touches your live .state.
-import { test } from "node:test";
+import { test as nodeTest } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync, spawn } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -16,10 +16,15 @@ const ROOT = resolve(HERE, "..");
 const PEER = join(ROOT, "bin", "peer.mjs");
 const FAKE_CODEX = join(HERE, "fake-codex.mjs");
 const FAKE_CLAUDE = join(HERE, "fake-claude.mjs");
+const TEST_CASE_TIMEOUT_MS = 30_000;
+const TEST_PROCESS_TIMEOUT_MS = 20_000;
+const TEST_KILL_TIMEOUT_MS = 5_000;
+const test = (name, fn) => nodeTest(name, { timeout: TEST_CASE_TIMEOUT_MS }, fn);
 
 function freshState(t) {
   const d = mkdtempSync(join(tmpdir(), "tandem-test-"));
   t.after(() => {
+    stopStateDaemons(d);
     try {
       rmSync(d, { recursive: true, force: true });
     } catch {
@@ -47,35 +52,106 @@ function buildEnv(state, driver, partner, env) {
 }
 // Run a peer.mjs command synchronously in an isolated state dir against a fake partner.
 function peer(args, { state, driver, partner = "codex", env = {} } = {}) {
-  const r = spawnSync(process.execPath, [PEER, ...args], { encoding: "utf8", env: buildEnv(state, driver, partner, env) });
+  const r = spawnSync(process.execPath, [PEER, ...args], {
+    encoding: "utf8",
+    env: buildEnv(state, driver, partner, env),
+    windowsHide: true,
+    timeout: TEST_PROCESS_TIMEOUT_MS,
+    killSignal: "SIGKILL",
+  });
+  if (r.error) {
+    if (r.pid) killTree(r.pid);
+    assert.fail(
+      `peer ${args.join(" ")} did not complete within ${TEST_PROCESS_TIMEOUT_MS}ms: ${r.error.message}`,
+    );
+  }
   return { stdout: r.stdout || "", out: (r.stdout || "") + (r.stderr || ""), code: r.status };
 }
 // Async variant for genuinely parallel (overlapping) runs.
 function peerAsync(args, { state, driver, partner = "codex", env = {} } = {}) {
-  return new Promise((resolve) => {
-    const c = spawn(process.execPath, [PEER, ...args], { env: buildEnv(state, driver, partner, env) });
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timer = null;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      fn(value);
+    };
+    const c = spawn(process.execPath, [PEER, ...args], {
+      env: buildEnv(state, driver, partner, env),
+      windowsHide: true,
+    });
     let out = "";
     c.stdout.on("data", (b) => (out += b));
     c.stderr.on("data", (b) => (out += b));
-    c.on("exit", (code) => resolve({ out, stdout: out, code }));
+    c.on("error", (error) => {
+      finish(reject, new Error(`peer ${args.join(" ")} failed to spawn: ${error.message}`));
+    });
+    c.on("exit", (code) => finish(resolve, { out, stdout: out, code }));
+    timer = setTimeout(() => {
+      if (c.pid) killTree(c.pid);
+      finish(
+        reject,
+        new Error(`peer ${args.join(" ")} did not complete within ${TEST_PROCESS_TIMEOUT_MS}ms`),
+      );
+    }, TEST_PROCESS_TIMEOUT_MS);
   });
 }
 // Kill a serve daemon started during a test (reads its pid from the isolated state). Tree-kill on
 // Windows so the fake-claude child doesn't linger between daemon tests.
+function stopStateDaemons(root) {
+  const pending = [root];
+  while (pending.length) {
+    const dir = pending.pop();
+    let entries = [];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    if (entries.some((entry) => entry.isFile() && entry.name === "serve.pid")) {
+      stopDaemon(dir);
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) pending.push(join(dir, entry.name));
+    }
+  }
+}
 function stopDaemon(state) {
+  let pid = 0;
   try {
-    const pid = Number(readFileSync(join(state, "serve.pid"), "utf8").trim());
-    if (!pid) return;
-    if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
-    else process.kill(pid);
+    pid = Number(readFileSync(join(state, "serve.pid"), "utf8").trim());
   } catch {
     /* already gone */
+    return;
+  }
+  if (!pid) return;
+  if (process.platform === "win32") {
+    const result = spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      windowsHide: true,
+      timeout: TEST_KILL_TIMEOUT_MS,
+    });
+    if (result.error) {
+      throw new Error(`could not stop test daemon ${pid}: ${result.error.message}`);
+    }
+  } else {
+    try {
+      process.kill(pid);
+    } catch {
+      /* already gone */
+    }
   }
 }
 function killTree(pid) {
   if (!pid) return;
   try {
-    if (process.platform === "win32") spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        windowsHide: true,
+        timeout: TEST_KILL_TIMEOUT_MS,
+      });
+    }
     else process.kill(pid, "SIGKILL");
   } catch {
     /* already gone */
@@ -83,7 +159,15 @@ function killTree(pid) {
 }
 const sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 function runGit(args, cwd) {
-  const result = spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: TEST_PROCESS_TIMEOUT_MS,
+  });
+  if (result.error) {
+    assert.fail(`git ${args.join(" ")} did not complete: ${result.error.message}`);
+  }
   assert.equal(result.status, 0, `git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
   return result.stdout.trim();
 }
@@ -281,7 +365,6 @@ test("low-context notice fires for the driver when the passenger nears the limit
 // ---------- Codex→Claude path (the persistent serve daemon) ----------
 test("codex→claude (daemon): the driver's verdict is captured from the result event", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   const r = peer(["ask", "CLAUDEUI build the lock panel"], { state: s, driver: "codexDrvA", partner: "claude" });
   assert.equal(r.code, 0);
   assert.match(r.stdout, /CLAUDEUI/); // verdict came back from the daemon, for this driver
@@ -290,7 +373,6 @@ test("codex→claude (daemon): the driver's verdict is captured from the result 
 
 test("codex→claude spawn failure releases the lane instead of wedging it", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   const failed = peer(["ask", "CLAUDE-SPAWN-FAIL"], {
     state: s,
     driver: "claudeSpawnFail",
@@ -316,7 +398,6 @@ test("codex→claude spawn failure releases the lane instead of wedging it", (t)
 
 test("codex→claude and claude→codex do NOT clobber each other (cross-direction — the field bug)", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   peer(["ask", "CLAUDEWORK alpha"], { state: s, driver: "cdxDrv", partner: "claude" }); // → claude daemon
   peer(["ask", "CODEXWORK beta"], { state: s, driver: "cldDrv", partner: "codex" }); // → codex
   assert.match(readLast(s, "cdxDrv"), /CLAUDEWORK/);
@@ -326,7 +407,6 @@ test("codex→claude and claude→codex do NOT clobber each other (cross-directi
 
 test("codex→claude: `new` yields a FRESH claude session (no re-glue to the old one)", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   const r1 = peer(["ask", "first ui task"], { state: s, driver: "cdxN", partner: "claude" });
   const sid1 = sidOf(r1.stdout) || sidOf(readLast(s, "cdxN"));
   peer(["new"], { state: s, driver: "cdxN", partner: "claude" }); // must reset the daemon + detach
@@ -338,7 +418,6 @@ test("codex→claude: `new` yields a FRESH claude session (no re-glue to the old
 
 test("codex→claude: `compact` is lane-locked, preserves the last real verdict, and reseeds fresh", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   const base = { state: s, driver: "claudeCompact", partner: "claude" };
   const first = peer(["ask", "CLAUDE-REALWORK-one"], base);
   const sid1 = sidOf(first.stdout) || sidOf(readLast(s, "claudeCompact"));
@@ -573,7 +652,6 @@ test("persistent Claude lanes start inside the worktree pinned in lane metadata"
     partner: "claude",
     env: { TANDEM_CWD: repo, TANDEM_LABEL: "claude-editing-lane" },
   };
-  t.after(() => stopDaemon(state));
   assert.equal(
     peer(["worktree", "create", worktree, "tandem/claude-editing", "HEAD"], opts).code,
     0,
@@ -837,7 +915,6 @@ test("session identity mutations are refused while a live turn owns the lane", (
 
 test("`stop` cancels an active Claude turn without leaving a wedged lease", (t) => {
   const s = freshState(t);
-  t.after(() => stopDaemon(s));
   const opts = {
     state: s,
     driver: "claudeStop",
@@ -1045,7 +1122,6 @@ test("Claude daemon stall recovery reopens the same persisted session", async (t
   const s = freshState(t);
   const driver = "claudeWarmAfterStall";
   const sid = "44444444-5555-4666-8777-888888888888";
-  t.after(() => stopDaemon(s));
   const started = peer(["ask", "--bg", "CLAUDE-STALL-BUT-KEEP-CONTEXT"], {
     state: s,
     driver,
