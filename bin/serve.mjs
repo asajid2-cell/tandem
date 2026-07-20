@@ -156,7 +156,10 @@ try {
 }
 const present = apiRoutingVarsPresent(process.env);
 if (present.length) console.error(`tandem serve: scrubbing ${present.join(", ")} (subscription only)`);
-const env = scrubbedClaudeEnv(process.env);
+// TANDEM_NESTED_AGENT: the Claude partner runs tool calls in ephemeral harness
+// contexts (kill-on-close Job Objects on Windows); any peer.mjs it invokes must
+// use the job-escape spawn path so nested lanes survive tool-call teardown.
+const env = { ...scrubbedClaudeEnv(process.env), TANDEM_NESTED_AGENT: "1" };
 
 // Resume the Claude partner COUPLED to this Codex driver (immutable pair); fall
 // back to the last claude session only if this driver has no tandem yet.

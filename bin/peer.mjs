@@ -64,6 +64,7 @@ import {
   updateSwarm,
 } from "./swarm.mjs";
 import { scrubbedClaudeEnv } from "./claudeEnv.mjs";
+import { spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -625,17 +626,27 @@ async function ensureClaudeDaemon(cfg) {
     }
   }
   console.error("tandem: opening persistent Claude session (serve)…");
-  const child = spawn(process.execPath, [SERVE_SCRIPT], {
-    detached: true,
-    stdio: "ignore",
-    env: { ...process.env, TANDEM_STATE: STATE, TANDEM_CWD: cfg.cwd },
-  });
-  child.unref();
+  // spawnDetachedWorker instead of a bare detached spawn: when THIS process is
+  // running inside a nested caller's kill-on-close job, the daemon must be
+  // launched outside that job chain or it dies with the caller's tool call.
+  let servePid = 0;
+  try {
+    ({ pid: servePid } = await spawnDetachedWorker({
+      argv: [SERVE_SCRIPT],
+      env: { ...process.env, TANDEM_STATE: STATE, TANDEM_CWD: cfg.cwd },
+      cwd: process.cwd(),
+      stateDir: STATE,
+      tag: "serve",
+    }));
+  } catch (error) {
+    console.error(`tandem: cannot spawn serve daemon - ${error.message || error}`);
+    return false;
+  }
   for (let i = 0; i < 70; i++) {
     await sleep(500);
     const s = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
     if ((s === "IDLE" || s === "RUNNING") && isPidAlive(existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0)) return true;
-    if (!isPidAlive(child.pid)) {
+    if (!isPidAlive(servePid)) {
       console.error("tandem: serve exited before the Claude partner became ready");
       return false;
     }
@@ -772,18 +783,19 @@ async function startJob(task, cfg) {
   writeFileSync(taskFile, task);
   updateDispatch(lease, { driverId, partner: "codex", mode: "background", workerPid: process.pid });
   try {
-    const child = spawn(process.execPath, [fileURLToPath(import.meta.url), "__runjob", driverId, resumeSid, taskFile, lease.dispatchId], {
-      detached: true,
-      stdio: "ignore",
+    // spawnDetachedWorker instead of a bare detached spawn: a nested caller's
+    // shell tool runs inside a kill-on-close Job Object, and DETACHED_PROCESS
+    // does not leave the job — the worker must be launched outside that chain
+    // to survive the caller's teardown.
+    const { pid, mode } = await spawnDetachedWorker({
+      argv: [fileURLToPath(import.meta.url), "__runjob", driverId, resumeSid, taskFile, lease.dispatchId],
       env: process.env,
+      cwd: process.cwd(),
+      stateDir: STATE,
+      tag: "runjob",
     });
-    await new Promise((resolveSpawn, rejectSpawn) => {
-      child.once("spawn", resolveSpawn);
-      child.once("error", rejectSpawn);
-    });
-    updateDispatch(lease, { workerPid: child.pid });
-    child.unref();
-    console.log(`tandem: codex turn started in background (pid ${child.pid}). poll: peer.mjs status  ·  block: peer.mjs wait`);
+    updateDispatch(lease, { workerPid: pid });
+    console.log(`tandem: codex turn started in background (pid ${pid}${mode === "escape" ? ", job-escaped" : ""}). poll: peer.mjs status  ·  block: peer.mjs wait`);
   } catch (error) {
     try {
       if (existsSync(taskFile)) rmSync(taskFile);
@@ -995,13 +1007,15 @@ function worktreeCommand(args, cfg) {
 function interactiveSpec(cfg, sid) {
   let bin;
   let args;
-  let env = process.env;
+  // even an interactively attached partner runs its tool calls in ephemeral
+  // harness contexts — mark it so nested peer.mjs asks use job-escape spawning
+  let env = { ...process.env, TANDEM_NESTED_AGENT: "1" };
   if (cfg.partner === "claude") {
     bin = cfg.claudeBin;
     args = ["--resume", sid];
     if (cfg.claudeModel) args.push("--model", cfg.claudeModel);
     if (cfg.claudeEffort) args.push("--effort", cfg.claudeEffort);
-    env = scrubbedClaudeEnv(process.env);
+    env = { ...scrubbedClaudeEnv(process.env), TANDEM_NESTED_AGENT: "1" };
   } else {
     bin = cfg.codexBin;
     args = ["resume", "-C", cfg.cwd];
@@ -1620,6 +1634,11 @@ function runCodex(
         stdio: ["pipe", "pipe", "pipe"],
         windowsHide: true,
         detached: process.platform !== "win32",
+        // The partner agent runs tool calls in EPHEMERAL harness contexts (on
+        // Windows: kill-on-close Job Objects). The marker tells any peer.mjs
+        // the agent invokes to spawn ITS workers via the job-escape path so
+        // nested lanes survive the agent's tool-call teardown.
+        env: { ...process.env, TANDEM_NESTED_AGENT: "1" },
       });
     } catch (error) {
       settle({ stdout, code: 1, killed: false, partnerPid: 0, error: `cannot spawn ${bin}: ${error.message}` });

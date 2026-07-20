@@ -53,7 +53,10 @@ function freshState(t) {
 // fake codex; partner="claude" → this is a Codex driver pairing with the fake claude daemon.
 function buildEnv(state, driver, partner, env) {
   const e = { ...process.env };
-  for (const k of ["CODEX_SESSION_ID", "CODEX_THREAD_ID", "CODEX_CONVERSATION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]) delete e[k];
+  // TANDEM_NESTED_AGENT would route worker spawns through the job-escape path
+  // (extra latency) if this suite itself runs under a nested agent — these
+  // tests exercise top-level lane behavior, so always start unmarked
+  for (const k of ["CODEX_SESSION_ID", "CODEX_THREAD_ID", "CODEX_CONVERSATION_ID", "CLAUDE_CODE_SESSION_ID", "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "TANDEM_NESTED_AGENT"]) delete e[k];
   e.TANDEM_STATE = state;
   e.TANDEM_PARTNER = partner;
   if (partner === "claude") {
