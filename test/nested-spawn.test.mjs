@@ -13,6 +13,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { LANE_IDENTITY_VARS } from "../bin/claudeEnv.mjs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -197,5 +198,143 @@ test(
     );
     assert.equal(done.status, "done");
     assert.match(readLast(state, driver), /NESTED-CLAUDE-TASK/);
+  },
+);
+
+// Run `peer.mjs <args>` directly (no job — these cases test lane identity, not
+// job survival). Returns combined output; asserts nothing about the exit code.
+function peerPlain(args, env) {
+  return spawnSync(process.execPath, [PEER, ...args], {
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 75_000,
+    cwd: ROOT,
+    env,
+  });
+}
+
+test(
+  "the spawned claude partner's environment carries no lane identity (only the nested marker)",
+  { skip: !IS_WIN, timeout: CASE_TIMEOUT_MS },
+  async (t) => {
+    const state = freshState(t);
+    const driver = "envScrubDriver";
+    const env = laneEnv(state, driver, "claude");
+    env.TANDEM_LABEL = "parent-lane";
+    env.TANDEM_MODEL = "fake-opus";
+    env.TANDEM_TIER = "deep";
+    env.FAKE_ENV_FILE = join(state, "partner-env.json");
+
+    const r = peerPlain(["ask", "--bg", "ENV-SCRUB-TASK"], env);
+    assert.equal(r.status, 0, `ask failed: ${(r.stdout || "") + (r.stderr || "")}`);
+    await waitFor(() => readJob(state, driver)?.status === "done", "the env-scrub turn to finish", 30_000);
+
+    const partnerEnv = JSON.parse(
+      await waitFor(() => existsSync(env.FAKE_ENV_FILE) && readFileSync(env.FAKE_ENV_FILE, "utf8"), "the partner env dump", 10_000),
+    );
+    for (const k of LANE_IDENTITY_VARS) {
+      assert.equal(partnerEnv[k], undefined, `${k} must NOT leak into the partner's environment`);
+    }
+    assert.equal(partnerEnv.TANDEM_NESTED_AGENT, "1", "the partner keeps the nested-agent marker");
+  },
+);
+
+test(
+  "self-ask guard: a peer.mjs running inside the lane's own claude partner is refused, not self-injected",
+  { skip: !IS_WIN, timeout: CASE_TIMEOUT_MS },
+  async (t) => {
+    const state = freshState(t);
+    const driver = "guardDriver";
+    const env = laneEnv(state, driver, "claude");
+
+    const first = peerPlain(["ask", "--bg", "GUARD-SETUP-TASK"], env);
+    assert.equal(first.status, 0, `setup ask failed: ${(first.stdout || "") + (first.stderr || "")}`);
+    await waitFor(() => readJob(state, driver)?.status === "done", "the setup turn to finish", 30_000);
+    const partnerPid = Number(
+      await waitFor(() => existsSync(join(state, "claude.pid")) && readFileSync(join(state, "claude.pid"), "utf8").trim(), "the daemon's claude pid record", 10_000),
+    );
+    assert.ok(partnerPid > 0, "serve recorded its claude child pid");
+
+    // the leaked-identity scenario: a tool call OF THIS LANE'S OWN PARTNER
+    // (CLAUDE_PID = the partner) asking with the lane's own TANDEM_STATE
+    const inner = laneEnv(state, "innerPartnerSession", "claude");
+    inner.CLAUDECODE = "1";
+    inner.CLAUDE_CODE_ENTRYPOINT = "sdk-cli";
+    inner.CLAUDE_CODE_SESSION_ID = "innerPartnerSession";
+    inner.CLAUDE_PID = String(partnerPid);
+    delete inner.CODEX_SESSION_ID;
+    const refused = peerPlain(["ask", "--bg", "SELF-ASK-TASK must not reach my own inbox"], inner);
+    assert.notEqual(refused.status, 0, "the self-ask must fail loudly");
+    assert.match(
+      (refused.stdout || "") + (refused.stderr || ""),
+      /INSIDE the lane's own Claude partner/,
+      "the refusal names the self-ask",
+    );
+    assert.ok(!existsSync(join(state, "inbox.txt")), "no task was relayed into the lane's own inbox");
+  },
+);
+
+test(
+  "claude→claude: an ask from inside the claude partner opens a NEW sub-lane whose daemon survives the tool-call teardown",
+  { skip: !IS_WIN, timeout: CASE_TIMEOUT_MS },
+  async (t) => {
+    const state = freshState(t);
+    const subLabel = "nested-subtest-lane";
+    const subState = join(ROOT, "tandems", subLabel);
+    const cleanSub = () => {
+      const pidFile = join(subState, "serve.pid");
+      if (existsSync(pidFile)) {
+        const pid = Number(readFileSync(pidFile, "utf8").trim());
+        if (pid && pidAlive(pid)) killTree(pid);
+      }
+      const subJob = readJob(subState, "subPartner001");
+      for (const key of ["workerPid", "partnerPid"]) {
+        if (Number(subJob?.[key]) > 0 && pidAlive(Number(subJob[key]))) killTree(Number(subJob[key]));
+      }
+      rmSync(subState, { recursive: true, force: true });
+    };
+    cleanSub(); // a previous crashed run must not alias this one
+    t.after(cleanSub);
+
+    const driver = "nestedNestedDriver";
+    const env = laneEnv(state, driver, "claude");
+    env.FAKE_NESTED_ASK = "1";
+    env.FAKE_SUB_LABEL = subLabel;
+    env.FAKE_SUB_DELAY = "4000";
+
+    // parent turn: the fake claude partner runs `peer.mjs ask --bg` for a claude
+    // sub-lane inside a kill-on-close job (its "tool call"), which closes before
+    // the fake replies — the sub-lane must outlive it.
+    const r = peerPlain(["ask", "--bg", "PARENT-TURN SPAWN-SUB-LANE now"], env);
+    assert.equal(r.status, 0, `parent ask failed: ${(r.stdout || "") + (r.stderr || "")}`);
+    const parentDone = await waitFor(
+      () => {
+        const j = readJob(state, driver);
+        return j?.status === "done" ? j : null;
+      },
+      "the parent turn to finish",
+      60_000,
+    );
+    assert.match(parentDone.verdict || "", /NESTED-ASK .*childExit=0/, "the partner's nested ask tool call succeeded");
+
+    // the sub-lane got its OWN state (not the parent's), its daemon survived the
+    // nested caller's job closing, and its turn completes end-to-end
+    const subPidFile = join(subState, "serve.pid");
+    assert.ok(existsSync(subPidFile), "the nested ask created its own sub-lane state with a serve daemon");
+    const subPid = Number(readFileSync(subPidFile, "utf8").trim());
+    await sleep(1_000); // let any kill-on-close reaping land
+    assert.ok(pidAlive(subPid), `sub-lane daemon pid ${subPid} must survive the partner's tool-call teardown`);
+    assert.ok(!existsSync(join(state, "inbox.txt")), "nothing was relayed into the parent lane's inbox");
+
+    const subDone = await waitFor(
+      () => {
+        const j = readJob(subState, "subPartner001");
+        return j?.status === "done" ? j : null;
+      },
+      "the sub-lane turn to finish",
+      30_000,
+    );
+    assert.equal(subDone.status, "done");
+    assert.match(readLast(subState, "subPartner001"), /SUB-LANE-TASK/);
   },
 );

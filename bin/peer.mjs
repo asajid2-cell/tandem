@@ -63,8 +63,8 @@ import {
   readSwarm,
   updateSwarm,
 } from "./swarm.mjs";
-import { scrubbedClaudeEnv } from "./claudeEnv.mjs";
-import { spawnDetachedWorker } from "./spawn-escape.mjs";
+import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
+import { spawnDebug, spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -572,6 +572,7 @@ const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id �
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon
 const STATUS_FILE = join(STATE, "status.txt");
 const SERVE_PID = join(STATE, "serve.pid");
+const CLAUDE_PID_FILE = join(STATE, "claude.pid"); // daemon's claude child — powers the self-ask guard
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
 
@@ -608,7 +609,30 @@ function killDaemon() {
 async function ensureClaudeDaemon(cfg) {
   const pid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
   const status = existsSync(STATUS_FILE) ? readFileSync(STATUS_FILE, "utf8").trim() : "";
-  if (isPidAlive(pid) && (status === "IDLE" || status === "RUNNING")) return true;
+  spawnDebug(
+    `ensureClaudeDaemon state=${STATE} servePid=${pid} alive=${isPidAlive(pid)} status=${status || "(none)"} ` +
+      `nested=${process.env.TANDEM_NESTED_AGENT || "(unset)"} tandemStateEnv=${process.env.TANDEM_STATE || "(unset)"}`,
+  );
+  // Self-ask guard: if THIS process is a tool call of the very claude partner
+  // this lane's daemon is driving (the daemon records its claude child pid, and
+  // the claude CLI stamps CLAUDE_PID into its tool calls), then relaying here
+  // would feed the "new" task back into the caller's own session. That means a
+  // stale lane identity leaked into the caller's environment — refuse loudly
+  // instead of silently self-injecting.
+  const lanePartnerPid = existsSync(CLAUDE_PID_FILE) ? Number(readFileSync(CLAUDE_PID_FILE, "utf8").trim()) : 0;
+  if (isPidAlive(pid) && lanePartnerPid > 0 && Number(process.env.CLAUDE_PID) === lanePartnerPid) {
+    spawnDebug(`ensureClaudeDaemon decision=REFUSE-SELF-ASK partnerPid=${lanePartnerPid}`);
+    console.error(
+      "tandem: refusing to relay into this lane — this peer.mjs is running INSIDE the lane's own Claude partner " +
+        `(CLAUDE_PID ${lanePartnerPid} is the partner this daemon drives), so the task would be fed back into your own session. ` +
+        "A sub-lane needs its own state: unset the inherited TANDEM_STATE/TANDEM_LABEL (or set TANDEM_STATE to a fresh directory) and re-run.",
+    );
+    return false;
+  }
+  if (isPidAlive(pid) && (status === "IDLE" || status === "RUNNING")) {
+    spawnDebug(`ensureClaudeDaemon decision=REUSE-EXISTING-DAEMON pid=${pid} (no spawn attempted)`);
+    return true;
+  }
   if (isPidAlive(pid)) {
     let exitedWhileWaiting = false;
     for (let i = 0; i < 70; i++) {
@@ -1008,14 +1032,15 @@ function interactiveSpec(cfg, sid) {
   let bin;
   let args;
   // even an interactively attached partner runs its tool calls in ephemeral
-  // harness contexts — mark it so nested peer.mjs asks use job-escape spawning
-  let env = { ...process.env, TANDEM_NESTED_AGENT: "1" };
+  // harness contexts — partnerEnv marks it nested (job-escape spawning) and
+  // scrubs this lane's identity so its own asks open fresh sub-lanes
+  let env = partnerEnv(process.env);
   if (cfg.partner === "claude") {
     bin = cfg.claudeBin;
     args = ["--resume", sid];
     if (cfg.claudeModel) args.push("--model", cfg.claudeModel);
     if (cfg.claudeEffort) args.push("--effort", cfg.claudeEffort);
-    env = { ...scrubbedClaudeEnv(process.env), TANDEM_NESTED_AGENT: "1" };
+    env = scrubbedClaudeEnv(env);
   } else {
     bin = cfg.codexBin;
     args = ["resume", "-C", cfg.cwd];
@@ -1635,10 +1660,11 @@ function runCodex(
         windowsHide: true,
         detached: process.platform !== "win32",
         // The partner agent runs tool calls in EPHEMERAL harness contexts (on
-        // Windows: kill-on-close Job Objects). The marker tells any peer.mjs
-        // the agent invokes to spawn ITS workers via the job-escape path so
-        // nested lanes survive the agent's tool-call teardown.
-        env: { ...process.env, TANDEM_NESTED_AGENT: "1" },
+        // Windows: kill-on-close Job Objects). partnerEnv marks it nested so
+        // any peer.mjs it invokes job-escapes its workers, and scrubs THIS
+        // lane's identity so those asks open fresh sub-lanes instead of
+        // relaying back into the partner's own session.
+        env: partnerEnv(process.env),
       });
     } catch (error) {
       settle({ stdout, code: 1, killed: false, partnerPid: 0, error: `cannot spawn ${bin}: ${error.message}` });

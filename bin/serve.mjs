@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, ope
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
-import { scrubbedClaudeEnv, apiRoutingVarsPresent } from "./claudeEnv.mjs";
+import { scrubbedClaudeEnv, apiRoutingVarsPresent, partnerEnv } from "./claudeEnv.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   finishDispatch,
@@ -38,6 +38,7 @@ const INBOX = join(STATE, "inbox.txt");
 const STATUS = join(STATE, "status.txt");
 const TURNLOG = join(STATE, "turn.jsonl");
 const PID = join(STATE, "serve.pid");
+const PARTNER_PID = join(STATE, "claude.pid"); // the claude child — lets a nested peer.mjs detect a self-ask
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
 const GROUPS = join(STATE, "groups.json");
@@ -156,10 +157,14 @@ try {
 }
 const present = apiRoutingVarsPresent(process.env);
 if (present.length) console.error(`tandem serve: scrubbing ${present.join(", ")} (subscription only)`);
-// TANDEM_NESTED_AGENT: the Claude partner runs tool calls in ephemeral harness
-// contexts (kill-on-close Job Objects on Windows); any peer.mjs it invokes must
-// use the job-escape spawn path so nested lanes survive tool-call teardown.
-const env = { ...scrubbedClaudeEnv(process.env), TANDEM_NESTED_AGENT: "1" };
+// partnerEnv: the Claude partner runs tool calls in ephemeral harness contexts
+// (kill-on-close Job Objects on Windows), so it gets TANDEM_NESTED_AGENT=1 —
+// any peer.mjs it invokes job-escapes ITS spawns. Equally important, the lane's
+// own identity (TANDEM_STATE/LABEL/PARTNER/MODEL…, driver session ids) is
+// SCRUBBED: inherited, a partner's `peer.mjs ask` would resolve to THIS lane's
+// state, find THIS daemon alive, and relay the "sub-lane" task straight back
+// into the partner's own session instead of spawning anything.
+const env = scrubbedClaudeEnv(partnerEnv(process.env));
 
 // Resume the Claude partner COUPLED to this Codex driver (immutable pair); fall
 // back to the last claude session only if this driver has no tandem yet.
@@ -294,6 +299,11 @@ if (supervisionWindows.length) {
 }
 
 claude.once("spawn", () => {
+  try {
+    writeFileSync(PARTNER_PID, String(claude.pid));
+  } catch {
+    /* self-ask guard degrades to env-scrub protection only */
+  }
   writeFileSync(STATUS, "IDLE");
   console.log(`tandem serve: persistent Claude partner OPEN (pid ${process.pid} / claude ${claude.pid})`);
   console.log(`  cwd ${cwd} · subscription · bypass · ${sessionId ? "resumed " + sessionId.slice(0, 8) : "new session"}`);
@@ -455,6 +465,11 @@ function cleanup() {
   clearTurnSupervision();
   try {
     rmSync(PID);
+  } catch {
+    /* ignore */
+  }
+  try {
+    rmSync(PARTNER_PID);
   } catch {
     /* ignore */
   }
