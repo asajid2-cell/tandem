@@ -101,6 +101,11 @@ const args = process.argv.slice(2);
 const ri = args.indexOf("--resume");
 const sid = (ri >= 0 ? args[ri + 1] : null) || process.env.FAKE_SID || randomUUID();
 let firstTurn = true;
+// A turn is "open" from the moment it's received until it is answered (or interrupted). A hang keeps
+// it open indefinitely; a delayed reply keeps it open until pendingReplyTimer fires. An interrupt
+// control_request while a turn is open ends it with an error_during_execution result (see below).
+let turnOpen = false;
+let pendingReplyTimer = null;
 
 function emitSession() {
   if (!firstTurn) return;
@@ -111,6 +116,40 @@ function emitSession() {
 const rl = createInterface({ input: process.stdin });
 rl.on("line", (line) => {
   if (!line.trim()) return;
+  // Interrupt control_request over the SAME stdin pipe user turns arrive on (T4 protocol grace).
+  // Handle it BEFORE the user-turn logic. Real behavior (probed 2026-07-21): ack immediately with a
+  // control_response success, flush the in-flight turn as a result event (subtype
+  // error_during_execution, is_error true), and STAY ALIVE — the session answers the next turn warm.
+  // FAKE_IGNORE_INTERRUPT=1 swallows it silently, exercising the daemon's hard-kill fallback.
+  let control = null;
+  try {
+    control = JSON.parse(line);
+  } catch {
+    /* not JSON — fall through to the normal task path */
+  }
+  if (control && control.type === "control_request" && control.request && control.request.subtype === "interrupt") {
+    if (process.env.FAKE_IGNORE_INTERRUPT === "1") return;
+    process.stdout.write(
+      JSON.stringify({ type: "control_response", response: { subtype: "success", request_id: control.request_id } }) + "\n",
+    );
+    if (turnOpen) {
+      if (pendingReplyTimer) {
+        clearTimeout(pendingReplyTimer);
+        pendingReplyTimer = null;
+      }
+      turnOpen = false;
+      process.stdout.write(
+        JSON.stringify({
+          type: "result",
+          subtype: "error_during_execution",
+          is_error: true,
+          result: "[Request interrupted by user]",
+          usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+        }) + "\n",
+      );
+    }
+    return;
+  }
   let task = "";
   try {
     const o = JSON.parse(line);
@@ -126,6 +165,7 @@ rl.on("line", (line) => {
     process.env.FAKE_HANG_AFTER_SESSION === "1" &&
     (!process.env.FAKE_HANG_MATCH || task.includes(process.env.FAKE_HANG_MATCH));
   if (shouldHang) {
+    turnOpen = true; // the hang leaves the turn OPEN — an interrupt during it yields error_during_execution
     emitSession();
     return;
   }
@@ -174,11 +214,14 @@ rl.on("line", (line) => {
         usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 30, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
       }) + "\n",
     );
+    turnOpen = false; // the turn has been answered
+    pendingReplyTimer = null;
   };
   const delayMatches =
     !process.env.FAKE_DELAY_MATCH || task.includes(process.env.FAKE_DELAY_MATCH);
   const delay = delayMatches ? Number(process.env.FAKE_DELAY) || 0 : 0;
-  if (delay > 0) setTimeout(reply, delay);
+  turnOpen = true; // a received turn is OPEN until reply() answers it (or an interrupt ends it)
+  if (delay > 0) pendingReplyTimer = setTimeout(reply, delay);
   else reply();
 });
 rl.on("close", () => process.exit(0)); // stdin EOF = daemon closed

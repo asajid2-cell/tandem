@@ -1263,6 +1263,10 @@ test("Claude daemon stall recovery reopens the same persisted session", async (t
   const s = freshState(t);
   const driver = "claudeWarmAfterStall";
   const sid = "44444444-5555-4666-8777-888888888888";
+  // T4 protocol grace: a stalled claude turn now CHECKPOINTS (stream-json interrupt) instead of
+  // tree-killing the daemon — the persistent daemon+session SURVIVE and the next ask reuses them
+  // warm (no respawn). FAKE_HANG_MATCH pins the hang to THIS stall turn only, so the warm
+  // continuation below is answered by the same surviving fake instead of hanging a second time.
   const started = peer(["ask", "--bg", "CLAUDE-STALL-BUT-KEEP-CONTEXT"], {
     state: s,
     driver,
@@ -1270,6 +1274,7 @@ test("Claude daemon stall recovery reopens the same persisted session", async (t
     env: {
       FAKE_SID: sid,
       FAKE_HANG_AFTER_SESSION: "1",
+      FAKE_HANG_MATCH: "CLAUDE-STALL-BUT-KEEP-CONTEXT",
       TANDEM_STALL_SEC: "0.15",
       TANDEM_MAX_TURN_SEC: "1.5",
       TANDEM_STOP_GRACE_SEC: "0.1",

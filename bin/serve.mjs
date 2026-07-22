@@ -66,6 +66,15 @@ const STOP_GRACE_SEC =
   process.env.TANDEM_STOP_GRACE_SEC !== undefined
     ? Math.max(0, Number(process.env.TANDEM_STOP_GRACE_SEC) || 0)
     : Math.max(0, Number(cfg().stopGraceSec ?? 5) || 0);
+// Protocol grace: a stop mid-turn no longer relies on a WM_CLOSE no-op + tree-kill. It writes a
+// stream-json `interrupt` control_request over the SAME live stdin pipe user turns arrive on; the
+// CLI ends the turn (a `result` event, error_during_execution) WITHOUT dying, so the persistent
+// session stays warm — a CHECKPOINT, not a kill. This is the window we wait for that terminal
+// result before the hard-kill backstop fires. STOP_GRACE_SEC now bounds only the throw-fallback path.
+const INTERRUPT_GRACE_SEC =
+  process.env.TANDEM_INTERRUPT_GRACE_SEC !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_INTERRUPT_GRACE_SEC) || 0)
+    : Math.max(0, Number(cfg().interruptGraceSec ?? 75) || 0);
 const ACTIVITY_PERSIST_MS = Math.max(
   20,
   Math.min(1000, STALL_SEC > 0 ? (STALL_SEC * 1000) / 4 : 1000),
@@ -273,6 +282,7 @@ try {
       stallSec: STALL_SEC,
       maxTurnSec: MAX_TURN_SEC,
       stopGraceSec: STOP_GRACE_SEC,
+      interruptGraceSec: INTERRUPT_GRACE_SEC,
       model: claudeModel,
       effort: claudeEffort,
       bin,
@@ -339,6 +349,19 @@ function stopError(stop) {
   return `turn stopped at the optional maxTurnSec backstop after ${stop?.elapsedSec || 0}s; ${stopChannelClause(stop)}; ${warm}`;
 }
 
+// The CHECKPOINT phrasing: a stream-json interrupt landed a terminal result before the hard-kill
+// backstop, so the partner process was NOT killed and the session stays warm. Keeps the pinned
+// per-kind fragments existing tests match (STALLED/WEDGED for a stall; maxTurnSec backstop for the
+// cap) and appends the truthful checkpoint clause.
+function checkpointError(stop) {
+  const sid = sessionId || "(unknown)";
+  const tail = `; turn CHECKPOINTED via stream-json interrupt — the partner process was NOT killed; session ${sid} stays open and warm; continue resumes it`;
+  if (stop?.kind === "stall") {
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity${tail}`;
+  }
+  return `turn stopped at the optional maxTurnSec backstop after ${stop?.elapsedSec || 0}s${tail}`;
+}
+
 function clearTurnSupervision() {
   if (turnHardStopTimer) clearTimeout(turnHardStopTimer);
   turnHardStopTimer = null;
@@ -366,6 +389,51 @@ function noteTurnActivity(kind) {
 function beginTurnStop(decision) {
   if (!inTurn || turnTermination || terminalHandled || !claude.pid) return;
   const now = Date.now();
+  const interruptRequestId = `tandem-stop-${now}`;
+  // PRIMARY path: write a stream-json `interrupt` control_request over the SAME stdin pipe we feed
+  // user turns to. The CLI accepts it mid-turn and ends the turn with a `result` event WITHOUT dying,
+  // so we can CHECKPOINT instead of tree-killing. A throw (stdin already gone) falls back below to the
+  // old graceful-then-hard-kill path at STOP_GRACE_SEC.
+  let interruptWritten = false;
+  try {
+    claude.stdin.write(
+      JSON.stringify({ type: "control_request", request_id: interruptRequestId, request: { subtype: "interrupt" } }) + "\n",
+    );
+    interruptWritten = true;
+  } catch {
+    interruptWritten = false;
+  }
+  if (interruptWritten) {
+    turnTermination = {
+      ...decision,
+      triggeredTs: now,
+      graceSec: INTERRUPT_GRACE_SEC,
+      gracefulAttempted: true,
+      // The stop CHANNEL: the interrupt request was written to the live protocol pipe. callAccepted =
+      // the stdin write succeeded; deliveryProven starts false and is upgraded to true only when the
+      // CLI acks THIS request_id with a control_response (the truthful, provable channel T3 wanted).
+      stopChannel: "stream-json-interrupt",
+      stopCallAccepted: true,
+      stopDeliveryProven: false,
+      interruptRequestId,
+      checkpoint: false,
+      // Kept for backward compat: the channel CALL succeeded — NOT proof the partner observed it.
+      gracefulSignalAccepted: true,
+      hardKilled: false,
+    };
+    if (curLease) updateDispatch(curLease, { terminationPending: turnTermination });
+    // Hard-kill BACKSTOP: if no terminal outcome (result/exit) lands within the interrupt grace, the
+    // interrupt was ignored (or the CLI wedged) — tree-kill as the final backstop.
+    const hardStop = () => {
+      if (terminalHandled || claude.exitCode !== null) return;
+      turnTermination.hardStopFired = true;
+      turnTermination.hardKilled = hardKillProcessTree(claude.pid);
+    };
+    if (INTERRUPT_GRACE_SEC > 0) turnHardStopTimer = setTimeout(hardStop, INTERRUPT_GRACE_SEC * 1000);
+    else hardStop();
+    return;
+  }
+  // FALLBACK: the stdin write threw — use the old graceful-then-hard-kill path at STOP_GRACE_SEC.
   const stop = describeGracefulStop(claude.pid);
   turnTermination = {
     ...decision,
@@ -376,6 +444,8 @@ function beginTurnStop(decision) {
     stopChannel: stop.channel,
     stopCallAccepted: stop.callAccepted,
     stopDeliveryProven: stop.deliveryProven,
+    interruptRequestId,
+    checkpoint: false,
     // Kept for backward compat: the channel CALL succeeded — NOT proof the partner observed it.
     gracefulSignalAccepted: stop.callAccepted,
     hardKilled: false,
@@ -383,6 +453,7 @@ function beginTurnStop(decision) {
   if (curLease) updateDispatch(curLease, { terminationPending: turnTermination });
   const hardStop = () => {
     if (terminalHandled || claude.exitCode !== null) return;
+    turnTermination.hardStopFired = true;
     turnTermination.hardKilled = hardKillProcessTree(claude.pid);
   };
   if (STOP_GRACE_SEC > 0) turnHardStopTimer = setTimeout(hardStop, STOP_GRACE_SEC * 1000);
@@ -491,8 +562,37 @@ claude.stdout.on("data", (b) => {
     } catch {
       /* never let a malformed structural signal crash the turn */
     }
+    // control_response to our stream-json interrupt: proves the CLI RECEIVED the stop. Upgrade the
+    // pending termination's deliveryProven — this is the provable channel T3 could not have on win32.
+    // Idle-interrupt safety: a control_response with no pending termination (or a mismatched id) is
+    // ignored. Every field access is guarded so a malformed response can't crash the turn.
+    if (o.type === "control_response") {
+      try {
+        const tt = turnTermination;
+        const resp = o.response || {};
+        const rid = resp.request_id ?? o.request_id;
+        if (tt && tt.stopChannel === "stream-json-interrupt" && resp.subtype === "success" && rid === tt.interruptRequestId) {
+          tt.stopDeliveryProven = true;
+          if (curLease) updateDispatch(curLease, { terminationPending: tt });
+        }
+      } catch {
+        /* an unparseable control_response never affects the turn */
+      }
+      continue;
+    }
     if (o.type === "result") {
       const stopped = turnTermination;
+      // CHECKPOINT: a stream-json interrupt produced this terminal result BEFORE the hard-kill
+      // backstop fired, so the partner process is still alive. Disarm the backstop, mark the turn a
+      // checkpoint, and (below) return to a clean IDLE — the next ask dispatches into the SAME warm
+      // session with no kill and no respawn. If the backstop already fired (hardStopFired), the exit
+      // handler owns the record with the truthful hardKilled/checkpoint:false fields instead.
+      const checkpoint = !!(stopped && stopped.stopChannel === "stream-json-interrupt" && !stopped.hardStopFired);
+      if (checkpoint) {
+        if (turnHardStopTimer) clearTimeout(turnHardStopTimer);
+        turnHardStopTimer = null;
+        stopped.checkpoint = true;
+      }
       const verdict = o.result || "";
       const dur = Math.round((Date.now() - turnStart) / 1000);
       const u = o.usage || {};
@@ -639,7 +739,7 @@ claude.stdout.on("data", (b) => {
             finishDispatch(curLease, {
               ...result,
               status: stopped ? "error" : "done",
-              error: stopped ? stopError(stopped) : undefined,
+              error: stopped ? (checkpoint ? checkpointError(stopped) : stopError(stopped)) : undefined,
               termination: stopped,
               terminationPending: null,
               stalled: stopped?.kind === "stall",
@@ -657,7 +757,7 @@ claude.stdout.on("data", (b) => {
               ...provenance,
               ...(verdictParkFields || {}),
               warning: verdictParkWarn || provenanceWarn || null,
-              error: stopped ? stopError(stopped) : undefined,
+              error: stopped ? (checkpoint ? checkpointError(stopped) : stopError(stopped)) : undefined,
               termination: stopped,
               stalled: stopped?.kind === "stall",
               ts: Date.now(),
@@ -683,9 +783,15 @@ claude.stdout.on("data", (b) => {
         direction: "codex->claude",
       });
       inTurn = false;
-      if (!stopped) clearTurnSupervision();
-      writeFileSync(STATUS, stopped ? "STOPPING" : "IDLE");
-      console.log(`  ◂ turn done (${dur}s): ${verdict.replace(/\s+/g, " ").slice(0, 80)}`);
+      // A checkpoint clears supervision and returns to IDLE (warm session, next ask reuses it); a
+      // non-checkpoint stop leaves STOPPING for the exit handler as before.
+      if (!stopped || checkpoint) clearTurnSupervision();
+      writeFileSync(STATUS, stopped && !checkpoint ? "STOPPING" : "IDLE");
+      console.log(
+        checkpoint
+          ? `  ◂ turn CHECKPOINTED (${dur}s): stream-json interrupt — partner NOT killed, session warm`
+          : `  ◂ turn done (${dur}s): ${verdict.replace(/\s+/g, " ").slice(0, 80)}`,
+      );
     }
   }
 });
