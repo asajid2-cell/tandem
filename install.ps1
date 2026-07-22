@@ -4,6 +4,17 @@
 # repo (single source of truth); SKILL.md references them by absolute path.
 $ErrorActionPreference = 'Stop'
 $repo = $PSScriptRoot
+
+# Best-effort re-vendor of the shared provider-policy package from the sibling orchestrate repo,
+# so an install picks up the canonical limit-detection logic. Non-fatal: a standalone install (no
+# sibling repo) runs from the committed vendored copy, and sync-shared.mjs no-ops when the source
+# is absent. Never let a failed sync block installing the skill.
+try {
+  node (Join-Path $repo "bin\sync-shared.mjs")
+} catch {
+  Write-Host "tandem: shared-package sync skipped ($($_.Exception.Message)); using the committed vendored copy." -ForegroundColor DarkYellow
+}
+
 $dest = Join-Path $env:USERPROFILE ".claude\skills\tandem"
 New-Item -ItemType Directory -Force $dest | Out-Null
 Copy-Item (Join-Path $repo "SKILL.md") (Join-Path $dest "SKILL.md") -Force

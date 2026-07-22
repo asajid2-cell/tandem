@@ -1,30 +1,17 @@
 // Subscription-billing guard for a Claude partner (verified via deep research).
-// If ANY of these env vars is present, Claude Code bills the per-token API even
+// If ANY of the API_ROUTING_VARS is present, Claude Code bills the per-token API even
 // when logged into a subscription — and in headless/non-interactive use it does
 // so SILENTLY. So we scrub them from the partner's environment, forcing auth via
 // the claude.ai OAuth subscription. CLAUDE_CODE_OAUTH_TOKEN is a SUBSCRIPTION
 // token and is preserved.
-
-export const API_ROUTING_VARS = [
-  "ANTHROPIC_API_KEY",
-  "ANTHROPIC_AUTH_TOKEN",
-  "ANTHROPIC_BEDROCK_BASE_URL",
-  "AWS_BEARER_TOKEN_BEDROCK",
-  "CLAUDE_CODE_USE_BEDROCK",
-  "CLAUDE_CODE_USE_VERTEX",
-  "CLAUDE_CODE_USE_FOUNDRY",
-  "CLAUDE_CODE_USE_AZURE",
-];
-
-export function scrubbedClaudeEnv(base) {
-  const out = { ...base };
-  for (const k of API_ROUTING_VARS) delete out[k];
-  return out;
-}
-
-export function apiRoutingVarsPresent(base) {
-  return API_ROUTING_VARS.filter((k) => base[k] !== undefined && base[k] !== "");
-}
+//
+// The scrub list + its helpers now live in the shared, vendored provider-policy package
+// (bin/shared/provider-policy/partner-env.mjs) so orch and tandem share ONE source of truth
+// for the billing guard — see that file for the full rationale. They are re-exported here so
+// every existing tandem import (`from "./claudeEnv.mjs"`) keeps working unchanged. Only the
+// tandem-SPECIFIC lane-identity concepts (LANE_IDENTITY_VARS + partnerEnv) stay local, because
+// they describe tandem lanes, not the cross-tool provider policy.
+export { API_ROUTING_VARS, scrubbedClaudeEnv, apiRoutingVarsPresent } from "./shared/provider-policy/partner-env.mjs";
 
 // Lane-identity vars describe THIS lane (its state dir, label, partner/model
 // binding) and the DRIVER's session — not the partner agent spawned into it.

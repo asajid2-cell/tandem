@@ -64,6 +64,7 @@ import {
   updateSwarm,
 } from "./swarm.mjs";
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
+import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { spawnDebug, spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -147,6 +148,19 @@ function detectPartner() {
   return "codex"; // fallback (assume Claude driver)
 }
 
+// The UNIFIED tier view both loadConfig (tier resolution) and the provider policy consume: for
+// each family, the flat model/effort keys become the `default` tier, and any explicit
+// tiers.<fam>.<tier> presets are layered on top (config presets win). This is the single mapping
+// from tandem's config shape to the shared package's { family: { tier: {model, effort} } } shape.
+function unifyTiers(c) {
+  const mk = (model, effort, extra) => ({ default: { model: model || "", effort: effort || "" }, ...(extra || {}) });
+  const tiers = c.tiers || {};
+  return {
+    codex: mk(c.codexModel, c.codexEffort, tiers.codex),
+    claude: mk(c.claudeModel, c.claudeEffort, tiers.claude),
+  };
+}
+
 function loadConfig() {
   const defaults = {
     // PARTNER = the model the driver pairs with. Auto-detected from the session
@@ -210,11 +224,20 @@ function loadConfig() {
   if (process.env.TANDEM_CWD) cfg.cwd = process.env.TANDEM_CWD;
   if (process.env.TANDEM_PARTNER) cfg.partner = process.env.TANDEM_PARTNER;
   if (process.env.TANDEM_POSTURE) cfg.posture = process.env.TANDEM_POSTURE;
-  // TANDEM_TIER resolves a config tier preset for the active partner (routed AFTER the
-  // TANDEM_PARTNER override above). Explicit TANDEM_MODEL/TANDEM_EFFORT below still win.
+  // TANDEM_TIER resolves a tier preset for the active partner (routed AFTER the TANDEM_PARTNER
+  // override above). Resolution goes through the UNIFIED tier view (see unifyTiers): the flat
+  // codexModel/codexEffort (claudeModel/claudeEffort) keys are the `default` tier, and explicit
+  // tiers.<fam>.<tier> presets win. Existing behavior is preserved exactly: efficient/deep resolve
+  // from the config as before; an unknown tier still warns and keeps the flat defaults; the new
+  // TANDEM_TIER=default is additive and resolves to the flat keys (a no-op override).
   if (process.env.TANDEM_TIER) {
-    const t = (cfg.tiers || {})[cfg.partner]?.[process.env.TANDEM_TIER];
-    if (t) {
+    const tierName = process.env.TANDEM_TIER;
+    const fam = unifyTiers(cfg)[cfg.partner] || {};
+    // "Known" = the flat-key default, or an explicit preset in tiers.<fam>. Anything else warns.
+    if (tierName !== "default" && !((cfg.tiers || {})[cfg.partner] || {})[tierName]) {
+      console.error(`tandem: unknown tier "${tierName}" for partner "${cfg.partner}" (no tiers entry in tandem.config.json) — using defaults`);
+    } else {
+      const t = fam[tierName] || fam.default || {};
       if (cfg.partner === "claude") {
         if (t.model) cfg.claudeModel = t.model;
         if (t.effort) cfg.claudeEffort = t.effort;
@@ -222,8 +245,6 @@ function loadConfig() {
         if (t.model) cfg.codexModel = t.model;
         if (t.effort) cfg.codexEffort = t.effort;
       }
-    } else {
-      console.error(`tandem: unknown tier "${process.env.TANDEM_TIER}" for partner "${cfg.partner}" (no tiers entry in tandem.config.json) — using defaults`);
     }
   }
   // TANDEM_MODEL / TANDEM_EFFORT target whichever partner is active. codex: -m /
@@ -458,8 +479,196 @@ function supervisedStopError(res) {
   return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; graceful stop requested before tree-kill; ${warm}`;
 }
 
+// ---- provider-limit awareness --------------------------------------------------------------
+// tandem drives a coupled partner CLI. When that partner's subscription hits a 5h/weekly cap, the
+// CLI either exits nonzero with the cause buried, or — worse for the claude -p partner — returns
+// the limit BANNER as an ordinary exit-0 result that the lane would otherwise store as the
+// partner's VERDICT. The shared provider-policy package supplies the (real-string-anchored)
+// classifier + reset parser + park/resolve engine; here we wire it into every codex turn (the
+// claude daemon does the same in serve.mjs). We NEVER auto-reroute a coupled lane — that would
+// violate the coupling invariant — but we classify, park the provider, fast-fail future asks, and
+// surface the reset time + live alternates. Opt-in `--failover` starts a FRESH alternate lane.
+
+const tierOf = () => process.env.TANDEM_TIER || "default";
+// Escape hatch: --no-limit-classify flag (normalized into this env at dispatch) or the env directly
+// skips ALL pre-flight + post-turn classification, restoring the pre-feature behavior verbatim.
+const limitClassifyEnabled = () => process.env.TANDEM_NO_LIMIT_CLASSIFY !== "1";
+
+// Classify a partner failure from ONLY the final message + the stderr tail (last 4000 chars) —
+// NEVER the raw --json event stream. tandem lanes routinely edit files containing these very limit
+// strings (tandem working on tandem), and tool output echoed in the stream would self-trigger a
+// false park. Mirrors orch's transcript-tail discipline. Returns {msg, kind} | null.
+function classifyPartnerFailure(policyObj, { finalMessage, stderrTail }) {
+  const tail = String(finalMessage || "") + "\n" + String(stderrTail || "").slice(-4000);
+  const msg = policyObj.extractFailure(tail);
+  if (!msg) return null;
+  return { msg, kind: policyObj.classify(msg)?.kind || "limit" };
+}
+
+// Classify a codex turn's result, caching the verdict on `res` so the printer and the job-record
+// builder agree without re-scanning. Reads res.verdict (the -o/stream final message) + res.error
+// (the stderr tail peer.mjs already captured), never res.raw.
+function providerLimitHit(res) {
+  if (!res) return null;
+  if (res.__limitHit !== undefined) return res.__limitHit;
+  const hit = limitClassifyEnabled()
+    ? classifyPartnerFailure(policy, { finalMessage: res.verdict, stderrTail: res.error })
+    : null;
+  res.__limitHit = hit;
+  return hit;
+}
+
+// The LOUD replacement line that stands in for a banner-as-verdict everywhere a verdict is shown.
+function loudProviderLine(family, hit, until, alternates) {
+  const iso = new Date(until).toISOString();
+  const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
+  return (
+    `(provider limit hit — ${family} parked until ${iso}; this is NOT a task verdict. ` +
+    `Alternate: ${alt} — or wait and re-ask. See --failover.)`
+  );
+}
+
+const isProviderLimitState = (s) => !!s && (s.errorKind === "provider-limit" || s.errorKind === "provider-auth");
+
+// Build the additive error record for a classified codex limit: parks the provider (markDown =
+// the single authoritative state write) and returns a job record whose status is still the frozen
+// "error" but which carries the extra provider-limit fields watch/wait/ceerelay ignore harmlessly.
+function providerLimitRecordFor(family, hit, res) {
+  const { until } = policy.markDown(family, hit.msg);
+  const errorKind = hit.kind === "auth" ? "provider-auth" : "provider-limit";
+  const alternates = policy.resolve(family === "codex" ? "claude" : "codex", tierOf());
+  const iso = new Date(until).toISOString();
+  return {
+    status: "error",
+    partner: family,
+    errorKind,
+    provider: family,
+    resetAt: until,
+    providerMessage: String(hit.msg).slice(0, 300),
+    alternates,
+    verdict: loudProviderLine(family, hit, until, alternates), // NEVER the banner
+    error: `${errorKind === "provider-auth" ? "provider auth failure" : "provider usage limit"} on ${family}: ${String(hit.msg).slice(0, 300)} (resets ~${iso})`,
+    durSec: res?.dur,
+    commands: res?.d?.commands || [],
+    files: res?.d?.files || [],
+    tokens: res?.d?.tokens || null,
+    termination: res?.termination || null,
+    terminationPending: null,
+    workerPid: process.pid,
+    partnerPid: res?.partnerPid || 0,
+  };
+}
+
+// Pre-flight error record from ALREADY-parked provider state (no new turn was run).
+function parkedPreflightRecord(family) {
+  const p = policy.state()[family] || {};
+  const until = p.until || Date.now() + 3600_000;
+  const errorKind = p.kind === "auth" ? "provider-auth" : "provider-limit";
+  const alternates = policy.resolve(family === "codex" ? "claude" : "codex", tierOf());
+  const iso = new Date(until).toISOString();
+  const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
+  return {
+    status: "error",
+    partner: family,
+    errorKind,
+    provider: family,
+    resetAt: until,
+    providerMessage: String(p.reason || "").slice(0, 300),
+    alternates,
+    verdict: `(provider parked — ${family} until ${iso}; this is NOT a task verdict. Alternate: ${alt} — wait or use --failover.)`,
+    error: `provider parked: ${family} ${errorKind === "provider-auth" ? "auth failure" : "usage limit"} resets ~${iso}`,
+  };
+}
+
+// The loud stderr guidance printed alongside a parked/limit record: reset time, live alternate,
+// and the two LAWFUL moves (wait, or --failover) — never an implicit auto-reroute.
+function parkedStderr(family, rec) {
+  const iso = new Date(rec.resetAt).toISOString();
+  const alt = rec.alternates
+    ? `${rec.alternates.family}/${rec.alternates.model}${rec.alternates.effort ? ` (${rec.alternates.effort})` : ""}`
+    : "none available — every provider is currently capped";
+  return [
+    `tandem: ${family} provider ${rec.errorKind === "provider-auth" ? "AUTH FAILURE" : "USAGE LIMIT"} — lane parked (this is NOT a task failure).`,
+    `   resets ~${iso}`,
+    `   alternate now: ${alt}`,
+    `   lawful moves: (1) wait and re-ask after the reset, or (2) re-run with --failover to start a FRESH alternate lane` +
+      ` — the coupled ${family} session stays untouched and resumable.`,
+  ].join("\n");
+}
+
+// --failover (opt-in): the partner is parked (pre-flight) or just hit a limit (post-turn). Resolve
+// the alternate family at the current tier and run ONE fresh turn there, in-process, reusing the
+// existing ask machinery. The failed lease is already finished by the caller; we acquire a new one
+// the normal way. The old coupled session is deliberately left untouched (no detach) so it resumes
+// warm once its window rolls. Never runs without the flag.
+async function runFailover(cfg, task, fromFamily) {
+  const toFamily = fromFamily === "codex" ? "claude" : "codex";
+  const alt = policy.resolve(toFamily, tierOf());
+  if (!alt) {
+    const iso = new Date(policy.earliestReset()).toISOString();
+    console.error(`tandem: FAILOVER blocked — every provider is capped (earliest reset ~${iso}). Wait and re-ask.`);
+    logEvent({ type: "failover", ts: Date.now(), from: fromFamily, to: null, blocked: "all-capped" });
+    process.exitCode = 1;
+    return;
+  }
+  const parkedUntil = policy.state()[fromFamily]?.until || Date.now();
+  console.error(
+    `tandem: FAILOVER — ${fromFamily} parked (resets ~${new Date(parkedUntil).toISOString()}); starting a FRESH ` +
+      `${alt.family}/${alt.model} lane; the old coupled session is untouched and resumable`,
+  );
+  logEvent({ type: "failover", ts: Date.now(), from: fromFamily, to: alt.family, model: alt.model, tier: tierOf() });
+  // Switch cfg to the alternate. A different family has no prior coupling on this driver in the
+  // common case, so the alternate lane is naturally fresh (codex↔claude use separate session state).
+  cfg.partner = alt.family;
+  if (alt.family === "claude") {
+    cfg.claudeModel = alt.model;
+    if (alt.effort) cfg.claudeEffort = alt.effort;
+  } else {
+    cfg.codexModel = alt.model;
+    if (alt.effort) cfg.codexEffort = alt.effort;
+  }
+  const lease = acquireLaneDispatch(cfg, "foreground");
+  if (!lease) return;
+  if (cfg.partner === "claude") {
+    updateDispatch(lease, { workerPid: process.pid, partner: "claude", mode: "foreground" });
+    try {
+      if (!(await askUnlocked(task, cfg, lease))) {
+        finishDispatch(lease, { status: "error", partner: "claude", error: "persistent Claude daemon did not become ready" });
+        process.exitCode = 1;
+      } else {
+        process.exitCode = 0; // the alternate turn is the authoritative result of the failover
+      }
+    } catch (error) {
+      finishDispatch(lease, { status: "error", partner: "claude", error: String(error) });
+      console.error(`tandem: FAILOVER claude dispatch failed - ${error.message || error}`);
+      process.exitCode = 1;
+    }
+    return;
+  }
+  updateDispatch(lease, { workerPid: process.pid, partner: "codex", mode: "foreground" });
+  const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
+  try {
+    const res = await askUnlocked(task, cfg, lease);
+    const finalState = codexJobRecord(res); // no nested failover — runFailover never re-enters
+    finishDispatch(lease, finalState);
+    process.exitCode = finalState.status === "error" ? 1 : 0;
+    if (isProviderLimitState(finalState)) console.error(parkedStderr("codex", finalState));
+  } catch (error) {
+    finishDispatch(lease, { status: "error", partner: "codex", error: String(error) });
+    console.error(`tandem: FAILOVER codex dispatch failed - ${error.message || error}`);
+    process.exitCode = 1;
+  } finally {
+    stopHeartbeat();
+  }
+}
+
 function codexJobRecord(res) {
   if (!res) return { status: "error", partner: "codex", error: "partner returned no result" };
+  // Provider-limit classification happens FIRST: a capped subscription can surface as a nonzero
+  // exit (stderr banner) OR — the silent-failure case — an exit-0 turn whose verdict IS the banner.
+  // Either way it is NOT a task result. Classify verdict + stderr tail only (providerLimitHit).
+  const hit = providerLimitHit(res);
+  if (hit) return providerLimitRecordFor("codex", hit, res);
   const failed = res.killed || res.code !== 0;
   return {
     status: failed ? "error" : "done",
@@ -503,17 +712,29 @@ async function askUnlocked(task, cfg, lease) {
   if (driverId && resumeSid) recordGroup(GROUPS, { claudeId: driverId, codexId: resumeSid, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
   const res = await askCodex(task, cfg, resumeSid, codexLeaseHooks(lease, cfg));
   if (res) {
-    printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
-    logEvent({
-      type: "verdict",
-      ts: Date.now(),
-      partner: "codex",
-      durSec: res.dur,
-      verdict: res.verdict,
-      commands: res.d?.commands || [],
-      files: res.d?.files || [],
-      tokens: res.d?.tokens || null,
-    });
+    const hit = providerLimitHit(res);
+    if (hit) {
+      // The partner's "verdict" IS a provider-limit banner (or its stderr carried one). NEVER
+      // surface it as a task verdict — print the loud park line and log the RAW banner for
+      // forensics. The authoritative park (markDown) happens in codexJobRecord, called next by
+      // ask()/runJob; here we only parse the reset time for display (no state write).
+      const until = policy.parseResetTime(hit.msg);
+      const alternates = policy.resolve("claude", tierOf());
+      console.log("\n" + loudProviderLine("codex", hit, until, alternates) + "\n");
+      logEvent({ type: "provider-limit", ts: Date.now(), partner: "codex", kind: hit.kind, providerMessage: hit.msg, raw: res.verdict });
+    } else {
+      printVerdict("codex", res.verdict, res.d, res.dur, res.raw || "");
+      logEvent({
+        type: "verdict",
+        ts: Date.now(),
+        partner: "codex",
+        durSec: res.dur,
+        verdict: res.verdict,
+        commands: res.d?.commands || [],
+        files: res.d?.files || [],
+        tokens: res.d?.tokens || null,
+      });
+    }
     // register/refresh this exact pair — codexId is the ACTUAL codex this turn used/created
     const cdx = res.codexId || resumeSid;
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
@@ -533,11 +754,33 @@ async function ask(task, cfg) {
   const lease = acquireLaneDispatch(cfg, "foreground");
   if (!lease) return;
 
+  // Pre-flight fast-fail: a PRIOR turn parked this partner (provider-state.json), so spawning it
+  // again would just burn time re-hitting the same wall. Fail here — after the lease, before ANY
+  // spawn/daemon-ensure — with the reset time + live alternates. --failover instead starts a fresh
+  // alternate lane. Both partners; both lawful moves surfaced; ZERO spawns.
+  if (limitClassifyEnabled() && !policy.available(cfg.partner)) {
+    const parkedFamily = cfg.partner;
+    const rec = parkedPreflightRecord(parkedFamily);
+    finishDispatch(lease, rec);
+    if (failoverFlag) return await runFailover(cfg, task, parkedFamily);
+    console.error(parkedStderr(parkedFamily, rec));
+    process.exitCode = 1;
+    return;
+  }
+
   if (cfg.partner === "claude") {
     try {
       if (!(await askUnlocked(task, cfg, lease))) {
         finishDispatch(lease, { status: "error", partner: "claude", error: "persistent Claude daemon did not become ready" });
         process.exitCode = 1;
+        return;
+      }
+      // The serve daemon writes the claude job record (error-shaped on a limit). If it parked and
+      // --failover is set, run one fresh alternate turn; otherwise leave the exit code waitJob set.
+      const j = jobState(cfg);
+      if (failoverFlag && isProviderLimitState(j)) {
+        process.exitCode = 0;
+        return await runFailover(cfg, task, "claude");
       }
     } catch (error) {
       finishDispatch(lease, { status: "error", partner: "claude", error: String(error) });
@@ -553,7 +796,14 @@ async function ask(task, cfg) {
     const res = await askUnlocked(task, cfg, lease);
     const finalState = codexJobRecord(res);
     finishDispatch(lease, finalState);
-    if (finalState.status === "error") process.exitCode = 1;
+    if (failoverFlag && isProviderLimitState(finalState)) {
+      stopHeartbeat();
+      return await runFailover(cfg, task, "codex");
+    }
+    if (finalState.status === "error") {
+      if (isProviderLimitState(finalState)) console.error(parkedStderr("codex", finalState));
+      process.exitCode = 1;
+    }
   } catch (error) {
     finishDispatch(lease, { status: "error", partner: "codex", error: String(error) });
     console.error(`tandem: codex dispatch failed - ${error.message || error}`);
@@ -780,6 +1030,45 @@ async function startJob(task, cfg) {
   }
   const lease = acquireLaneDispatch(cfg, "background");
   if (!lease) return;
+  // Pre-flight fast-fail (same doctrine as ask): a parked partner never gets spawned. Without
+  // --failover, fail loudly with reset + alternates. With --failover, switch cfg to the alternate
+  // family and dispatch THIS bg turn there instead (the fresh alternate lane; the coupled session
+  // is left untouched). Background post-turn failover is intentionally not attempted — the detached
+  // worker classifies + records, but re-dispatch is a foreground (ask/continue) concern.
+  if (limitClassifyEnabled() && !policy.available(cfg.partner)) {
+    const parkedFamily = cfg.partner;
+    if (failoverFlag) {
+      const alt = policy.resolve(parkedFamily === "codex" ? "claude" : "codex", tierOf());
+      if (!alt) {
+        const iso = new Date(policy.earliestReset()).toISOString();
+        finishDispatch(lease, { status: "error", partner: parkedFamily, errorKind: "provider-limit", provider: parkedFamily, resetAt: policy.earliestReset(), error: `every provider is capped (earliest reset ~${iso})` });
+        console.error(`tandem: FAILOVER blocked — every provider is capped (earliest reset ~${iso}). Wait and re-ask.`);
+        process.exitCode = 1;
+        return;
+      }
+      console.error(
+        `tandem: FAILOVER — ${parkedFamily} parked; starting a FRESH ${alt.family}/${alt.model} background lane; ` +
+          `the old coupled session is untouched and resumable`,
+      );
+      logEvent({ type: "failover", ts: Date.now(), from: parkedFamily, to: alt.family, model: alt.model, tier: tierOf(), mode: "background" });
+      cfg.partner = alt.family;
+      if (alt.family === "claude") {
+        cfg.claudeModel = alt.model;
+        if (alt.effort) cfg.claudeEffort = alt.effort;
+      } else {
+        cfg.codexModel = alt.model;
+        if (alt.effort) cfg.codexEffort = alt.effort;
+      }
+      updateDispatch(lease, { partner: alt.family });
+      // fall through: dispatch the alternate on this same lease
+    } else {
+      const rec = parkedPreflightRecord(parkedFamily);
+      finishDispatch(lease, rec);
+      console.error(parkedStderr(parkedFamily, rec));
+      process.exitCode = 1;
+      return;
+    }
+  }
   // Claude partner → relay into the persistent open session (daemon does the work)
   if (cfg.partner === "claude") {
     try {
@@ -1880,11 +2169,28 @@ function ledger(text) {
 }
 
 const cfg = loadConfig();
+// ONE provider policy per invocation, over the lane's OWN state dir (per-lane provider state is
+// deliberate — a machine-global store is a deferred follow-up). The unified tier view (flat keys =
+// the `default` tier) lets resolve()/tierSpec() name the live alternate for a parked provider.
+const policy = createProviderPolicy({
+  stateDir: STATE,
+  tiers: unifyTiers(cfg),
+  families: {},
+  now: Date.now,
+  log: (m) => logEvent({ type: "provider", ts: Date.now(), message: m }),
+});
 const cmd = process.argv[2];
 const argv = process.argv.slice(3);
 const bg = argv.includes("--bg");
+// --failover: opt-in, ask/continue only. --no-limit-classify (or TANDEM_NO_LIMIT_CLASSIFY=1): skip
+// ALL classification. We NORMALIZE the flag into the env immediately so the setting also reaches
+// the detached __runjob worker (startJob spawns it with env: process.env) — the driver-side flags
+// (--failover, pre-flight) act in this process and need not survive into __runjob.
+const failoverFlag = argv.includes("--failover");
+if (argv.includes("--no-limit-classify")) process.env.TANDEM_NO_LIMIT_CLASSIFY = "1";
+const stripFlags = (a) => a !== "--bg" && a !== "--failover" && a !== "--no-limit-classify";
 if (cmd === "ask" || cmd === "continue") {
-  let task = argv.filter((a) => a !== "--bg").join(" ");
+  let task = argv.filter(stripFlags).join(" ");
   if (task === "-" || !task) task = readFileSync(0, "utf8"); // stdin
   if (bg) await startJob(task, cfg);
   else await ask(task, cfg);

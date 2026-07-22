@@ -2,6 +2,16 @@
 // Persistent stand-in for the `claude -p --input-format stream-json …` partner the serve daemon
 // drives. Reads one user message per stdin line, replies with a stream-json `result` (+ a
 // session_id on the first turn), and stays alive — no real model, no API. Env: FAKE_SID, FAKE_TOKENS.
+//   FAKE_LIMIT=1      the exit-0 `result` payload IS the claude session-limit banner (the silent-
+//                     failure shape): "You've hit your session limit · resets 3am (America/Edmonton)"
+//   FAKE_LIMIT_429=1  the `result` is instead the anthropic 429 rate_limit_error JSON body
+//   FAKE_LIMIT_MATCH  optional substring gate (like FAKE_HANG_MATCH) — only turns containing it hit
+//                     the limit; others reply normally
+
+// The exact strings the claude CLI surfaces on a capped subscription (see limit-policy.mjs header).
+const CLAUDE_SESSION_LIMIT = "You've hit your session limit · resets 3am (America/Edmonton)";
+const CLAUDE_429 =
+  '429 {"type":"error","error":{"type":"rate_limit_error","message":"This request would exceed your account\'s rate limit. Please try again later."}}';
 import { createInterface } from "node:readline";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -112,11 +122,20 @@ rl.on("line", (line) => {
     emitSession();
     return;
   }
+  const limitGate = !process.env.FAKE_LIMIT_MATCH || task.includes(process.env.FAKE_LIMIT_MATCH);
+  const limitMode = process.env.FAKE_LIMIT === "1" && limitGate;
+  const limit429 = process.env.FAKE_LIMIT_429 === "1" && limitGate;
   const reply = () => {
     emitSession(); // daemon captures + records the pair
     const nested =
       process.env.FAKE_NESTED_ASK === "1" && task.includes("SPAWN-SUB-LANE") ? ` ${runNestedAsk()}` : "";
-    const verdict = `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
+    // A capped subscription returns the banner (or the 429 JSON) as an ORDINARY exit-0 result —
+    // the silent-failure shape the daemon must classify instead of storing it as a verdict.
+    const verdict = limit429
+      ? CLAUDE_429
+      : limitMode
+        ? CLAUDE_SESSION_LIMIT
+        : `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
     process.stdout.write(
       JSON.stringify({
         type: "result",

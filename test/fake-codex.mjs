@@ -8,9 +8,31 @@
 //   FAKE_STREAM_INTERVAL_MS / FAKE_STREAM_COUNT emit periodic tool activity before the verdict
 //   FAKE_HANG_AFTER_SESSION=1 emit the session id, then stay silent until tandem stops the process
 //   FAKE_SIGNAL_FILE     record a graceful signal observed by the fake
+//   FAKE_LIMIT=1         the agent_message AND the -o file become the REAL codex usage-limit string
+//                        (with a reset datetime ~25h in the future, so parseResetTime lands ahead)
+//   FAKE_LIMIT_EXIT      "0" (default) = banner as an exit-0 verdict; "1" = write the banner to
+//                        stderr and exit 1 WITHOUT an agent_message (the nonzero-exit limit shape)
+//   FAKE_STREAM_LIMIT_NOISE=1  emit the limit string inside a command_execution STREAM item while
+//                        the real verdict stays clean (false-positive guard: stream ≠ verdict)
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+
+// The exact string the codex CLI prints when the ChatGPT/Codex subscription is capped, with a
+// reset datetime generated ~25h ahead at RUNTIME so parseResetTime always resolves into the future
+// (a hard-coded date would eventually fall into the past and flip the test).
+function codexLimitString() {
+  const d = new Date(Date.now() + 25 * 3600 * 1000);
+  const mon = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][d.getMonth()];
+  const n = d.getDate();
+  const ord = (v) => v + (["th", "st", "nd", "rd"][(v % 100 - 20) % 10] || ["th", "st", "nd", "rd"][v % 100] || "th");
+  let h = d.getHours();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at ${mon} ${ord(n)}, ${d.getFullYear()} ${h}:${min} ${ap}.`;
+}
+const LIMIT_STRING = codexLimitString();
 
 let testProcessRecord = "";
 if (process.env.TANDEM_TEST_PROCESS_DIR) {
@@ -63,8 +85,18 @@ if (process.env.FAKE_FAIL_CONTEXT === "1" && resume) {
   process.exit(1);
 }
 
+const limitMode = process.env.FAKE_LIMIT === "1";
+// Nonzero-exit limit shape: the banner goes to STDERR and the process exits 1 with no verdict.
+if (limitMode && process.env.FAKE_LIMIT_EXIT === "1") {
+  process.stderr.write(LIMIT_STRING + "\n");
+  process.exit(1);
+}
+
 const sid = resume ? sidArg : process.env.FAKE_SID || randomUUID();
-const verdict = `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
+// Banner-as-verdict (exit 0): the "final message" IS the limit string — the silent-failure case.
+const verdict = limitMode
+  ? LIMIT_STRING
+  : `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
 const sessionLines = [];
 if (!resume && process.env.FAKE_DECOY_ID) {
   sessionLines.push(JSON.stringify({ type: "item.started", id: process.env.FAKE_DECOY_ID }));
@@ -80,6 +112,12 @@ function writeLines(lines) {
 }
 
 function finish() {
+  // False-positive guard fixture: the limit string appears in a TOOL-OUTPUT stream item, but the
+  // verdict stays clean. peer.mjs classifies only verdict+stderr (never the raw stream), so this
+  // must NOT trip a park.
+  if (process.env.FAKE_STREAM_LIMIT_NOISE === "1") {
+    writeLines([JSON.stringify({ item: { type: "command_execution", command: `echo ${LIMIT_STRING}` } })]);
+  }
   if (!resume && process.env.FAKE_WRITE_ROLLOUT === "1" && process.env.TANDEM_CODEX_SESSIONS) {
     mkdirSync(process.env.TANDEM_CODEX_SESSIONS, { recursive: true });
     writeFileSync(

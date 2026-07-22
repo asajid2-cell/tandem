@@ -13,6 +13,10 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { scrubbedClaudeEnv, apiRoutingVarsPresent, partnerEnv } from "./claudeEnv.mjs";
+import {
+  CLAUDE_HEADLESS_POSTURE,
+  createProviderPolicy,
+} from "./shared/provider-policy/index.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   finishDispatch,
@@ -166,6 +170,44 @@ if (present.length) console.error(`tandem serve: scrubbing ${present.join(", ")}
 // into the partner's own session instead of spawning anything.
 const env = scrubbedClaudeEnv(partnerEnv(process.env));
 
+// ---- provider-limit awareness (see peer.mjs for the full doctrine) ----------------------------
+// The daemon drives a claude -p partner on the claude.ai subscription. When that account hits a
+// 5h/weekly cap, the WORST case is the CLI returning the limit banner as an ordinary exit-0
+// `result` — which without this guard the lane would store as the partner's VERDICT. We classify
+// the result (+ this turn's stderr tail) against the shared patterns, park the provider, and write
+// an error-shaped job record with the loud replacement line instead of the banner.
+const LIMIT_ENABLED = process.env.TANDEM_NO_LIMIT_CLASSIFY !== "1";
+const tierOf = () => process.env.TANDEM_TIER || "default";
+// Unified tier view: the flat config keys are the `default` tier; tiers.<fam>.<tier> presets win.
+// Used only to resolve ALTERNATES for the parked-provider message (never to route this lane).
+const policyTiers = {
+  codex: { default: { model: C.codexModel || "", effort: C.codexEffort || "" }, ...((C.tiers || {}).codex || {}) },
+  claude: { default: { model: C.claudeModel || "", effort: C.claudeEffort || "" }, ...((C.tiers || {}).claude || {}) },
+};
+const policy = createProviderPolicy({
+  stateDir: STATE, // per-lane provider state, same file peer.mjs reads/writes
+  tiers: policyTiers,
+  families: {},
+  now: Date.now,
+  log: (m) => log({ type: "provider", ts: Date.now(), message: m }),
+});
+// Classify ONLY the final message + the turn's stderr tail (never the raw event stream — a lane
+// editing files full of these very limit strings would self-trigger). Returns {msg, kind} | null.
+function classifyPartnerFailure({ finalMessage, stderrTail }) {
+  const tail = String(finalMessage || "") + "\n" + String(stderrTail || "").slice(-4000);
+  const msg = policy.extractFailure(tail);
+  if (!msg) return null;
+  return { msg, kind: policy.classify(msg)?.kind || "limit" };
+}
+function loudProviderLine(family, hit, until, alternates) {
+  const iso = new Date(until).toISOString();
+  const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
+  return (
+    `(provider limit hit — ${family} parked until ${iso}; this is NOT a task verdict. ` +
+    `Alternate: ${alt} — or wait and re-ask. See --failover.)`
+  );
+}
+
 // Resume the Claude partner COUPLED to this Codex driver (immutable pair); fall
 // back to the last claude session only if this driver has no tandem yet.
 function claudePartnerFor(codexId) {
@@ -179,7 +221,9 @@ function claudePartnerFor(codexId) {
 }
 let sessionId =
   claudePartnerFor(CODEX_DRIVER_ID) || (existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "");
-let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--dangerously-skip-permissions", "--verbose"];
+// CLAUDE_HEADLESS_POSTURE (the "never stop to ask a human who isn't here" flag) comes from the
+// shared package so orch and tandem agree on the one posture a headless Claude child runs under.
+let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", CLAUDE_HEADLESS_POSTURE, "--verbose"];
 // Partner model/effort bind at daemon start (`stop` then re-ask to change). Env is inherited
 // from the driver that spawned us. Resolution mirrors peer.mjs: explicit TANDEM_MODEL/EFFORT >
 // TANDEM_TIER preset (tiers.claude.<tier> in the config) > flat config defaults.
@@ -220,6 +264,7 @@ let curControllerPid = 0;
 let terminalHandled = false;
 let turnLastActivity = 0;
 let lastPersistedActivity = 0;
+let stderrTail = ""; // rolling tail of the claude child's stderr (last 4KB) for limit classification
 let turnTermination = null;
 let turnHardStopTimer = null;
 let supervisionTimer = null;
@@ -364,6 +409,60 @@ claude.stdout.on("data", (b) => {
       const used = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
+
+      // Provider-limit guard: if this "result" IS a usage/limit banner (or the turn's stderr
+      // carried one), park claude and write an ERROR-shaped record with the loud replacement
+      // line — NEVER the banner as a verdict. The raw banner is still logged for forensics.
+      const limitHit = LIMIT_ENABLED ? classifyPartnerFailure({ finalMessage: verdict, stderrTail }) : null;
+      if (limitHit) {
+        const { until } = policy.markDown("claude", limitHit.msg);
+        const errorKind = limitHit.kind === "auth" ? "provider-auth" : "provider-limit";
+        const alternates = policy.resolve("codex", tierOf());
+        const iso = new Date(until).toISOString();
+        const loud = loudProviderLine("claude", limitHit, until, alternates);
+        // Additive fields only — status stays within the frozen enum; wait/watch/ceerelay unaffected.
+        const errRecord = {
+          partner: "claude",
+          workerPid: curHoldLease ? curControllerPid : process.pid,
+          partnerPid: claude.pid || 0,
+          durSec: dur,
+          verdict: loud, // the LOUD line, never the raw banner
+          lowContext: low,
+          status: "error",
+          errorKind,
+          provider: "claude",
+          resetAt: until,
+          providerMessage: limitHit.msg.slice(0, 300),
+          alternates,
+          error: `${errorKind === "provider-auth" ? "provider auth failure" : "provider usage limit"} on claude: ${limitHit.msg.slice(0, 300)} (resets ~${iso})`,
+        };
+        try {
+          // LASTMSG must be the loud line, not the bare banner (this is what `result`/`status` echo).
+          if (!curHoldLease && (!curLease || leaseIsOwned(curLease))) writeFileSync(curLast, loud);
+          if (curLease) {
+            if (curHoldLease) updateDispatch(curLease, { ...errRecord, resultReady: true });
+            else finishDispatch(curLease, errRecord);
+          } else {
+            writeFileSync(curJob, JSON.stringify({ ...errRecord, ts: Date.now() }));
+          }
+        } catch {
+          /* ignore */
+        }
+        if (stopTurnHeartbeat) stopTurnHeartbeat();
+        stopTurnHeartbeat = null;
+        curLease = null;
+        curHoldLease = false;
+        curControllerPid = 0;
+        // forensics: keep the RAW banner in the timeline even though the verdict is replaced.
+        log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: verdict });
+        recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
+        inTurn = false;
+        if (!stopped) clearTurnSupervision();
+        writeFileSync(STATUS, stopped ? "STOPPING" : "IDLE");
+        console.log(`  ◂ turn PROVIDER-LIMIT (${dur}s): parked claude until ${iso}`);
+        continue;
+      }
+
       try {
         if (!curHoldLease && (!curLease || leaseIsOwned(curLease))) writeFileSync(curLast, verdict);
         if (curLease) {
@@ -429,6 +528,7 @@ claude.stdout.on("data", (b) => {
 });
 claude.stderr.on("data", (b) => {
   noteTurnActivity("stderr");
+  stderrTail = (stderrTail + b.toString()).slice(-4000); // keep the last 4KB for limit classification
   process.stderr.write(b);
 });
 claude.on("exit", (code) => {
@@ -548,6 +648,7 @@ setInterval(() => {
     if (!curHoldLease) stopTurnHeartbeat = startHeartbeat(curLease, { pid: process.pid });
   }
   clearTurnSupervision();
+  stderrTail = ""; // fresh per turn so a prior turn's banner can't misclassify this one
   inTurn = true;
   turnStart = Date.now();
   turnLastActivity = turnStart;
