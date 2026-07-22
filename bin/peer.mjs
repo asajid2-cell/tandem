@@ -66,6 +66,7 @@ import {
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
+import { provenanceWarning } from "./provenance.mjs";
 import { spawnDebug, spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -366,6 +367,101 @@ function idFromRolloutName(p) {
   return m ? m[1] : null;
 }
 
+// Find the rollout file whose FILENAME ends with <codexId>.jsonl (the session uuid is the filename
+// suffix). Bounded walk like rolloutMatches (depth ≤ 6, honors TANDEM_CODEX_SESSIONS). The newest
+// match wins so a re-used session id resolves to its latest file.
+function findRolloutById(codexId) {
+  const root = codexSessionsRoot();
+  if (!codexId || !existsSync(root)) return null;
+  const target = `${String(codexId).toLowerCase()}.jsonl`;
+  let best = null;
+  let bestMtime = -1;
+  const walk = (dir, depth) => {
+    if (depth > 6) return;
+    let names;
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of names) {
+      const file = join(dir, name);
+      let stat;
+      try {
+        stat = statSync(file);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        walk(file, depth + 1);
+      } else if (/^rollout-.*\.jsonl$/i.test(name) && name.toLowerCase().endsWith(target) && stat.mtimeMs > bestMtime) {
+        best = file;
+        bestMtime = stat.mtimeMs;
+      }
+    }
+  };
+  walk(root, 0);
+  return best;
+}
+
+// Read only the tail of a (possibly large) file — bounded so provenance never loads a huge rollout.
+function readFileTail(file, maxBytes) {
+  let fd;
+  try {
+    fd = openSync(file, "r");
+    const size = statSync(file).size;
+    const start = Math.max(0, size - maxBytes);
+    const len = size - start;
+    const buffer = Buffer.alloc(len);
+    const read = readSync(fd, buffer, 0, len, start);
+    return buffer.subarray(0, read).toString("utf8");
+  } catch {
+    return "";
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        /* already closed */
+      }
+    }
+  }
+}
+
+// The model/effort the codex rollout PROVES ran this turn. The exec --json stream carries no model
+// field; provenance lives in the rollout's turn_context lines (one per turn). Take the LAST one, but
+// only if its timestamp is at/after this turn's start (minus a small skew) — otherwise it belongs to
+// a PRIOR turn and the fields stay "" (records must not lie). Any failure returns empty strings.
+function rolloutProvenance(codexId, startedAt) {
+  const empty = { modelActual: "", effortActual: "" };
+  try {
+    const file = findRolloutById(codexId);
+    if (!file) return empty;
+    const lines = readFileTail(file, 256 * 1024).split(/\r?\n/);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const t = lines[i].trim();
+      if (!t.startsWith("{") || !t.includes('"turn_context"')) continue;
+      let o;
+      try {
+        o = JSON.parse(t);
+      } catch {
+        continue;
+      }
+      if (o.type !== "turn_context") continue;
+      const ts = Date.parse(o.timestamp);
+      if (!Number.isFinite(ts) || ts < startedAt - 5000) return empty; // a prior turn's context
+      const p = o.payload || {};
+      return {
+        modelActual: typeof p.model === "string" ? p.model : "",
+        effortActual: typeof p.effort === "string" ? p.effort : "",
+      };
+    }
+  } catch {
+    /* provenance is best-effort — never fail the turn */
+  }
+  return empty;
+}
+
 function readSession() {
   return existsSync(SESSION_FILE) ? readFileSync(SESSION_FILE, "utf8").trim() : "";
 }
@@ -548,6 +644,11 @@ function providerLimitRecordFor(family, hit, res) {
     commands: res?.d?.commands || [],
     files: res?.d?.files || [],
     tokens: res?.d?.tokens || null,
+    modelRequested: res?.modelRequested || "",
+    effortRequested: res?.effortRequested || "",
+    modelActual: res?.modelActual || "",
+    effortActual: res?.effortActual || "",
+    warning: provenanceWarning(res || {}) || null,
     termination: res?.termination || null,
     terminationPending: null,
     workerPid: process.pid,
@@ -680,7 +781,11 @@ function codexJobRecord(res) {
     files: res.d?.files || [],
     tokens: res.d?.tokens || null,
     lowContext: res.lowContext || null,
-    warning: res.couplingWarning || null,
+    modelRequested: res.modelRequested || "",
+    effortRequested: res.effortRequested || "",
+    modelActual: res.modelActual || "",
+    effortActual: res.effortActual || "",
+    warning: provenanceWarning(res, res.couplingWarning || "") || null,
     termination: res.termination || null,
     terminationPending: null,
     stalled: res.termination?.kind === "stall",
@@ -1615,6 +1720,7 @@ async function waitJob(maxSec, cfg) {
       if (j.status === "done") {
         printVerdict(j.partner, j.verdict, { commands: j.commands, files: j.files, tokens: j.tokens }, j.durSec, "");
         if (j.lowContext) console.log(j.lowContext);
+        if (j.warning) console.error(`tandem: WARNING - ${j.warning}`);
       } else if (j.status === "WEDGED") {
         console.error(`tandem: job WEDGED - ${j.reason || "worker liveness failed"}`);
         console.error("tandem: inspect `peer.mjs status`, then run `peer.mjs reap` before dispatching a replacement");
@@ -1750,6 +1856,9 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
       ")";
   }
   const d = digest(out);
+  // Provenance: the exec stream carries no model; the rollout's turn_context does. Best-effort, and
+  // only once codexId is final (fresh turns resolve it above), so we read THIS turn's rollout.
+  const provenance = rolloutProvenance(codexId, t0);
   return {
     verdict,
     d,
@@ -1762,6 +1871,10 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
     error,
     couplingWarning,
     termination,
+    modelRequested: cfg.codexModel || "",
+    effortRequested: cfg.codexEffort || "",
+    modelActual: provenance.modelActual,
+    effortActual: provenance.effortActual,
   };
 }
 
@@ -2111,6 +2224,10 @@ function status(cfg) {
     else if (j.status === "WEDGED") {
       console.log(`reason: ${j.reason || "worker liveness failed"}`);
       console.log("recovery: run `peer.mjs reap`; only then dispatch a replacement");
+    }
+    if (j.modelRequested || j.modelActual) {
+      const part = (m, e) => (m || "(unspecified)") + (e ? ` (${e})` : "");
+      console.log(`model: requested ${part(j.modelRequested, j.effortRequested)} -> actual ${part(j.modelActual, j.effortActual)}`);
     }
     if (j.warning) console.log(`warning: ${j.warning}`);
   } else if (existsSync(LASTMSG)) {

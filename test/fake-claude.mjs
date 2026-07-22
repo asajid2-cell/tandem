@@ -138,6 +138,12 @@ rl.on("line", (line) => {
       : limitMode
         ? CLAUDE_SESSION_LIMIT
         : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
+    // Provenance: the real claude stream stamps the model id on every assistant event. Emit one so
+    // the daemon can prove modelActual (env FAKE_MODEL overrides). The daemon ignores unknown types,
+    // so this is harmless for every existing case.
+    process.stdout.write(
+      JSON.stringify({ type: "assistant", message: { model: process.env.FAKE_MODEL || "claude-opus-4-8", content: [] } }) + "\n",
+    );
     process.stdout.write(
       JSON.stringify({
         type: "result",

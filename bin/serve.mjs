@@ -18,6 +18,7 @@ import {
   createProviderPolicy,
 } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
+import { provenanceWarning } from "./provenance.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   finishDispatch,
@@ -263,9 +264,22 @@ let terminalHandled = false;
 let turnLastActivity = 0;
 let lastPersistedActivity = 0;
 let stderrTail = ""; // rolling tail of the claude child's stderr (last 4KB) for limit classification
+let turnModelActual = ""; // the model the stream PROVED ran this turn (reset per dispatch); "" = unproven
 let turnTermination = null;
 let turnHardStopTimer = null;
 let supervisionTimer = null;
+
+// Provenance fields for the current turn: what tandem asked the CLI to run (claudeModel/claudeEffort,
+// bound at daemon start) vs what the stream proved (turnModelActual). The claude stream carries no
+// effort, so effortActual stays "". Additive job-record fields only — never changes an outcome.
+function turnProvenance() {
+  return {
+    modelRequested: claudeModel,
+    effortRequested: claudeEffort,
+    modelActual: turnModelActual,
+    effortActual: "",
+  };
+}
 
 function stopError(stop) {
   const warm = sessionId
@@ -399,6 +413,13 @@ claude.stdout.on("data", (b) => {
       // register the pair the moment the (possibly fresh) session id is known
       recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
     }
+    // Provenance: the claude stream stamps the model id on EVERY assistant event (and on the init
+    // system event). Keep the LAST seen value — it's what actually ran this turn.
+    if (o.type === "assistant" && typeof o.message?.model === "string" && o.message.model) {
+      turnModelActual = o.message.model;
+    } else if (o.type === "system" && o.subtype === "init" && typeof o.model === "string" && o.model) {
+      turnModelActual = o.model;
+    }
     if (o.type === "result") {
       const stopped = turnTermination;
       const verdict = o.result || "";
@@ -407,6 +428,10 @@ claude.stdout.on("data", (b) => {
       const used = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
+      // Provenance stamped onto every result shape below: what tandem asked for vs what the stream
+      // proved, plus a loud warning on a proven mismatch (never flips the outcome).
+      const provenance = turnProvenance();
+      const provenanceWarn = provenanceWarning(provenance);
 
       // Provider-limit guard: if this "result" IS a usage/limit banner (strict whole-result
       // match only — the process is alive and exit-0 here, so the answer text itself is the
@@ -427,6 +452,8 @@ claude.stdout.on("data", (b) => {
           durSec: dur,
           verdict: loud, // the LOUD line, never the raw banner
           lowContext: low,
+          ...provenance,
+          warning: provenanceWarn || null,
           status: "error",
           errorKind,
           provider: "claude",
@@ -472,6 +499,8 @@ claude.stdout.on("data", (b) => {
             durSec: dur,
             verdict,
             lowContext: low,
+            ...provenance,
+            warning: provenanceWarn || null,
           };
           if (curHoldLease) updateDispatch(curLease, { ...result, resultReady: true });
           else {
@@ -493,6 +522,8 @@ claude.stdout.on("data", (b) => {
               durSec: dur,
               verdict,
               lowContext: low,
+              ...provenance,
+              warning: provenanceWarn || null,
               error: stopped ? stopError(stopped) : undefined,
               termination: stopped,
               stalled: stopped?.kind === "stall",
@@ -555,6 +586,7 @@ claude.on("exit", (code) => {
   }
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
+    const exitProvenance = turnProvenance(); // last known actual for the turn that was in flight
     finishDispatch(curLease, {
       status: "error",
       partner: "claude",
@@ -566,6 +598,8 @@ claude.on("exit", (code) => {
           ? `provider ${limitFields.errorKind === "provider-auth" ? "auth failure" : "usage limit"} on claude — the persistent process exited (code ${code ?? "unknown"}): ${limitFields.providerMessage} (resets ~${new Date(limitFields.resetAt).toISOString()})`
           : `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
       ...(limitFields || {}),
+      ...exitProvenance,
+      warning: provenanceWarning(exitProvenance) || null,
       termination: stopped,
       terminationPending: null,
       stalled: stopped?.kind === "stall",
@@ -669,6 +703,7 @@ setInterval(() => {
   }
   clearTurnSupervision();
   stderrTail = ""; // fresh per turn so a prior turn's banner can't misclassify this one
+  turnModelActual = ""; // reset per dispatch — never reuse a prior turn's proven model
   inTurn = true;
   turnStart = Date.now();
   turnLastActivity = turnStart;

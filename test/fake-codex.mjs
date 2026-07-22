@@ -127,12 +127,19 @@ function finish() {
   if (process.env.FAKE_STREAM_LIMIT_NOISE === "1") {
     writeLines([JSON.stringify({ item: { type: "command_execution", command: `echo ${LIMIT_STRING}` } })]);
   }
-  if (!resume && process.env.FAKE_WRITE_ROLLOUT === "1" && process.env.TANDEM_CODEX_SESSIONS) {
+  if (process.env.FAKE_WRITE_ROLLOUT === "1" && process.env.TANDEM_CODEX_SESSIONS) {
     mkdirSync(process.env.TANDEM_CODEX_SESSIONS, { recursive: true });
-    writeFileSync(
-      join(process.env.TANDEM_CODEX_SESSIONS, `rollout-fake-${Date.now()}-${sid}.jsonl`),
-      JSON.stringify({ type: "user_message", task }) + "\n",
-    );
+    // Keep the user_message FIRST (the coupling machinery greps the task marker in the file prefix),
+    // then the turn_context line — the real shape peer.mjs reads model/effort provenance from. Fire
+    // on RESUME turns too, writing to the file named with the resumed sid.
+    const rollout =
+      JSON.stringify({ type: "user_message", task }) + "\n" +
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        type: "turn_context",
+        payload: { model: process.env.FAKE_ACTUAL_MODEL || "gpt-5.6-sol", effort: process.env.FAKE_ACTUAL_EFFORT || "high" },
+      }) + "\n";
+    writeFileSync(join(process.env.TANDEM_CODEX_SESSIONS, `rollout-fake-${Date.now()}-${sid}.jsonl`), rollout);
   }
   writeLines(finalLines);
   if (outFile) {
