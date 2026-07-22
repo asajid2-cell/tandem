@@ -7,6 +7,8 @@
 //   FAKE_LIMIT_429=1  the `result` is instead the anthropic 429 rate_limit_error JSON body
 //   FAKE_LIMIT_MATCH  optional substring gate (like FAKE_HANG_MATCH) — only turns containing it hit
 //                     the limit; others reply normally
+//   FAKE_VERDICT      override the result text verbatim (may be multi-line) — lets tests prove an
+//                     ANSWER that merely discusses limit banners never parks
 
 // The exact strings the claude CLI surfaces on a capped subscription (see limit-policy.mjs header).
 const CLAUDE_SESSION_LIMIT = "You've hit your session limit · resets 3am (America/Edmonton)";
@@ -135,7 +137,7 @@ rl.on("line", (line) => {
       ? CLAUDE_429
       : limitMode
         ? CLAUDE_SESSION_LIMIT
-        : `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
+        : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
     process.stdout.write(
       JSON.stringify({
         type: "result",

@@ -65,6 +65,7 @@ import {
 } from "./swarm.mjs";
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
+import { classifyProviderSignal } from "./limit-signals.mjs";
 import { spawnDebug, spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -494,25 +495,20 @@ const tierOf = () => process.env.TANDEM_TIER || "default";
 // skips ALL pre-flight + post-turn classification, restoring the pre-feature behavior verbatim.
 const limitClassifyEnabled = () => process.env.TANDEM_NO_LIMIT_CLASSIFY !== "1";
 
-// Classify a partner failure from ONLY the final message + the stderr tail (last 4000 chars) —
-// NEVER the raw --json event stream. tandem lanes routinely edit files containing these very limit
-// strings (tandem working on tandem), and tool output echoed in the stream would self-trigger a
-// false park. Mirrors orch's transcript-tail discipline. Returns {msg, kind} | null.
-function classifyPartnerFailure(policyObj, { finalMessage, stderrTail }) {
-  const tail = String(finalMessage || "") + "\n" + String(stderrTail || "").slice(-4000);
-  const msg = policyObj.extractFailure(tail);
-  if (!msg) return null;
-  return { msg, kind: policyObj.classify(msg)?.kind || "limit" };
-}
-
 // Classify a codex turn's result, caching the verdict on `res` so the printer and the job-record
-// builder agree without re-scanning. Reads res.verdict (the -o/stream final message) + res.error
-// (the stderr tail peer.mjs already captured), never res.raw.
+// builder agree without re-scanning. The gate lives in limit-signals.mjs: res.error (the stderr
+// tail, populated only on a nonzero exit) is loose-scanned only when the process genuinely failed;
+// res.verdict (the model's ANSWER) is only ever strict whole-result matched — an answer that
+// merely DISCUSSES limit banners is a normal verdict. Never reads res.raw (the event stream).
 function providerLimitHit(res) {
   if (!res) return null;
   if (res.__limitHit !== undefined) return res.__limitHit;
   const hit = limitClassifyEnabled()
-    ? classifyPartnerFailure(policy, { finalMessage: res.verdict, stderrTail: res.error })
+    ? classifyProviderSignal(policy, {
+        finalMessage: res.verdict,
+        stderrTail: res.error,
+        exitFailed: !!res.killed || res.code !== 0,
+      })
     : null;
   res.__limitHit = hit;
   return hit;

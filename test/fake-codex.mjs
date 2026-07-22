@@ -14,6 +14,10 @@
 //                        stderr and exit 1 WITHOUT an agent_message (the nonzero-exit limit shape)
 //   FAKE_STREAM_LIMIT_NOISE=1  emit the limit string inside a command_execution STREAM item while
 //                        the real verdict stays clean (false-positive guard: stream ≠ verdict)
+//   FAKE_VERDICT         override the final agent_message/-o text verbatim (may be multi-line) —
+//                        lets tests prove an ANSWER that merely discusses limit banners never parks
+//   FAKE_STDERR_NOISE=1  write a transient 429 retry notice to stderr but SUCCEED (exit 0) — the
+//                        shape both real CLIs produce when a rate-limited request retries and lands
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -93,10 +97,15 @@ if (limitMode && process.env.FAKE_LIMIT_EXIT === "1") {
 }
 
 const sid = resume ? sidArg : process.env.FAKE_SID || randomUUID();
+// A successful turn that was transiently rate-limited: retry notice on stderr, clean exit 0.
+if (process.env.FAKE_STDERR_NOISE === "1") {
+  process.stderr.write("Rate limited; retrying in 4s... (429 Too Many Requests)\n");
+}
 // Banner-as-verdict (exit 0): the "final message" IS the limit string — the silent-failure case.
 const verdict = limitMode
   ? LIMIT_STRING
-  : `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
+  : process.env.FAKE_VERDICT ||
+    `FAKE ok sid=${sid} mode=${resume ? "resume" : "fresh"} cwd=${cwdArg || "(resume)"} task=${firstLine} | last=${lastLine}`;
 const sessionLines = [];
 if (!resume && process.env.FAKE_DECOY_ID) {
   sessionLines.push(JSON.stringify({ type: "item.started", id: process.env.FAKE_DECOY_ID }));

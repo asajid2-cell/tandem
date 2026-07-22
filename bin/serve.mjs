@@ -17,6 +17,7 @@ import {
   CLAUDE_HEADLESS_POSTURE,
   createProviderPolicy,
 } from "./shared/provider-policy/index.mjs";
+import { classifyProviderSignal } from "./limit-signals.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   finishDispatch,
@@ -174,8 +175,8 @@ const env = scrubbedClaudeEnv(partnerEnv(process.env));
 // The daemon drives a claude -p partner on the claude.ai subscription. When that account hits a
 // 5h/weekly cap, the WORST case is the CLI returning the limit banner as an ordinary exit-0
 // `result` — which without this guard the lane would store as the partner's VERDICT. We classify
-// the result (+ this turn's stderr tail) against the shared patterns, park the provider, and write
-// an error-shaped job record with the loud replacement line instead of the banner.
+// genuine CLI signals only (whole-result banner / stderr of a DEAD process — limit-signals.mjs),
+// park the provider, and write an error-shaped job record with the loud line instead of the banner.
 const LIMIT_ENABLED = process.env.TANDEM_NO_LIMIT_CLASSIFY !== "1";
 const tierOf = () => process.env.TANDEM_TIER || "default";
 // Unified tier view: the flat config keys are the `default` tier; tiers.<fam>.<tier> presets win.
@@ -191,14 +192,11 @@ const policy = createProviderPolicy({
   now: Date.now,
   log: (m) => log({ type: "provider", ts: Date.now(), message: m }),
 });
-// Classify ONLY the final message + the turn's stderr tail (never the raw event stream — a lane
-// editing files full of these very limit strings would self-trigger). Returns {msg, kind} | null.
-function classifyPartnerFailure({ finalMessage, stderrTail }) {
-  const tail = String(finalMessage || "") + "\n" + String(stderrTail || "").slice(-4000);
-  const msg = policy.extractFailure(tail);
-  if (!msg) return null;
-  return { msg, kind: policy.classify(msg)?.kind || "limit" };
-}
+// Classification is gated in limit-signals.mjs: an exit-0 `result` is only a limit when it IS
+// the whole banner (strict anchored match) — the partner's ANSWER is never loose-scanned, so a
+// turn that merely discusses limit strings can't self-park. The stderr tail is classified only
+// in the exit handler (a dead partner CLI is the genuine failure signal; transient 429 retry
+// notices on a SURVIVING turn never classify).
 function loudProviderLine(family, hit, until, alternates) {
   const iso = new Date(until).toISOString();
   const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
@@ -410,10 +408,11 @@ claude.stdout.on("data", (b) => {
       if (used) setUsage(sessionId, used);
       const low = lowNote(sessionId, used);
 
-      // Provider-limit guard: if this "result" IS a usage/limit banner (or the turn's stderr
-      // carried one), park claude and write an ERROR-shaped record with the loud replacement
-      // line — NEVER the banner as a verdict. The raw banner is still logged for forensics.
-      const limitHit = LIMIT_ENABLED ? classifyPartnerFailure({ finalMessage: verdict, stderrTail }) : null;
+      // Provider-limit guard: if this "result" IS a usage/limit banner (strict whole-result
+      // match only — the process is alive and exit-0 here, so the answer text itself is the
+      // ONLY admissible evidence), park claude and write an ERROR-shaped record with the loud
+      // replacement line — NEVER the banner as a verdict. Raw banner still logged for forensics.
+      const limitHit = LIMIT_ENABLED ? classifyProviderSignal(policy, { finalMessage: verdict }) : null;
       if (limitHit) {
         const { until } = policy.markDown("claude", limitHit.msg);
         const errorKind = limitHit.kind === "auth" ? "provider-auth" : "provider-limit";
@@ -536,6 +535,24 @@ claude.on("exit", (code) => {
   terminalHandled = true;
   const stopped = turnTermination;
   console.error(`tandem serve: claude session ended (${code})`);
+  // A dead partner CLI is the one GENUINE failure signal under which the stderr tail may be
+  // loose-classified (never on a surviving turn — see limit-signals.mjs). On a hit, park claude
+  // and carry the additive provider fields on the error record.
+  const limitHit =
+    LIMIT_ENABLED && !stopped && code ? classifyProviderSignal(policy, { stderrTail, exitFailed: true }) : null;
+  let limitFields = null;
+  if (limitHit) {
+    const { until } = policy.markDown("claude", limitHit.msg);
+    const errorKind = limitHit.kind === "auth" ? "provider-auth" : "provider-limit";
+    limitFields = {
+      errorKind,
+      provider: "claude",
+      resetAt: until,
+      providerMessage: limitHit.msg.slice(0, 300),
+      alternates: policy.resolve("codex", tierOf()),
+    };
+    log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: "" });
+  }
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
     finishDispatch(curLease, {
@@ -545,7 +562,10 @@ claude.on("exit", (code) => {
       partnerPid: claude.pid || 0,
       error: stopped
         ? stopError(stopped)
-        : `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
+        : limitFields
+          ? `provider ${limitFields.errorKind === "provider-auth" ? "auth failure" : "usage limit"} on claude — the persistent process exited (code ${code ?? "unknown"}): ${limitFields.providerMessage} (resets ~${new Date(limitFields.resetAt).toISOString()})`
+          : `persistent Claude process exited during the turn (code ${code ?? "unknown"})`,
+      ...(limitFields || {}),
       termination: stopped,
       terminationPending: null,
       stalled: stopped?.kind === "stall",

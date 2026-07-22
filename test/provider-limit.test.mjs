@@ -146,6 +146,25 @@ const readLast = (state, driver) => {
 const CODEX_BANNER = "You've hit your usage limit";
 const CLAUDE_BANNER = "You've hit your session limit";
 
+// Isolation guard: every peer spawn in this suite runs under a temp TANDEM_STATE, so the repo's
+// LIVE lane state (.state/ + tandems/<label>/provider-state.json) must be byte-identical when the
+// suite ends — a test that parks a provider in a real lane's state is itself a critical bug.
+const liveStateFiles = () => {
+  const found = {};
+  const laneDirs = existsSync(join(ROOT, "tandems"))
+    ? readdirSync(join(ROOT, "tandems")).map((d) => join(ROOT, "tandems", d))
+    : [];
+  for (const d of [join(ROOT, ".state"), ...laneDirs]) {
+    const f = join(d, "provider-state.json");
+    if (existsSync(f)) found[f] = readFileSync(f, "utf8");
+  }
+  return found;
+};
+const LIVE_STATE_BEFORE = liveStateFiles();
+after(() => {
+  assert.deepEqual(liveStateFiles(), LIVE_STATE_BEFORE, "the suite must never touch a live provider-state.json");
+});
+
 test("codex banner with exit 0: classified as provider-limit, banner NEVER surfaced as a verdict", (t) => {
   const state = freshState(t);
   const driver = "limitCodexDrv";
@@ -277,6 +296,56 @@ test("escape hatch (env): TANDEM_NO_LIMIT_CLASSIFY=1 also disables classificatio
   const r = peer(["ask", "run"], { state, driver, env: { FAKE_LIMIT: "1", TANDEM_NO_LIMIT_CLASSIFY: "1" } });
   assert.equal(r.code, 0);
   assert.equal(readJob(state, driver)?.status, "done");
+});
+
+// ---- false-positive regression: the model's ANSWER is never limit evidence -------------------
+// The production incident this guards: a lead lane BUILDING this very feature answered with prose
+// quoting the claude banner ("resets 3am"); the old classifier loose-scanned the verdict and
+// parked a healthy claude (its usage probe showed 35% — not limited). An exit-0 answer that
+// discusses/quotes limit banners is a NORMAL verdict; only a genuine CLI failure signal (nonzero
+// exit with the banner on stderr, or the banner AS the whole result) may classify.
+const LIMIT_PROSE = [
+  "Classifier review complete. Notes on the banner strings:",
+  "the claude 5h shape is \"You've hit your session limit · resets 3am (America/Edmonton)\",",
+  "the codex shape says \"You've hit your usage limit\" and \"purchase more credits or try again at 2:29 PM\",",
+  "and the structured variant is a rate_limit_error 429 (provider-limit).",
+  "None of these, quoted inside an answer, may ever park a healthy provider.",
+].join("\n");
+
+test("REGRESSION: an exit-0 codex ANSWER that merely DISCUSSES limit banners is a normal verdict — no park", (t) => {
+  const state = freshState(t);
+  const driver = "proseCodexDrv";
+  const r = peer(["ask", "review the classifier"], { state, driver, env: { FAKE_VERDICT: LIMIT_PROSE } });
+  assert.equal(r.code, 0, "the turn succeeds");
+  const job = readJob(state, driver);
+  assert.equal(job?.status, "done");
+  assert.equal(job?.errorKind, undefined, "must NOT be classified as a provider-limit");
+  assert.match(job.verdict, /resets 3am/, "the answer survives verbatim as the verdict");
+  assert.doesNotMatch(r.out, /provider limit hit/, "no loud park line is printed");
+  assert.ok(!existsSync(join(state, "provider-state.json")), "nothing was parked");
+});
+
+test("REGRESSION: an exit-0 claude ANSWER that merely DISCUSSES limit banners is a normal verdict — no park", (t) => {
+  const state = freshState(t);
+  const driver = "proseClaudeDrv";
+  const r = peer(["ask", "review the classifier"], { state, driver, partner: "claude", env: { FAKE_VERDICT: LIMIT_PROSE } });
+  assert.equal(r.code, 0, "the turn succeeds");
+  const job = readJob(state, driver);
+  assert.equal(job?.status, "done");
+  assert.equal(job?.errorKind, undefined, "must NOT be classified as a provider-limit");
+  assert.match(readLast(state, driver), /resets 3am/, "LASTMSG is the answer, not a park line");
+  assert.ok(!existsSync(join(state, "provider-state.json")), "nothing was parked");
+});
+
+test("REGRESSION: a transient 429 retry notice on stderr of a SUCCESSFUL (exit-0) turn does not park", (t) => {
+  const state = freshState(t);
+  const driver = "retryNoiseDrv";
+  const r = peer(["ask", "clean turn with retry noise"], { state, driver, env: { FAKE_STDERR_NOISE: "1" } });
+  assert.equal(r.code, 0, "the surviving turn succeeds");
+  const job = readJob(state, driver);
+  assert.equal(job?.status, "done");
+  assert.equal(job?.errorKind, undefined);
+  assert.ok(!existsSync(join(state, "provider-state.json")), "a retried-but-successful turn never parks");
 });
 
 test("wait on an errorKind record still exits 1 (unchanged consumer contract)", (t) => {
