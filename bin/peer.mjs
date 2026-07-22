@@ -612,10 +612,11 @@ function providerLimitHit(res) {
 
 // The LOUD replacement line that stands in for a banner-as-verdict everywhere a verdict is shown.
 function loudProviderLine(family, hit, until, alternates) {
-  const iso = new Date(until).toISOString();
+  // Show the reset in UTC AND local: a bare "…Z" ISO was misread in production as a past local time.
+  const when = `${new Date(until).toISOString()} (${new Date(until).toLocaleString()} local)`;
   const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
   return (
-    `(provider limit hit — ${family} parked until ${iso}; this is NOT a task verdict. ` +
+    `(provider limit hit — ${family} parked until ${when}; this is NOT a task verdict. ` +
     `Alternate: ${alt} — or wait and re-ask. See --failover.)`
   );
 }
@@ -680,7 +681,8 @@ function parkedPreflightRecord(family) {
 // The loud stderr guidance printed alongside a parked/limit record: reset time, live alternate,
 // and the two LAWFUL moves (wait, or --failover) — never an implicit auto-reroute.
 function parkedStderr(family, rec) {
-  const iso = new Date(rec.resetAt).toISOString();
+  // UTC ISO kept (tests + logs match it) with the local rendering appended — a bare "…Z" was misread.
+  const iso = `${new Date(rec.resetAt).toISOString()} (${new Date(rec.resetAt).toLocaleString()} local)`;
   const alt = rec.alternates
     ? `${rec.alternates.family}/${rec.alternates.model}${rec.alternates.effort ? ` (${rec.alternates.effort})` : ""}`
     : "none available — every provider is currently capped";

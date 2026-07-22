@@ -17,7 +17,7 @@ import {
   CLAUDE_HEADLESS_POSTURE,
   createProviderPolicy,
 } from "./shared/provider-policy/index.mjs";
-import { classifyProviderSignal } from "./limit-signals.mjs";
+import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
@@ -51,6 +51,7 @@ const GROUPS = join(STATE, "groups.json");
 const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → start fresh next turn
 const USAGE = join(STATE, "usage.json"); // per-session context size → low-context notice
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on a fresh session's first turn
+const RATE_LIMIT = join(STATE, "rate-limit.json"); // last rate_limit_event seen (groundwork for a predictive-warning item)
 const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
 const STALL_SEC =
   process.env.TANDEM_STALL_SEC !== undefined
@@ -152,6 +153,15 @@ function lowNote(sid, used) {
     `   (or just \`peer.mjs compact\` for the default summary).`
   );
 }
+// Persist EVERY rate_limit_event (allowed too) — additive groundwork for a later predictive-warning
+// item. Never throws: it must not be able to crash a turn.
+function persistRateLimit(info) {
+  try {
+    writeFileSync(RATE_LIMIT, JSON.stringify({ ts: Date.now(), info }));
+  } catch {
+    /* groundwork only */
+  }
+}
 
 const C = cfg();
 if (!existsSync(STATE)) mkdirSync(STATE, { recursive: true });
@@ -199,10 +209,11 @@ const policy = createProviderPolicy({
 // in the exit handler (a dead partner CLI is the genuine failure signal; transient 429 retry
 // notices on a SURVIVING turn never classify).
 function loudProviderLine(family, hit, until, alternates) {
-  const iso = new Date(until).toISOString();
+  // Show the reset in UTC AND local: a bare "…Z" ISO was misread in production as a past local time.
+  const when = `${new Date(until).toISOString()} (${new Date(until).toLocaleString()} local)`;
   const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
   return (
-    `(provider limit hit — ${family} parked until ${iso}; this is NOT a task verdict. ` +
+    `(provider limit hit — ${family} parked until ${when}; this is NOT a task verdict. ` +
     `Alternate: ${alt} — or wait and re-ask. See --failover.)`
   );
 }
@@ -265,6 +276,8 @@ let turnLastActivity = 0;
 let lastPersistedActivity = 0;
 let stderrTail = ""; // rolling tail of the claude child's stderr (last 4KB) for limit classification
 let turnModelActual = ""; // the model the stream PROVED ran this turn (reset per dispatch); "" = unproven
+let turnRateLimitInfo = null; // rate_limit_info of the LAST rate_limit_event this turn — PRIMARY limit evidence
+let turnDidWork = false; // a tool_use appeared this turn → the turn executed real work (a capped turn cannot)
 let turnTermination = null;
 let turnHardStopTimer = null;
 let supervisionTimer = null;
@@ -420,6 +433,23 @@ claude.stdout.on("data", (b) => {
     } else if (o.type === "system" && o.subtype === "init" && typeof o.model === "string" && o.model) {
       turnModelActual = o.model;
     }
+    // Structural limit evidence (PRIMARY, see the ladder on the result event): the claude stream
+    // carries a machine-readable rate_limit_event every turn, and a tool_use proves the turn ran
+    // real work (a genuinely capped turn cannot). Both reset per dispatch alongside stderrTail.
+    try {
+      if (o.type === "rate_limit_event" && o.rate_limit_info && typeof o.rate_limit_info === "object") {
+        turnRateLimitInfo = o.rate_limit_info;
+        persistRateLimit(o.rate_limit_info);
+      } else if (
+        o.type === "assistant" &&
+        Array.isArray(o.message?.content) &&
+        o.message.content.some((c) => c && c.type === "tool_use")
+      ) {
+        turnDidWork = true;
+      }
+    } catch {
+      /* never let a malformed structural signal crash the turn */
+    }
     if (o.type === "result") {
       const stopped = turnTermination;
       const verdict = o.result || "";
@@ -433,17 +463,56 @@ claude.stdout.on("data", (b) => {
       const provenance = turnProvenance();
       const provenanceWarn = provenanceWarning(provenance);
 
-      // Provider-limit guard: if this "result" IS a usage/limit banner (strict whole-result
-      // match only — the process is alive and exit-0 here, so the answer text itself is the
-      // ONLY admissible evidence), park claude and write an ERROR-shaped record with the loud
-      // replacement line — NEVER the banner as a verdict. Raw banner still logged for forensics.
-      const limitHit = LIMIT_ENABLED ? classifyProviderSignal(policy, { finalMessage: verdict }) : null;
-      if (limitHit) {
-        const { until } = policy.markDown("claude", limitHit.msg);
-        const errorKind = limitHit.kind === "auth" ? "provider-auth" : "provider-limit";
+      // Provider-limit guard (T2 classification ladder). STRUCTURAL evidence is PRIMARY; banner
+      // text drops to last-resort. `park` → an ERROR-shaped record replaces the verdict; a set
+      // `keepVerdictPark` (a real verdict from a turn that DID work) survives untouched but parks
+      // the provider for FUTURE asks. LIMIT_ENABLED gates the whole ladder; every parse is caught.
+      let park = null; // { msg, kind, signal } → error-shaped park
+      let keepVerdictPark = null; // { msg, signal } → verdict survives; park future asks only
+      if (LIMIT_ENABLED) {
+        try {
+          const rli = turnRateLimitInfo;
+          const status = rli && typeof rli.status === "string" ? rli.status.trim() : "";
+          if (status) {
+            // 1. PRIMARY — the CLI's own rate_limit_event. A refusal status is the strongest signal.
+            if (/reject|block|exceed|denied/i.test(status)) {
+              const type = rli.rateLimitType || "unknown";
+              const resetsAt = rli.resetsAt;
+              const hasEpoch = typeof resetsAt === "number" && /^\d{10}$/.test(String(resetsAt));
+              const msg = `rate_limit_event: status=${status} type=${type}` + (hasEpoch ? ` resets_at:${resetsAt}` : "");
+              // No real verdict (error/banner/empty/no-work) → error-shaped park; a real verdict from
+              // a turn that DID work → keep the verdict and park only the future.
+              const worthless = o.is_error === true || wholeResultBanner(verdict) || !verdict.trim() || !turnDidWork;
+              if (worthless) park = { msg, kind: "limit", signal: "rate_limit_event" };
+              else keepVerdictPark = { msg, signal: "rate_limit_event" };
+            } else if (/warn/i.test(status)) {
+              /* PROXIMITY (e.g. allowed_warning): never a park — persisted for the predictive item only. */
+            } else if (status !== "allowed") {
+              // unrecognized non-allowed status: forensics only, prefer false-negative per the doctrine.
+              log({ type: "rate-limit-status-unknown", ts: Date.now(), status });
+            }
+          }
+          // 2. SECONDARY — an error-shaped result is CLI failure output, so loose-scanning is admissible.
+          if (!park && !keepVerdictPark && (o.is_error === true || o.api_error_status === 429 || o.api_error_status === 529)) {
+            const msg = policy.extractFailure(String(verdict).slice(-4000));
+            const kind = msg ? policy.classify(msg)?.kind : null;
+            if (kind) park = { msg, kind, signal: "result-error" };
+          }
+          // 3. LAST-RESORT — whole-banner text, but a banner AFTER real tool work is an ordinary verdict.
+          if (!park && !keepVerdictPark && !turnDidWork) {
+            const hit = classifyProviderSignal(policy, { finalMessage: verdict });
+            if (hit) park = { msg: hit.msg, kind: hit.kind, signal: "banner" };
+          }
+        } catch {
+          /* an unclassifiable turn is never a park — fall through to the normal verdict */
+        }
+      }
+      if (park) {
+        const { until } = policy.markDown("claude", park.msg);
+        const errorKind = park.kind === "auth" ? "provider-auth" : "provider-limit";
         const alternates = policy.resolve("codex", tierOf());
         const iso = new Date(until).toISOString();
-        const loud = loudProviderLine("claude", limitHit, until, alternates);
+        const loud = loudProviderLine("claude", park, until, alternates);
         // Additive fields only — status stays within the frozen enum; wait/watch/ceerelay unaffected.
         const errRecord = {
           partner: "claude",
@@ -458,9 +527,10 @@ claude.stdout.on("data", (b) => {
           errorKind,
           provider: "claude",
           resetAt: until,
-          providerMessage: limitHit.msg.slice(0, 300),
+          providerMessage: park.msg.slice(0, 300),
+          limitSignal: park.signal,
           alternates,
-          error: `${errorKind === "provider-auth" ? "provider auth failure" : "provider usage limit"} on claude: ${limitHit.msg.slice(0, 300)} (resets ~${iso})`,
+          error: `${errorKind === "provider-auth" ? "provider auth failure" : "provider usage limit"} on claude: ${park.msg.slice(0, 300)} (resets ~${iso})`,
         };
         try {
           // LASTMSG must be the loud line, not the bare banner (this is what `result`/`status` echo).
@@ -480,13 +550,33 @@ claude.stdout.on("data", (b) => {
         curHoldLease = false;
         curControllerPid = 0;
         // forensics: keep the RAW banner in the timeline even though the verdict is replaced.
-        log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: verdict });
+        log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: park.kind, providerMessage: park.msg, raw: verdict, signal: park.signal });
         recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
         inTurn = false;
         if (!stopped) clearTurnSupervision();
         writeFileSync(STATUS, stopped ? "STOPPING" : "IDLE");
         console.log(`  ◂ turn PROVIDER-LIMIT (${dur}s): parked claude until ${iso}`);
         continue;
+      }
+
+      // A refusal signal alongside a REAL verdict from a turn that did work: keep the verdict, but
+      // park the provider so FUTURE asks fast-fail, and stamp the record so it tells both truths.
+      let verdictParkFields = null;
+      let verdictParkWarn = null;
+      if (keepVerdictPark) {
+        try {
+          const { until } = policy.markDown("claude", keepVerdictPark.msg);
+          const parkWarn = `provider limit signaled — claude parked until ${new Date(until).toISOString()}; future asks fast-fail until the reset`;
+          verdictParkWarn = provenanceWarn ? `${provenanceWarn}; ${parkWarn}` : parkWarn;
+          verdictParkFields = {
+            provider: "claude",
+            resetAt: until,
+            providerMessage: keepVerdictPark.msg.slice(0, 300),
+            limitSignal: keepVerdictPark.signal,
+          };
+        } catch {
+          /* a park that can't be recorded never destroys the verdict */
+        }
       }
 
       try {
@@ -500,7 +590,8 @@ claude.stdout.on("data", (b) => {
             verdict,
             lowContext: low,
             ...provenance,
-            warning: provenanceWarn || null,
+            ...(verdictParkFields || {}),
+            warning: verdictParkWarn || provenanceWarn || null,
           };
           if (curHoldLease) updateDispatch(curLease, { ...result, resultReady: true });
           else {
@@ -523,7 +614,8 @@ claude.stdout.on("data", (b) => {
               verdict,
               lowContext: low,
               ...provenance,
-              warning: provenanceWarn || null,
+              ...(verdictParkFields || {}),
+              warning: verdictParkWarn || provenanceWarn || null,
               error: stopped ? stopError(stopped) : undefined,
               termination: stopped,
               stalled: stopped?.kind === "stall",
@@ -580,9 +672,10 @@ claude.on("exit", (code) => {
       provider: "claude",
       resetAt: until,
       providerMessage: limitHit.msg.slice(0, 300),
+      limitSignal: "stderr",
       alternates: policy.resolve("codex", tierOf()),
     };
-    log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: "" });
+    log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: "", signal: "stderr" });
   }
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
@@ -704,6 +797,8 @@ setInterval(() => {
   clearTurnSupervision();
   stderrTail = ""; // fresh per turn so a prior turn's banner can't misclassify this one
   turnModelActual = ""; // reset per dispatch — never reuse a prior turn's proven model
+  turnRateLimitInfo = null; // structural limit evidence is per-turn — never carry a prior turn's event
+  turnDidWork = false; // reset the "this turn ran real work" witness per dispatch
   inTurn = true;
   turnStart = Date.now();
   turnLastActivity = turnStart;

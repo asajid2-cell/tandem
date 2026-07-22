@@ -9,6 +9,11 @@
 //                     the limit; others reply normally
 //   FAKE_VERDICT      override the result text verbatim (may be multi-line) — lets tests prove an
 //                     ANSWER that merely discusses limit banners never parks
+//   FAKE_RATE_LIMIT_STATUS  emit a rate_limit_event with this status (e.g. "rejected"/"allowed"/
+//                     "allowed_warning") BEFORE the reply every turn — the daemon's PRIMARY structural
+//                     signal; FAKE_RATE_LIMIT_RESETS_AT (epoch sec) + FAKE_RATE_LIMIT_TYPE tune it
+//   FAKE_TOOL_USE=1   the assistant event carries a tool_use item → the turn "did work" (a capped
+//                     turn cannot run tools), gating the did-work branch of the classifier
 
 // The exact strings the claude CLI surfaces on a capped subscription (see limit-policy.mjs header).
 const CLAUDE_SESSION_LIMIT = "You've hit your session limit · resets 3am (America/Edmonton)";
@@ -129,6 +134,22 @@ rl.on("line", (line) => {
   const limit429 = process.env.FAKE_LIMIT_429 === "1" && limitGate;
   const reply = () => {
     emitSession(); // daemon captures + records the pair
+    // FAKE_RATE_LIMIT_STATUS: the real claude stream carries a machine-readable rate_limit_event every
+    // turn. Emit one BEFORE the reply so the daemon's structural classifier sees it before the result.
+    if (process.env.FAKE_RATE_LIMIT_STATUS) {
+      process.stdout.write(
+        JSON.stringify({
+          type: "rate_limit_event",
+          rate_limit_info: {
+            status: process.env.FAKE_RATE_LIMIT_STATUS,
+            resetsAt: Number(process.env.FAKE_RATE_LIMIT_RESETS_AT) || Math.floor(Date.now() / 1000) + 7200,
+            rateLimitType: process.env.FAKE_RATE_LIMIT_TYPE || "five_hour",
+            overageStatus: "rejected",
+            isUsingOverage: false,
+          },
+        }) + "\n",
+      );
+    }
     const nested =
       process.env.FAKE_NESTED_ASK === "1" && task.includes("SPAWN-SUB-LANE") ? ` ${runNestedAsk()}` : "";
     // A capped subscription returns the banner (or the 429 JSON) as an ORDINARY exit-0 result —
@@ -140,9 +161,11 @@ rl.on("line", (line) => {
         : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
     // Provenance: the real claude stream stamps the model id on every assistant event. Emit one so
     // the daemon can prove modelActual (env FAKE_MODEL overrides). The daemon ignores unknown types,
-    // so this is harmless for every existing case.
+    // so this is harmless for every existing case. FAKE_TOOL_USE=1 folds a tool_use item into the
+    // SAME assistant event (model + tool_use) — the structural "this turn ran real work" witness.
+    const content = process.env.FAKE_TOOL_USE === "1" ? [{ type: "tool_use", name: "Bash", input: {} }] : [];
     process.stdout.write(
-      JSON.stringify({ type: "assistant", message: { model: process.env.FAKE_MODEL || "claude-opus-4-8", content: [] } }) + "\n",
+      JSON.stringify({ type: "assistant", message: { model: process.env.FAKE_MODEL || "claude-opus-4-8", content } }) + "\n",
     );
     process.stdout.write(
       JSON.stringify({
