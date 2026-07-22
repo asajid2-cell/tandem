@@ -53,6 +53,38 @@ export function requestGracefulStop(pid) {
   return signalProcessGroup(pid, "SIGTERM");
 }
 
+// The TRUTHFUL account of a graceful-stop attempt. requestGracefulStop returns only "did the call
+// succeed" — which on win32 conflates a taskkill exit status with the partner actually observing
+// anything, and it doesn't. This reports the channel plus two separate facts: callAccepted (the OS
+// accepted the stop call) and deliveryProven (we can PROVE the partner received the signal).
+//   win32: a non-forced `taskkill /T` posts WM_CLOSE to the target's windows, but a windowsHide
+//          console child has none — the post is a structural no-op, so delivery is NEVER provable.
+//   posix: a successful kill(2) genuinely delivers the signal, so deliveryProven === callAccepted.
+export function describeGracefulStop(pid) {
+  pid = Number(pid) || 0;
+  if (!pid) return { attempted: true, channel: "none", callAccepted: false, deliveryProven: false };
+  if (process.platform === "win32") {
+    const result = spawnSync("taskkill", ["/PID", String(pid), "/T"], {
+      windowsHide: true,
+      stdio: "ignore",
+    });
+    // callAccepted may be true (taskkill exited 0), but delivery to a hidden console child is unprovable.
+    return { attempted: true, channel: "taskkill-no-force", callAccepted: result.status === 0, deliveryProven: false };
+  }
+  // Prefer the process group so the whole partner tree gets SIGTERM; fall back to the direct pid.
+  try {
+    process.kill(-pid, "SIGTERM");
+    return { attempted: true, channel: "SIGTERM-group", callAccepted: true, deliveryProven: true };
+  } catch {
+    try {
+      process.kill(pid, "SIGTERM");
+      return { attempted: true, channel: "SIGTERM-pid", callAccepted: true, deliveryProven: true };
+    } catch {
+      return { attempted: true, channel: "none", callAccepted: false, deliveryProven: false };
+    }
+  }
+}
+
 export function hardKillProcessTree(pid) {
   pid = Number(pid) || 0;
   if (!pid) return false;

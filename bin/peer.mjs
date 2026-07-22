@@ -49,8 +49,8 @@ import {
   updateDispatch,
 } from "./jobs.mjs";
 import {
+  describeGracefulStop,
   hardKillProcessTree,
-  requestGracefulStop,
   supervisionDecision,
 } from "./process-control.mjs";
 import { attachLaneWorktree, ensureLaneWorktree, readLaneMetadata } from "./worktrees.mjs";
@@ -564,6 +564,18 @@ function codexLeaseHooks(lease, cfg) {
   };
 }
 
+// ONE truthful clause about the stop CHANNEL, derived from the termination record — never a guess
+// about what the partner did. deliveryProven distinguishes a signal we can PROVE was delivered
+// (posix kill) from one we cannot (win32 WM_CLOSE to a hidden console child); hardKilled says
+// whether the force tree-kill was actually needed. Absent record → a neutral, non-committal clause.
+function stopChannelClause(stop) {
+  if (!stop) return "a stop was requested before tree-kill";
+  const first = stop.stopDeliveryProven
+    ? "a non-forced stop was delivered first"
+    : "a non-forced stop was issued first (win32: delivery to a hidden console child is unprovable)";
+  return `${first}; hard tree-kill ${stop.hardKilled ? "followed" : "was not needed"}`;
+}
+
 function supervisedStopError(res) {
   const stop = res?.termination;
   if (!stop) return "";
@@ -571,9 +583,9 @@ function supervisedStopError(res) {
     ? `session ${res.codexId} remains coupled; continue resumes it warm`
     : "no session id was captured; inspect the turn log before continuing";
   if (stop.kind === "stall") {
-    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; graceful stop requested before tree-kill; ${warm}`;
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; ${stopChannelClause(stop)}; ${warm}`;
   }
-  return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; graceful stop requested before tree-kill; ${warm}`;
+  return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; ${stopChannelClause(stop)}; ${warm}`;
 }
 
 // ---- provider-limit awareness --------------------------------------------------------------
@@ -925,6 +937,7 @@ const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id �
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon
 const STATUS_FILE = join(STATE, "status.txt");
 const SERVE_PID = join(STATE, "serve.pid");
+const SERVE_BOUND = join(STATE, "serve.bound.json"); // the supervision/model values the daemon BOUND at startup
 const CLAUDE_PID_FILE = join(STATE, "claude.pid"); // daemon's claude child — powers the self-ask guard
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
@@ -1839,22 +1852,20 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
 
   // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
   let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
-  if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
+  // The session-persistence clause both supervised verdicts share (a stall/cap kill leaves the
+  // coupled session warm; if no id was captured the driver must inspect the log before continuing).
+  const warmClause = codexId
+    ? `Session ${codexId} is persisted; continue resumes it warm.`
+    : "No session id was captured; inspect the turn log before continuing.";
+  // A maxTurnSec (absolute) kill: state ONLY what the supervisor can know — the cap elapsed. Why it
+  // elapsed (oversized ask / spinning partner / idle-but-working) is UNKNOWABLE from here, so we no
+  // longer editorialize a cause. The stall branch below overwrites this when the kill was a stall.
+  if (killed) verdict = `(turn KILLED after ${dur}s at the maxTurnSec cap — the supervisor knows only that the cap elapsed, not why. Inspect the tree for partial edits; ${warmClause})`;
   if (termination?.kind === "stall") {
     verdict =
       `(turn STALLED/WEDGED after ${termination.idleSec}s with no partner activity. ` +
-      `A graceful stop was requested before hard tree-kill. ` +
-      (codexId
-        ? `Session ${codexId} is persisted; continue resumes it warm.`
-        : "No session id was captured; inspect the turn log before continuing.") +
-      ")";
-  } else if (termination?.kind === "absolute") {
-    verdict =
-      `(turn stopped at the optional maxTurnSec backstop after ${termination.elapsedSec}s. ` +
-      `A graceful stop was requested before hard tree-kill. ` +
-      (codexId
-        ? `Session ${codexId} is persisted; continue resumes it warm.`
-        : "No session id was captured; inspect the turn log before continuing.") +
+      `${stopChannelClause(termination)}. ` +
+      warmClause +
       ")";
   }
   const d = digest(out);
@@ -2042,11 +2053,21 @@ function runCodex(
         triggeredTs: now,
         graceSec,
         gracefulAttempted: true,
+        // The stop CHANNEL, described truthfully (see describeGracefulStop). Populated after the
+        // onTermination notify so a persisted terminationPending never claims more than it knows.
+        stopChannel: "",
+        stopCallAccepted: false,
+        stopDeliveryProven: false,
+        // Kept for backward compat: the channel CALL succeeded — NOT proof the partner observed it.
         gracefulSignalAccepted: false,
         hardKilled: false,
       };
       invoke(onTermination, termination);
-      termination.gracefulSignalAccepted = requestGracefulStop(child.pid);
+      const stop = describeGracefulStop(child.pid);
+      termination.stopChannel = stop.channel;
+      termination.stopCallAccepted = stop.callAccepted;
+      termination.stopDeliveryProven = stop.deliveryProven;
+      termination.gracefulSignalAccepted = stop.callAccepted;
       if (graceSec > 0) {
         hardStopTimer = setTimeout(hardStop, graceSec * 1000);
       } else {
@@ -2212,6 +2233,32 @@ function status(cfg) {
     `supervision: stall ${cfg.stallSec > 0 ? `${cfg.stallSec}s` : "off"} | absolute max ${cfg.maxTurnSec > 0 ? `${cfg.maxTurnSec}s` : "off"}`,
   );
   console.log(`lane: ${laneName}`);
+  // Bound-config visibility: a LIVE serve daemon enforces the supervision windows + model/effort it
+  // BOUND at startup, NOT whatever tandem.config.json says now — `maxTurnSec:0` in the config changes
+  // nothing for a running daemon. Surface what it bound, and DRIFT loudly per field when the config
+  // has since diverged. A bound file whose pid isn't the live daemon (a crashed daemon) is ignored so
+  // it can't paint drift onto a fresh one. All reads are try/caught — status must never crash.
+  if (cfg.partner === "claude") {
+    try {
+      const servePid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+      const bound = servePid && isPidAlive(servePid) && existsSync(SERVE_BOUND) ? JSON.parse(readFileSync(SERVE_BOUND, "utf8")) : null;
+      if (bound && Number(bound.pid) === servePid) {
+        console.log(
+          `daemon: pid ${servePid} | bound stall ${bound.stallSec}s | bound max ${bound.maxTurnSec}s | bound model ${bound.model || "(cli default)"} (${bound.effort || "-"})`,
+        );
+        const drift = [];
+        if (Number(bound.stallSec) !== Number(cfg.stallSec)) drift.push(`stallSec ${bound.stallSec} != config ${cfg.stallSec}`);
+        if (Number(bound.maxTurnSec) !== Number(cfg.maxTurnSec)) drift.push(`maxTurnSec ${bound.maxTurnSec} != config ${cfg.maxTurnSec}`);
+        if ((bound.model || "") !== (cfg.claudeModel || "")) drift.push(`model ${bound.model || "(cli default)"} != config ${cfg.claudeModel || "(cli default)"}`);
+        if ((bound.effort || "") !== (cfg.claudeEffort || "")) drift.push(`effort ${bound.effort || "-"} != config ${cfg.claudeEffort || "-"}`);
+        for (const d of drift) {
+          console.log(`daemon DRIFT: bound ${d} — the daemon keeps enforcing its startup values; \`peer.mjs stop\` then re-ask to apply the current config`);
+        }
+      }
+    } catch {
+      /* bound-config visibility is best-effort — never crash the status command */
+    }
+  }
   const j = jobState(cfg);
   if (j) {
     const age = j.elapsedSec ?? Math.max(0, Math.round((Date.now() - (j.startedTs || j.ts || Date.now())) / 1000));

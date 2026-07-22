@@ -31,8 +31,8 @@ import {
   updateDispatch,
 } from "./jobs.mjs";
 import {
+  describeGracefulStop,
   hardKillProcessTree,
-  requestGracefulStop,
   supervisionDecision,
 } from "./process-control.mjs";
 
@@ -44,6 +44,7 @@ const INBOX = join(STATE, "inbox.txt");
 const STATUS = join(STATE, "status.txt");
 const TURNLOG = join(STATE, "turn.jsonl");
 const PID = join(STATE, "serve.pid");
+const BOUND = join(STATE, "serve.bound.json"); // the supervision/model values this daemon bound at startup
 const PARTNER_PID = join(STATE, "claude.pid"); // the claude child — lets a nested peer.mjs detect a self-ask
 const CLAUDE_SESSION = join(STATE, "claude.session");
 const TANDEM_LOG = join(STATE, "tandem.log.jsonl");
@@ -259,6 +260,28 @@ const claude = spawn(bin, args, {
   detached: process.platform !== "win32",
 });
 writeFileSync(STATUS, "STARTING");
+// Bound-config visibility: record the supervision windows + model/effort this daemon BOUND at
+// startup. A running daemon keeps enforcing these until it is stopped and re-asked — editing
+// tandem.config.json changes nothing for it — so `peer.mjs status` reads this to reveal DRIFT.
+// Best-effort (try/caught): a visibility file must never block the daemon from coming up.
+try {
+  writeFileSync(
+    BOUND,
+    JSON.stringify({
+      pid: process.pid,
+      startedTs: Date.now(),
+      stallSec: STALL_SEC,
+      maxTurnSec: MAX_TURN_SEC,
+      stopGraceSec: STOP_GRACE_SEC,
+      model: claudeModel,
+      effort: claudeEffort,
+      bin,
+      cwd,
+    }),
+  );
+} catch {
+  /* visibility only */
+}
 
 let buf = "";
 let turnStart = 0;
@@ -294,14 +317,26 @@ function turnProvenance() {
   };
 }
 
+// ONE truthful clause about the stop CHANNEL, derived from the termination record — never a guess
+// about partner behavior. deliveryProven separates a signal we can PROVE was delivered (posix kill)
+// from one we cannot (win32 WM_CLOSE to a hidden console child); hardKilled says whether the force
+// tree-kill was actually needed. Absent record → a neutral, non-committal clause.
+function stopChannelClause(stop) {
+  if (!stop) return "a stop was requested before tree-kill";
+  const first = stop.stopDeliveryProven
+    ? "a non-forced stop was delivered first"
+    : "a non-forced stop was issued first (win32: delivery to a hidden console child is unprovable)";
+  return `${first}; hard tree-kill ${stop.hardKilled ? "followed" : "was not needed"}`;
+}
+
 function stopError(stop) {
   const warm = sessionId
     ? `session ${sessionId} remains persisted; the next ask resumes it warm`
     : "no session id was captured; inspect the turn log before continuing";
   if (stop?.kind === "stall") {
-    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; graceful stop requested before tree-kill; ${warm}`;
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; ${stopChannelClause(stop)}; ${warm}`;
   }
-  return `turn stopped at the optional maxTurnSec backstop after ${stop?.elapsedSec || 0}s; graceful stop requested before tree-kill; ${warm}`;
+  return `turn stopped at the optional maxTurnSec backstop after ${stop?.elapsedSec || 0}s; ${stopChannelClause(stop)}; ${warm}`;
 }
 
 function clearTurnSupervision() {
@@ -331,12 +366,18 @@ function noteTurnActivity(kind) {
 function beginTurnStop(decision) {
   if (!inTurn || turnTermination || terminalHandled || !claude.pid) return;
   const now = Date.now();
+  const stop = describeGracefulStop(claude.pid);
   turnTermination = {
     ...decision,
     triggeredTs: now,
     graceSec: STOP_GRACE_SEC,
     gracefulAttempted: true,
-    gracefulSignalAccepted: requestGracefulStop(claude.pid),
+    // The stop CHANNEL, described truthfully (see describeGracefulStop).
+    stopChannel: stop.channel,
+    stopCallAccepted: stop.callAccepted,
+    stopDeliveryProven: stop.deliveryProven,
+    // Kept for backward compat: the channel CALL succeeded — NOT proof the partner observed it.
+    gracefulSignalAccepted: stop.callAccepted,
     hardKilled: false,
   };
   if (curLease) updateDispatch(curLease, { terminationPending: turnTermination });
@@ -712,6 +753,11 @@ function cleanup() {
   clearTurnSupervision();
   try {
     rmSync(PID);
+  } catch {
+    /* ignore */
+  }
+  try {
+    rmSync(BOUND);
   } catch {
     /* ignore */
   }
