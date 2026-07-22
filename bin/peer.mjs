@@ -187,6 +187,12 @@ function loadConfig() {
     // Stop only after a full quiet window; output and tool events refresh activity. The optional
     // absolute backstop is off by default. Both paths request graceful shutdown before tree-kill.
     stallSec: 240,
+    // A single codex tool call (a build, a test suite, an install) emits NOTHING on the --json
+    // stream while it runs, so to the raw stall clock it is indistinguishable from a wedge. While a
+    // command_execution item is open the stall clock is SUSPENDED (see runCodex); toolMaxSec bounds
+    // how long one such open tool may run before it is treated as a wedge. 0 = unbounded tools
+    // (suspension still applies). Env TANDEM_TOOL_MAX_SEC > config key toolMaxSec > this default.
+    toolMaxSec: 1800,
     maxTurnSec: 0,
     stopGraceSec: 5,
     // A live worker writes an independent heartbeat. If the PID dies, status reports WEDGED
@@ -262,10 +268,12 @@ function loadConfig() {
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_STALL_SEC !== undefined) cfg.stallSec = Number(process.env.TANDEM_STALL_SEC) || 0;
+  if (process.env.TANDEM_TOOL_MAX_SEC !== undefined) cfg.toolMaxSec = Number(process.env.TANDEM_TOOL_MAX_SEC) || 0;
   if (process.env.TANDEM_MAX_TURN_SEC !== undefined) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
   if (process.env.TANDEM_STOP_GRACE_SEC !== undefined) cfg.stopGraceSec = Number(process.env.TANDEM_STOP_GRACE_SEC) || 0;
   if (process.env.TANDEM_WEDGE_AFTER_SEC !== undefined) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
   cfg.stallSec = Math.max(0, Number(cfg.stallSec) || 0);
+  cfg.toolMaxSec = Math.max(0, Number(cfg.toolMaxSec) || 0);
   cfg.maxTurnSec = Math.max(0, Number(cfg.maxTurnSec) || 0);
   cfg.stopGraceSec = Math.max(0, Number(cfg.stopGraceSec) || 0);
   cfg.wedgeAfterSec = Math.max(0, Number(cfg.wedgeAfterSec) || 0);
@@ -584,6 +592,9 @@ function supervisedStopError(res) {
     : "no session id was captured; inspect the turn log before continuing";
   if (stop.kind === "stall") {
     return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; ${stopChannelClause(stop)}; ${warm}`;
+  }
+  if (stop.kind === "tool-timeout") {
+    return `turn stopped: a single tool call ran ${stop.toolSec}s, past the toolMaxSec bound; ${stopChannelClause(stop)}; ${warm}`;
   }
   return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; ${stopChannelClause(stop)}; ${warm}`;
 }
@@ -1823,6 +1834,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   } = await runCodex(cfg.codexBin, args, dispatchedTask, {
     stallSec: cfg.stallSec || 0,
     maxSec: cfg.maxTurnSec || 0,
+    toolMaxSec: cfg.toolMaxSec || 0,
     graceSec: cfg.stopGraceSec ?? 5,
     onSpawn: hooks.onSpawn,
     onActivity: hooks.onActivity,
@@ -1865,6 +1877,14 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
     verdict =
       `(turn STALLED/WEDGED after ${termination.idleSec}s with no partner activity. ` +
       `${stopChannelClause(termination)}. ` +
+      warmClause +
+      ")";
+  }
+  // A single tool call outran the toolMaxSec bound: the stall clock was suspended (a silent open
+  // tool is legitimate work, not a wedge), so state ONLY the fact — this one tool ran past its bound.
+  if (termination?.kind === "tool-timeout") {
+    verdict =
+      `(turn stopped: a single tool call ran ${termination.toolSec}s, past the toolMaxSec bound (${cfg.toolMaxSec}s). ` +
       warmClause +
       ")";
   }
@@ -1999,6 +2019,7 @@ function runCodex(
   {
     stallSec = 0,
     maxSec = 0,
+    toolMaxSec = 0,
     graceSec = 5,
     onSpawn,
     onActivity,
@@ -2021,6 +2042,13 @@ function runCodex(
     let settled = false;
     const startedAt = Date.now();
     let lastActivityAt = startedAt;
+    // Codex emits NOTHING on the --json stream while one tool call (a command_execution item) runs,
+    // so a long-but-legitimate build/test/install is indistinguishable from a wedge to the raw stall
+    // clock. We line-buffer stdout to track OPEN tool items (item.started … item.completed/failed);
+    // while any is open the stall clock is suspended (only the absolute cap fires) and toolMaxSec
+    // bounds a single tool. This never disturbs the raw `stdout` accumulation or the TURNLOG write.
+    const openItems = new Map(); // open item id → observed-start ms
+    let toolLineBuf = ""; // partial trailing line carried between stdout chunks
 
     const invoke = (fn, value) => {
       if (!fn) return;
@@ -2033,6 +2061,41 @@ function runCodex(
     const noteActivity = (kind, bytes = 0) => {
       lastActivityAt = Date.now();
       invoke(onActivity, { ts: lastActivityAt, kind, bytes });
+    };
+    // Parse only COMPLETE stdout lines to track open command_execution items. Every parse is
+    // guarded; a partial/non-JSON line, a malformed record, or an unknown id is ignored. Fed from
+    // the stdout handler AFTER the raw append, so it can never disturb the captured stream.
+    const trackToolItems = (text) => {
+      toolLineBuf += text;
+      let nl;
+      while ((nl = toolLineBuf.indexOf("\n")) >= 0) {
+        const line = toolLineBuf.slice(0, nl).trim();
+        toolLineBuf = toolLineBuf.slice(nl + 1);
+        if (!line.startsWith("{")) continue;
+        let o;
+        try {
+          o = JSON.parse(line);
+        } catch {
+          continue; // not a complete JSON record — ignore
+        }
+        try {
+          // Track ONLY by the item's real id. codex exec --json always stamps a command_execution
+          // item with an id (e.g. "item_0"); we deliberately invent NO fallback key for a (never-
+          // observed) id-less item, because two id-less items would both collapse onto one key and a
+          // single close would then drop BOTH from the open-count — prematurely resuming the stall
+          // clock on a tool still running. An untrackable item is simply not tracked (honest: its
+          // lifecycle is unprovable), never miscounted. A completed id we never saw started is a
+          // harmless no-op delete.
+          const id = o.item?.id;
+          const hasId = (typeof id === "string" && id !== "") || typeof id === "number";
+          if (hasId && o.item?.type === "command_execution") {
+            if (o.type === "item.started") openItems.set(id, Date.now());
+            else if (o.type === "item.completed" || o.type === "item.failed") openItems.delete(id);
+          }
+        } catch {
+          /* observing tool boundaries must never take down the supervised partner */
+        }
+      }
     };
     const settle = (value) => {
       if (settled) return;
@@ -2106,12 +2169,39 @@ function runCodex(
       });
     });
 
-    const enabledWindows = [stallSec, maxSec].filter((seconds) => seconds > 0);
+    // toolMaxSec is an INDEPENDENT bound: it must be able to fire even when stall detection and the
+    // absolute cap are both disabled (a user who sets stallSec:0 to never idle-kill can still want a
+    // silent tool bounded). If it were omitted here the supervisor loop would never start and the
+    // tool bound would be silently unenforced. It also tightens checkMs when it is the only window.
+    const enabledWindows = [stallSec, maxSec, toolMaxSec].filter((seconds) => seconds > 0);
     if (enabledWindows.length) {
       const checkMs = Math.max(20, Math.min(250, ...enabledWindows.map((seconds) => (seconds * 1000) / 4)));
       supervisorTimer = setInterval(() => {
         if (termination || settled) return;
         const now = Date.now();
+        if (openItems.size > 0) {
+          // A codex tool call is legitimately open (a build/test can run silently for minutes). The
+          // raw stall clock is SUSPENDED — the ordinary stall check is skipped by passing stallSec:0,
+          // so only toolMaxSec (this single tool) and the absolute maxSec cap may fire. Refresh the
+          // driver-side job record each tick (kind "tool-open", throttled in codexLeaseHooks) so a
+          // silent-but-working tool is never painted WEDGED by inspectDispatch's activity heuristic.
+          let oldestStart = Infinity;
+          for (const startTs of openItems.values()) if (startTs < oldestStart) oldestStart = startTs;
+          const toolElapsedMs = Math.max(0, now - oldestStart);
+          if (toolMaxSec > 0 && toolElapsedMs >= toolMaxSec * 1000) {
+            beginStop({
+              kind: "tool-timeout",
+              elapsedSec: Number(((now - startedAt) / 1000).toFixed(3)),
+              idleSec: Number(((now - lastActivityAt) / 1000).toFixed(3)),
+              toolSec: Math.round(toolElapsedMs / 1000),
+            });
+            return;
+          }
+          invoke(onActivity, { ts: now, kind: "tool-open", bytes: 0 });
+          const capOnly = supervisionDecision({ now, startedAt, lastActivityAt, stallSec: 0, maxSec });
+          if (capOnly) beginStop(capOnly);
+          return;
+        }
         const decision = supervisionDecision({
           now,
           startedAt,
@@ -2133,6 +2223,7 @@ function runCodex(
       } catch {
         /* ignore */
       }
+      trackToolItems(text); // track open command_execution items → stall-clock suspension
     });
     child.stderr.on("data", (b) => {
       stderr += b.toString();

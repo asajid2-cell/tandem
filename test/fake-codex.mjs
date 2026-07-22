@@ -18,6 +18,12 @@
 //                        lets tests prove an ANSWER that merely discusses limit banners never parks
 //   FAKE_STDERR_NOISE=1  write a transient 429 retry notice to stderr but SUCCEED (exit 0) — the
 //                        shape both real CLIs produce when a rate-limited request retries and lands
+//   FAKE_TOOL_OPEN_MS=<ms> after the session lines, emit an item.started for a command_execution
+//                        (id "item_0"), stay SILENT for <ms>, then emit the matching item.completed —
+//                        the real "a single tool call emits nothing while it runs" shape. Then the
+//                        normal final lines (verdict etc.), unless FAKE_HANG_AFTER_TOOL is set.
+//   FAKE_HANG_AFTER_TOOL=1 (only with FAKE_TOOL_OPEN_MS) after item.completed, hang forever instead
+//                        of finishing — proves the stall clock RESUMES once the open tool closes
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -168,10 +174,34 @@ for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
 const streamIntervalMs = Number(process.env.FAKE_STREAM_INTERVAL_MS) || 0;
 const streamCount = Math.max(0, Number(process.env.FAKE_STREAM_COUNT) || 0);
 const delay = Number(process.env.FAKE_DELAY) || 0; // let concurrent turns genuinely overlap in tests
+const toolOpenMs = Number(process.env.FAKE_TOOL_OPEN_MS) || 0; // a silent open tool call → stall-suspension tests
 
 if (process.env.FAKE_HANG_AFTER_SESSION === "1") {
   writeLines(sessionLines);
   setInterval(() => {}, 1000);
+} else if (toolOpenMs > 0) {
+  // One codex tool call that emits NOTHING while it runs: item.started, SILENCE for toolOpenMs, then
+  // item.completed. The event shapes mirror real `codex exec --json` command executions so peer.mjs's
+  // stall-clock suspension is exercised with no real tool, no model, no cost.
+  writeLines(sessionLines);
+  writeLines([
+    JSON.stringify({
+      type: "item.started",
+      item: { id: "item_0", type: "command_execution", command: "long-running-tool", aggregated_output: "", exit_code: null },
+    }),
+  ]);
+  setTimeout(() => {
+    writeLines([
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "item_0", type: "command_execution", command: "long-running-tool", exit_code: 0 },
+      }),
+    ]);
+    // The open tool has closed. FAKE_HANG_AFTER_TOOL proves the stall clock RESUMES: hang forever now
+    // and the ordinary stall guard must trip. Otherwise finish the turn normally.
+    if (process.env.FAKE_HANG_AFTER_TOOL === "1") setInterval(() => {}, 1000);
+    else finish();
+  }, toolOpenMs);
 } else if (streamIntervalMs > 0 && streamCount > 0) {
   writeLines(sessionLines);
   let emitted = 0;
