@@ -38,6 +38,7 @@ export function createProviderPolicy({
   usageProbe = {},          // model -> shell cmd string OR async function returning number | {remaining, asof}
   disabledProviders = [],
   deepNoDegrade = false,
+  deepFableOnly = false,    // deep runs on the PREFERRED family's deep model (fable) only — no cross-family reroute, no step-down
   now = Date.now,
   log = () => {},
 } = {}) {
@@ -156,12 +157,20 @@ export function createProviderPolicy({
     // a lesser model, trusted as the deep result, is a correctness failure. When noDegrade holds
     // (default: deepNoDegrade && the wanted tier is deep) do NOT step down the ladder — if no
     // deep-capable model is available, return null (→ the caller pauses; retries at reset).
-    const nd = (noDegrade !== undefined) ? noDegrade : (deepNoDegrade && (wantTier || 'default') === 'deep');
+    // deepFableOnly pins a DEEP assignment to the preferred family's deep model (fable) and nothing
+    // else: the cross-family codex-deep reroute is skipped AND the tier never steps down, so an
+    // unavailable fable resolves to null — the caller PAUSES the deep node rather than accepting a
+    // lesser mind. Off by default, so every other campaign keeps the full redundancy ladder.
+    const fableOnly = deepFableOnly && (wantTier || 'default') === 'deep';
+    const nd = fableOnly
+      ? true
+      : ((noDegrade !== undefined) ? noDegrade : (deepNoDegrade && (wantTier || 'default') === 'deep'));
     const end = nd ? start : TIER_LADDER.length - 1;
+    const ladder = fableOnly ? [primary] : [primary, altFamily(primary)];
     const held = heldModels();
     for (let i = start; i <= end; i++) {
       const tier = TIER_LADDER[i];
-      for (const family of [primary, altFamily(primary)]) {
+      for (const family of ladder) {
         if (disabled.has(family)) continue;         // never route to a disabled/signed-out provider
         const spec = tierSpec(family, tier);
         const model = spec.model;
