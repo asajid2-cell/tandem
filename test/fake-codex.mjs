@@ -7,6 +7,10 @@
 //   FAKE_SID            force the fresh session id (otherwise a random uuid)
 //   FAKE_STREAM_INTERVAL_MS / FAKE_STREAM_COUNT emit periodic tool activity before the verdict
 //   FAKE_HANG_AFTER_SESSION=1 emit the session id, then stay silent until tandem stops the process
+//   FAKE_HANG_MATCH      (with FAKE_HANG_AFTER_SESSION) hang ONLY when the task text includes this
+//                        string — pins the hang to one turn so a follow-up (e.g. the T5 progress-
+//                        capture prompt) on the same session is answered normally. Unset = the
+//                        current unconditional hang, so every existing test keeps its behavior.
 //   FAKE_SIGNAL_FILE     record a graceful signal observed by the fake
 //   FAKE_LIMIT=1         the agent_message AND the -o file become the REAL codex usage-limit string
 //                        (with a reset datetime ~25h in the future, so parseResetTime lands ahead)
@@ -176,7 +180,9 @@ const streamCount = Math.max(0, Number(process.env.FAKE_STREAM_COUNT) || 0);
 const delay = Number(process.env.FAKE_DELAY) || 0; // let concurrent turns genuinely overlap in tests
 const toolOpenMs = Number(process.env.FAKE_TOOL_OPEN_MS) || 0; // a silent open tool call → stall-suspension tests
 
-if (process.env.FAKE_HANG_AFTER_SESSION === "1") {
+const hangMatch = process.env.FAKE_HANG_MATCH || "";
+const shouldHang = process.env.FAKE_HANG_AFTER_SESSION === "1" && (!hangMatch || task.includes(hangMatch));
+if (shouldHang) {
   writeLines(sessionLines);
   setInterval(() => {}, 1000);
 } else if (toolOpenMs > 0) {

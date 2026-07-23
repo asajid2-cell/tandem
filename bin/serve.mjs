@@ -31,6 +31,7 @@ import {
   updateDispatch,
 } from "./jobs.mjs";
 import {
+  CAPTURE_PROMPT,
   describeGracefulStop,
   hardKillProcessTree,
   supervisionDecision,
@@ -75,6 +76,20 @@ const INTERRUPT_GRACE_SEC =
   process.env.TANDEM_INTERRUPT_GRACE_SEC !== undefined
     ? Math.max(0, Number(process.env.TANDEM_INTERRUPT_GRACE_SEC) || 0)
     : Math.max(0, Number(cfg().interruptGraceSec ?? 75) || 0);
+// T5 progress capture: a CHECKPOINTED stop (T4) leaves the partner alive with the stopped turn's
+// partial work in its warm context. Before finishing the dispatch, run ONE bounded follow-up turn
+// on that same warm session asking for a factual progress report, and attach it ADDITIVELY to the
+// job record the driver is waiting on. Capture happens only when the partner survived (a hard-killed
+// partner has no session to ask); a capture that itself stalls/errors is recorded ok:false and is
+// NEVER retried — structural, not judgment: the capture path cannot re-enter itself.
+const CAPTURE_ON_STOP =
+  process.env.TANDEM_CAPTURE_ON_STOP !== undefined
+    ? process.env.TANDEM_CAPTURE_ON_STOP !== "0"
+    : cfg().captureOnStop !== false;
+const CAPTURE_MAX_SEC =
+  process.env.TANDEM_CAPTURE_MAX_SEC !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_CAPTURE_MAX_SEC) || 0)
+    : Math.max(0, Number(cfg().captureMaxSec ?? 90) || 0);
 const ACTIVITY_PERSIST_MS = Math.max(
   20,
   Math.min(1000, STALL_SEC > 0 ? (STALL_SEC * 1000) / 4 : 1000),
@@ -283,6 +298,8 @@ try {
       maxTurnSec: MAX_TURN_SEC,
       stopGraceSec: STOP_GRACE_SEC,
       interruptGraceSec: INTERRUPT_GRACE_SEC,
+      captureOnStop: CAPTURE_ON_STOP,
+      captureMaxSec: CAPTURE_MAX_SEC,
       model: claudeModel,
       effort: claudeEffort,
       bin,
@@ -314,6 +331,43 @@ let turnDidWork = false; // a tool_use appeared this turn → the turn executed 
 let turnTermination = null;
 let turnHardStopTimer = null;
 let supervisionTimer = null;
+// T5: non-null while the ONE bounded post-checkpoint capture turn is in flight. Holds the stopped
+// turn's fully-built (but unwritten) job record plus the deferred output targets, so the capture's
+// outcome can be attached ADDITIVELY before the single finishDispatch the driver is waiting on.
+// While set, inTurn stays true (the inbox loop cannot race a new ask into the capture) and the
+// result handler routes the next `result` event here instead of the normal turn path.
+let capture = null;
+
+// The single exit point of a capture: write the stopped turn's record with the capture outcome
+// attached, release the lease/heartbeat, and return the daemon to a clean IDLE. `capture` is nulled
+// FIRST so no ordering (timer, exit, second result) can finalize twice.
+function finishWithCapture(progressCapture) {
+  const c = capture;
+  if (!c) return;
+  capture = null;
+  if (c.capTimer) clearTimeout(c.capTimer);
+  try {
+    if (!c.lease || leaseIsOwned(c.lease)) writeFileSync(c.last, c.verdict);
+    if (c.lease) finishDispatch(c.lease, { ...c.record, progressCapture });
+    else writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture, ts: Date.now() }));
+  } catch {
+    /* ignore — same tolerance as the normal finish path */
+  }
+  if (stopTurnHeartbeat) stopTurnHeartbeat();
+  stopTurnHeartbeat = null;
+  curLease = null;
+  curHoldLease = false;
+  curControllerPid = 0;
+  log({ type: "progress-capture", ts: Date.now(), partner: "claude", ok: !!progressCapture.ok, durSec: progressCapture.durSec || 0, error: progressCapture.error || null });
+  inTurn = false;
+  clearTurnSupervision();
+  writeFileSync(STATUS, "IDLE");
+  console.log(
+    progressCapture.ok
+      ? `  ◂ progress captured (${progressCapture.durSec || 0}s) — recovery report attached to the stopped turn's record`
+      : `  ◂ progress capture failed: ${progressCapture.error || "unknown"}`,
+  );
+}
 
 // Provenance fields for the current turn: what tandem asked the CLI to run (claudeModel/claudeEffort,
 // bound at daemon start) vs what the stream proved (turnModelActual). The claude stream carries no
@@ -580,6 +634,33 @@ claude.stdout.on("data", (b) => {
       }
       continue;
     }
+    if (o.type === "result" && capture) {
+      // The CAPTURE turn's terminal result. This routes BEFORE the normal turn path (and before the
+      // provider-limit ladder — the light banner check below is the only classification a capture
+      // needs: a banner answer parks the provider and fails the capture, never poses as progress).
+      const capStopped = turnTermination; // set only if the capture turn was itself supervision-stopped
+      if (capStopped && capStopped.hardStopFired) continue; // backstop already fired — the exit handler owns the record (mirrors T4)
+      const capVerdict = o.result || "";
+      const capDur = Math.round((Date.now() - capture.startedTs) / 1000);
+      let pc;
+      const banner = LIMIT_ENABLED && !capStopped && wholeResultBanner(capVerdict);
+      if (capStopped) {
+        pc = { attempted: true, ok: false, durSec: capDur, error: `the capture turn was itself stopped (${capStopped.kind}) after ${capDur}s` };
+      } else if (banner) {
+        try {
+          policy.markDown("claude", capVerdict.trim());
+        } catch {
+          /* a park that can't be recorded never hides the capture failure */
+        }
+        pc = { attempted: true, ok: false, durSec: capDur, error: `provider limit during the capture turn: ${capVerdict.trim().slice(0, 200)}` };
+      } else if (o.is_error === true || !capVerdict.trim()) {
+        pc = { attempted: true, ok: false, durSec: capDur, error: o.is_error === true ? "the capture turn returned an error result" : "the capture turn returned an empty answer" };
+      } else {
+        pc = { attempted: true, ok: true, durSec: capDur, verdict: capVerdict };
+      }
+      finishWithCapture(pc);
+      continue;
+    }
     if (o.type === "result") {
       const stopped = turnTermination;
       // CHECKPOINT: a stream-json interrupt produced this terminal result BEFORE the hard-kill
@@ -720,6 +801,74 @@ claude.stdout.on("data", (b) => {
         }
       }
 
+      // T5: a CHECKPOINTED stop leaves the partner ALIVE with the stopped turn's work in its warm
+      // context — capture progress BEFORE finishing the dispatch, so the record the driver is
+      // waiting on already carries the recovery report. Held-lease (compact) dispatches are
+      // excluded: their controller polls resultReady and owns the outcome. The stopped turn's
+      // side effects (usage, group, verdict log) happen HERE; only the record write is deferred.
+      if (checkpoint && !curHoldLease && CAPTURE_ON_STOP) {
+        const record = {
+          partner: "claude",
+          workerPid: process.pid,
+          partnerPid: claude.pid || 0,
+          durSec: dur,
+          verdict,
+          lowContext: low,
+          ...provenance,
+          ...(verdictParkFields || {}),
+          warning: verdictParkWarn || provenanceWarn || null,
+          status: "error",
+          error: checkpointError(stopped),
+          termination: stopped,
+          terminationPending: null,
+          stalled: stopped?.kind === "stall",
+        };
+        // curLease may be null (legacy bare-text dispatch) — the deferred write then targets curJob.
+        capture = { lease: curLease, job: curJob, last: curLast, verdict, record, startedTs: Date.now(), capTimer: null };
+        log({ type: "verdict", ts: Date.now(), partner: "claude", durSec: dur, verdict });
+        if (low) console.log(low);
+        recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
+        // Supervise the capture like any turn: reset the clocks so the global stall/max windows
+        // measure the CAPTURE turn, plus its own absolute captureMaxSec bound. inTurn stays true,
+        // so the inbox loop cannot race a queued ask into the middle of the capture. STATUS stays
+        // RUNNING — deliberately NOT a new state: ensureClaudeDaemon treats only IDLE/RUNNING as a
+        // ready daemon, and the daemon IS mid-turn.
+        clearTurnSupervision();
+        turnStart = Date.now();
+        turnLastActivity = turnStart;
+        capture.startedTs = turnStart;
+        stderrTail = ""; // per-turn resets, same as a dispatch — a prior turn's signals never bleed in
+        turnModelActual = "";
+        turnRateLimitInfo = null;
+        turnDidWork = false;
+        console.log(`  ◂ turn CHECKPOINTED (${dur}s) — capturing progress from the warm session (bounded ${CAPTURE_MAX_SEC > 0 ? CAPTURE_MAX_SEC + "s" : "by the lane windows only"})`);
+        if (CAPTURE_MAX_SEC > 0) {
+          capture.capTimer = setTimeout(() => {
+            // The capture's own absolute bound. beginTurnStop re-guards on turnTermination; the
+            // resulting interrupt flows back through the capture-result intercept as ok:false.
+            if (!capture || turnTermination) return;
+            beginTurnStop({
+              kind: "capture-max",
+              elapsedSec: Number(((Date.now() - turnStart) / 1000).toFixed(3)),
+              idleSec: Number(((Date.now() - turnLastActivity) / 1000).toFixed(3)),
+            });
+          }, CAPTURE_MAX_SEC * 1000);
+        }
+        try {
+          claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: CAPTURE_PROMPT }] } }) + "\n");
+        } catch {
+          finishWithCapture({ attempted: true, ok: false, error: "the partner's stdin was gone before the capture prompt could be written" });
+        }
+        continue;
+      }
+      // Stopped turns that CANNOT capture say why, additively; successful turns carry nothing new.
+      const progressCaptureNote = !stopped
+        ? null
+        : !checkpoint
+          ? { attempted: false, reason: "the partner was hard-killed — no warm session to capture from" }
+          : curHoldLease
+            ? { attempted: false, reason: "held-lease dispatch — the controller owns the outcome" }
+            : { attempted: false, reason: "captureOnStop disabled" };
       try {
         if (!curHoldLease && (!curLease || leaseIsOwned(curLease))) writeFileSync(curLast, verdict);
         if (curLease) {
@@ -743,6 +892,7 @@ claude.stdout.on("data", (b) => {
               termination: stopped,
               terminationPending: null,
               stalled: stopped?.kind === "stall",
+              ...(progressCaptureNote ? { progressCapture: progressCaptureNote } : {}),
             });
           }
         } else {
@@ -760,6 +910,7 @@ claude.stdout.on("data", (b) => {
               error: stopped ? (checkpoint ? checkpointError(stopped) : stopError(stopped)) : undefined,
               termination: stopped,
               stalled: stopped?.kind === "stall",
+              ...(progressCaptureNote ? { progressCapture: progressCaptureNote } : {}),
               ts: Date.now(),
             }),
           );
@@ -824,6 +975,26 @@ claude.on("exit", (code) => {
     };
     log({ type: "provider-limit", ts: Date.now(), partner: "claude", kind: limitHit.kind, providerMessage: limitHit.msg, raw: "", signal: "stderr" });
   }
+  // T5: the partner died MID-CAPTURE — the ORIGINAL stopped record is what must land, with the
+  // capture recorded as the honest failure it was. Written directly (not via finishWithCapture,
+  // which would repaint STATUS as IDLE while the daemon is in fact exiting).
+  if (capture) {
+    const c = capture;
+    capture = null;
+    if (c.capTimer) clearTimeout(c.capTimer);
+    const pc = { attempted: true, ok: false, error: `the partner process exited during the capture turn (code ${code ?? "unknown"})` };
+    try {
+      if (!c.lease || leaseIsOwned(c.lease)) writeFileSync(c.last, c.verdict);
+      if (c.lease) finishDispatch(c.lease, { ...c.record, progressCapture: pc });
+      else writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture: pc, ts: Date.now() }));
+    } catch {
+      /* ignore */
+    }
+    log({ type: "progress-capture", ts: Date.now(), partner: "claude", ok: false, durSec: 0, error: pc.error });
+    if (stopTurnHeartbeat) stopTurnHeartbeat();
+    stopTurnHeartbeat = null;
+    curLease = null;
+  }
   if (curLease) {
     if (stopTurnHeartbeat) stopTurnHeartbeat();
     const exitProvenance = turnProvenance(); // last known actual for the turn that was in flight
@@ -843,6 +1014,8 @@ claude.on("exit", (code) => {
       termination: stopped,
       terminationPending: null,
       stalled: stopped?.kind === "stall",
+      // A supervised stop whose partner is now DEAD can never capture — say so, additively.
+      ...(stopped ? { progressCapture: { attempted: false, reason: "the partner process died before a capture could run — no warm session to ask" } } : {}),
     });
     curLease = null;
     stopTurnHeartbeat = null;

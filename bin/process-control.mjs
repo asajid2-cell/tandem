@@ -1,5 +1,16 @@
 import { spawnSync } from "node:child_process";
 
+// T5 progress capture: the ONE bounded follow-up turn dispatched on the same durable session right
+// after a supervised stop. The stopped turn's partial work lives only in the partner's context —
+// this prompt asks for a factual report of it WITHOUT resuming the work (a capture that started
+// new work would just be stopped again). Shared here so peer.mjs (codex resume) and serve.mjs
+// (warm checkpointed claude) send the identical prompt.
+export const CAPTURE_PROMPT =
+  "Your previous turn was interrupted by tandem turn supervision before it finished. " +
+  "Do NOT resume the work and do NOT run any tools. In a few sentences, report factually: " +
+  "(1) what you completed, (2) what was in progress when the turn stopped, " +
+  "(3) the next concrete step a fresh turn should take.";
+
 export function supervisionDecision({
   now = Date.now(),
   startedAt,

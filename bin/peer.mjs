@@ -49,6 +49,7 @@ import {
   updateDispatch,
 } from "./jobs.mjs";
 import {
+  CAPTURE_PROMPT,
   describeGracefulStop,
   hardKillProcessTree,
   supervisionDecision,
@@ -86,6 +87,7 @@ const SK = jobKey(DRIVER_ID); // per-driver suffix (still isolates within a shar
 const LASTMSG = join(STATE, `last-${SK}.txt`);
 const LEDGER = join(STATE, "TANDEM.md"); // per-tandem ledger (never shared across pairs)
 const COMPACT_OUT = join(STATE, "compact.out"); // handoff-summary turns write HERE, not LASTMSG (keep the real verdict clean)
+const CAPTURE_OUT = join(STATE, "capture.out"); // T5 progress-capture turns write HERE — the stopped turn's LASTMSG/TURNLOG stay untouched
 const CODEX_SEED = join(STATE, "codex.seed"); // handoff summary the next fresh codex turn prepends
 
 // ---- compaction: hand a near-full session off to a fresh one so it never breaks ----
@@ -195,6 +197,14 @@ function loadConfig() {
     toolMaxSec: 1800,
     maxTurnSec: 0,
     stopGraceSec: 5,
+    // T5 progress capture: after a supervised stop (stall / absolute cap / tool-timeout) the
+    // partner's partial work is stranded in its durable session — run ONE bounded follow-up turn
+    // on that same session asking for a factual progress report, and attach it (additively) to
+    // the SAME job record. captureMaxSec is the capture turn's own absolute+tool bound (it also
+    // inherits the lane's stall window, and never loosens a tighter lane bound). A capture that
+    // itself stalls/errors is recorded ok:false and NEVER retried — one attempt per stop, ever.
+    captureOnStop: true,
+    captureMaxSec: 90,
     // A live worker writes an independent heartbeat. If the PID dies, status reports WEDGED
     // immediately; if the PID survives but its heartbeat stops for this long, status also
     // reports WEDGED. 0 disables heartbeat-age detection (dead-PID detection remains).
@@ -272,11 +282,15 @@ function loadConfig() {
   if (process.env.TANDEM_MAX_TURN_SEC !== undefined) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
   if (process.env.TANDEM_STOP_GRACE_SEC !== undefined) cfg.stopGraceSec = Number(process.env.TANDEM_STOP_GRACE_SEC) || 0;
   if (process.env.TANDEM_WEDGE_AFTER_SEC !== undefined) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
+  if (process.env.TANDEM_CAPTURE_ON_STOP !== undefined) cfg.captureOnStop = process.env.TANDEM_CAPTURE_ON_STOP !== "0";
+  if (process.env.TANDEM_CAPTURE_MAX_SEC !== undefined) cfg.captureMaxSec = Number(process.env.TANDEM_CAPTURE_MAX_SEC) || 0;
   cfg.stallSec = Math.max(0, Number(cfg.stallSec) || 0);
   cfg.toolMaxSec = Math.max(0, Number(cfg.toolMaxSec) || 0);
   cfg.maxTurnSec = Math.max(0, Number(cfg.maxTurnSec) || 0);
   cfg.stopGraceSec = Math.max(0, Number(cfg.stopGraceSec) || 0);
   cfg.wedgeAfterSec = Math.max(0, Number(cfg.wedgeAfterSec) || 0);
+  cfg.captureOnStop = cfg.captureOnStop !== false;
+  cfg.captureMaxSec = Math.max(0, Number(cfg.captureMaxSec) || 0);
   const laneMetadata = readLaneMetadata(STATE);
   if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   return cfg;
@@ -814,6 +828,7 @@ function codexJobRecord(res) {
     termination: res.termination || null,
     terminationPending: null,
     stalled: res.termination?.kind === "stall",
+    progressCapture: res.progressCapture || null, // T5: additive — the bounded post-stop capture, or null
     workerPid: process.pid,
     partnerPid: res.partnerPid || 0,
   };
@@ -866,6 +881,13 @@ async function askUnlocked(task, cfg, lease) {
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
     if (res.couplingWarning) console.error(`tandem: WARNING - ${res.couplingWarning}`);
+    // T5: surface the post-stop capture to the driver right after the stop notice — the recovery
+    // report is the whole point of the extra turn. A failed attempt is stated, never dressed up.
+    if (res.progressCapture?.ok) {
+      console.log("\n----- progress captured before the stop -----\n" + String(res.progressCapture.verdict).slice(0, 2000));
+    } else if (res.progressCapture?.attempted) {
+      console.error(`tandem: progress capture failed - ${res.progressCapture.error}`);
+    }
   }
   return res;
 }
@@ -1753,6 +1775,13 @@ async function waitJob(maxSec, cfg) {
         process.exitCode = 3;
       } else {
         console.error(`tandem: job ${j.status}${j.error ? " - " + j.error : ""}`);
+        // T5: an error record from a supervised stop may carry the bounded post-stop capture —
+        // surface it here too, since `wait` is how background dispatches deliver their outcome.
+        if (j.progressCapture?.ok) {
+          console.log("\n----- progress captured before the stop -----\n" + String(j.progressCapture.verdict).slice(0, 2000));
+        } else if (j.progressCapture?.attempted) {
+          console.error(`tandem: progress capture failed - ${j.progressCapture.error}`);
+        }
         process.exitCode = 1;
       }
       return;
@@ -1911,6 +1940,47 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   };
 }
 
+// T5 progress capture (codex): ONE bounded follow-up turn on the same durable session right after
+// a supervised stop, asking for a factual progress report. Structurally non-recursive — this calls
+// codexExec directly (never askCodex), so a capture that is itself stopped can only be RECORDED as
+// failed, never re-captured. The capture turn writes to CAPTURE_OUT so the stopped turn's
+// LASTMSG/TURNLOG survive for forensics. Returns the additive progressCapture record; every branch
+// states only what provably happened.
+async function captureCodexProgress(sid, cfg, hooks) {
+  // The capture's bounds NEVER loosen the lane's: captureMaxSec caps the turn absolutely and per-tool,
+  // but a tighter lane maxTurnSec/toolMaxSec wins. The lane's stall window is inherited unchanged, so
+  // a hanging partner ends the capture at the ordinary stall clock even with captureMaxSec unset.
+  const minPositive = (a, b) => (a > 0 && b > 0 ? Math.min(a, b) : a > 0 ? a : b);
+  const cap = cfg.captureMaxSec || 0;
+  const cfg2 = {
+    ...cfg,
+    maxTurnSec: minPositive(cap, cfg.maxTurnSec || 0),
+    toolMaxSec: minPositive(cap, cfg.toolMaxSec || 0),
+  };
+  try {
+    const res = await codexExec(sid, CAPTURE_PROMPT, cfg2, CAPTURE_OUT, hooks);
+    const hit = providerLimitHit(res);
+    if (hit) {
+      // A capture answer that IS a limit banner is not captured progress — park for future asks
+      // (markDown, same as the primary path) and record the honest failure.
+      try {
+        policy.markDown("codex", hit.msg);
+      } catch {
+        /* a park that can't be recorded never hides the capture failure */
+      }
+      return { attempted: true, ok: false, durSec: res.dur, error: `provider limit during the capture turn: ${hit.msg.slice(0, 200)}` };
+    }
+    if (res.killed) return { attempted: true, ok: false, durSec: res.dur, error: `the capture turn was itself stopped: ${supervisedStopError(res)}` };
+    const v = (res.verdict || "").trim();
+    if (res.code !== 0 || !v) {
+      return { attempted: true, ok: false, durSec: res.dur, error: `the capture turn exited ${res.code}${v ? "" : " with an empty answer"}` };
+    }
+    return { attempted: true, ok: true, durSec: res.dur, verdict: v };
+  } catch (error) {
+    return { attempted: true, ok: false, error: `the capture turn could not run: ${String(error && error.message ? error.message : error)}` };
+  }
+}
+
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
 //  - by default the driver is just NOTIFIED when the passenger runs low (so it can craft the
 //    handoff via `peer.mjs compact "<prompt>"`); set autoCompact to do it automatically.
@@ -1950,6 +2020,26 @@ async function askCodex(task, cfg, sidOverride, hooks = {}) {
       /* ignore */
     }
     r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg, LASTMSG, hooks);
+  }
+
+  // T5: a supervised stop (r.termination — stall / absolute / tool-timeout) strands the turn's
+  // partial work inside the durable session. Run the ONE bounded capture turn on that same session
+  // (fg ask and detached bg runJob both flow through here) and attach the result ADDITIVELY —
+  // the stop record itself (status/error/termination/stalled) is untouched. Skips are honest:
+  // disabled → attempted:false with the reason; no durable sid → nothing to resume.
+  if (r.killed && r.termination) {
+    if (!cfg.captureOnStop) {
+      r.progressCapture = { attempted: false, reason: "captureOnStop disabled" };
+    } else {
+      const capSid = r.codexId || sid || "";
+      if (!capSid) {
+        r.progressCapture = { attempted: false, reason: "no durable session id was captured before the stop" };
+      } else {
+        console.error(`tandem: turn stopped — capturing progress from codex ${capSid.slice(0, 8)} (one bounded follow-up turn)`);
+        r.progressCapture = await captureCodexProgress(capSid, cfg, hooks);
+        logEvent({ type: "progress-capture", ts: Date.now(), partner: "codex", sid: capSid, ok: !!r.progressCapture.ok, durSec: r.progressCapture.durSec || 0, error: r.progressCapture.error || null });
+      }
+    }
   }
 
   if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
