@@ -49,6 +49,24 @@ export const AUTH_RE = new RegExp([
 // Combined matcher (transcript-tail scan; kept for conductor compatibility).
 export const EXTERNAL_BLOCK_RE = new RegExp(`${LIMIT_RE.source}|${AUTH_RE.source}`, 'i');
 
+// The fable-SAFEGUARD refusal signature (fable-recovery doctrine). Fable's content classifier
+// sometimes false-positives and returns FAST with, verbatim:
+//   "API Error: Fable 5's safeguards flagged this message ... can't respond to this request with Fable 5"
+// This is emphatically NOT a usage limit (it must never park the provider or parse a reset) and NOT
+// a node failure (the goal text is fine) — it is a transient the engine retries on a fresh fable
+// session. Anchored to the observed CLI wording; matched against the CLI failure signal / result,
+// never against arbitrary node-goal text (the goal never reaches the worker's OUTPUT stream).
+export const FABLE_SAFEGUARD_RE = new RegExp([
+  /fable(?:\s*\d+)?(?:'s|s)?\s+safeguards?\s+flagged\s+this\s+(?:message|request)/.source,
+  /can'?t\s+respond\s+to\s+this\s+request\s+with\s+fable/.source,
+].join('|'), 'i');
+
+// Is this text the fable-safeguard refusal? Deliberately independent of LIMIT_RE/AUTH_RE so a
+// safeguard never routes through the park/reroute path.
+export function isFableSafeguardRefusal(text) {
+  return FABLE_SAFEGUARD_RE.test(String(text || ''));
+}
+
 // Classify a failure string: {kind:'limit'|'auth'} or null when it is an ordinary failure.
 // LIMIT wins ties: mixed messages are overwhelmingly limit-shaped, and a mis-kinded auth
 // error self-corrects (its probe fails on the same broken credentials, so no un-park).

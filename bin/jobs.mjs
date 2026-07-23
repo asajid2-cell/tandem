@@ -24,6 +24,48 @@ export function jobPaths(state, sk) {
   };
 }
 
+// ---- completion signal (push, not poll) ---------------------------------------------------------
+// A per-lane COMPLETION SIGNAL file (`job-<sk>.done`). The job JSON stays the SOLE source of truth;
+// this file is a zero-cost WAKEUP so anything watching the lane's state dir (peer.mjs `wait`, an
+// external supervisor) is PUSHED the instant a dispatch reaches a terminal record instead of
+// sleep-polling the JSON. Payload is a truthful subset of what already landed in the job record:
+// { dispatchId, status, ts }. Written atomically (tmp+rename) so an external reader never sees a
+// torn payload and the final rename is the single fs.watch event a waiter races.
+//
+// Invariants (why this is safe to trust):
+//  - Fires ONLY when an OWNER writes a terminal job record — finishDispatch / forceFinishDispatch
+//    here, plus serve.mjs's legacy no-lease finishes that bypass finishDispatch. It is NOT a second
+//    source of truth: a woken waiter always re-reads the job JSON and only acts on status!=="running".
+//  - WEDGED emits NO signal. WEDGED is a driver-side DIAGNOSIS computed by inspectDispatch on the
+//    STATUS-READ path — no owner ever writes a WEDGED job record, so there is nothing to wake to; the
+//    job record itself is unchanged. (reap, which writes a real terminal record over a wedged lane
+//    via forceFinishDispatch, DOES signal — that IS a genuine terminal transition.)
+//  - Never fires EARLY from a prior dispatch's leftover file: cleared at acquire time (acquireDispatch)
+//    and wherever a fresh running record is first written for a lane (serve.mjs's no-lease path).
+//  - Idempotent per dispatchId: finishDispatch's leaseIsOwned guard makes a double-finish a no-op, so
+//    the signal cannot fire twice for one dispatchId. The poll fallback in the waiter is authoritative
+//    for correctness, so even a missed or spurious fs.watch event only changes latency, never outcome.
+export function doneSignalPath(state, sk) {
+  return join(state, `job-${sk}.done`);
+}
+
+export function signalDone(state, sk, { dispatchId = "", status = "" } = {}) {
+  try {
+    writeJsonAtomic(doneSignalPath(state, sk), { dispatchId, status, ts: Date.now() });
+  } catch {
+    /* the job JSON remains the source of truth; a failed signal only costs the waiter one poll cycle */
+  }
+}
+
+export function clearDoneSignal(state, sk) {
+  try {
+    const p = doneSignalPath(state, sk);
+    if (existsSync(p)) rmSync(p);
+  } catch {
+    /* a leftover signal is bounded by the acquire-time clear AND the waiter's authoritative re-read */
+  }
+}
+
 export function readJson(file) {
   if (!existsSync(file)) return null;
   try {
@@ -244,6 +286,10 @@ export function acquireDispatch(state, sk, meta = {}) {
     }
 
     const lease = { state, sk, dispatchId, paths, startedTs };
+    // Staleness discipline: a fresh dispatch clears any leftover done signal from a PRIOR dispatch
+    // BEFORE this one can finish, so a waiter can never be woken early by a stale file. This is the
+    // running-record write for the lease path; serve.mjs clears the same file on its no-lease path.
+    clearDoneSignal(state, sk);
     writeJsonAtomic(paths.job, {
       status: "running",
       dispatchId,
@@ -350,17 +396,21 @@ export function startHeartbeat(lease, { pid = process.pid, intervalMs = 2000 } =
 export function finishDispatch(lease, finalState) {
   if (!leaseIsOwned(lease)) return false;
   const current = readJson(lease.paths.job) || {};
+  const status = finalState.status || "done";
   writeJsonAtomic(lease.paths.job, {
     ...current,
     ...finalState,
     dispatchId: lease.dispatchId,
-    status: finalState.status || "done",
+    status,
     startedTs: current.startedTs || lease.startedTs || Date.now(),
     finishedTs: Date.now(),
     ts: Date.now(),
   });
   removeIfOwned(lease.paths.heartbeat, lease.dispatchId);
   removeIfOwned(lease.paths.lock, lease.dispatchId);
+  // Terminal record is durable → PUSH the wakeup. The leaseIsOwned guard above means a second
+  // finishDispatch for this dispatchId returns early, so this fires exactly once per dispatchId.
+  signalDone(lease.state, lease.sk, { dispatchId: lease.dispatchId, status });
   return true;
 }
 
@@ -385,5 +435,7 @@ export function forceFinishDispatch(state, sk, finalState) {
       /* explicit force-finish leaves the final job record as the recovery evidence */
     }
   }
+  // cancel/reap write a REAL terminal record (not a WEDGED diagnosis) — a waiter should wake to it too.
+  signalDone(state, sk, { dispatchId, status: finalState.status || "error" });
   return readJson(paths.job);
 }

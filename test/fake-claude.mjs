@@ -9,6 +9,11 @@
 //                     the limit; others reply normally
 //   FAKE_VERDICT      override the result text verbatim (may be multi-line) — lets tests prove an
 //                     ANSWER that merely discusses limit banners never parks
+//   FAKE_RATE_LIMIT_STATUS  emit a rate_limit_event with this status (e.g. "rejected"/"allowed"/
+//                     "allowed_warning") BEFORE the reply every turn — the daemon's PRIMARY structural
+//                     signal; FAKE_RATE_LIMIT_RESETS_AT (epoch sec) + FAKE_RATE_LIMIT_TYPE tune it
+//   FAKE_TOOL_USE=1   the assistant event carries a tool_use item → the turn "did work" (a capped
+//                     turn cannot run tools), gating the did-work branch of the classifier
 
 // The exact strings the claude CLI surfaces on a capped subscription (see limit-policy.mjs header).
 const CLAUDE_SESSION_LIMIT = "You've hit your session limit · resets 3am (America/Edmonton)";
@@ -96,6 +101,11 @@ const args = process.argv.slice(2);
 const ri = args.indexOf("--resume");
 const sid = (ri >= 0 ? args[ri + 1] : null) || process.env.FAKE_SID || randomUUID();
 let firstTurn = true;
+// A turn is "open" from the moment it's received until it is answered (or interrupted). A hang keeps
+// it open indefinitely; a delayed reply keeps it open until pendingReplyTimer fires. An interrupt
+// control_request while a turn is open ends it with an error_during_execution result (see below).
+let turnOpen = false;
+let pendingReplyTimer = null;
 
 function emitSession() {
   if (!firstTurn) return;
@@ -106,6 +116,40 @@ function emitSession() {
 const rl = createInterface({ input: process.stdin });
 rl.on("line", (line) => {
   if (!line.trim()) return;
+  // Interrupt control_request over the SAME stdin pipe user turns arrive on (T4 protocol grace).
+  // Handle it BEFORE the user-turn logic. Real behavior (probed 2026-07-21): ack immediately with a
+  // control_response success, flush the in-flight turn as a result event (subtype
+  // error_during_execution, is_error true), and STAY ALIVE — the session answers the next turn warm.
+  // FAKE_IGNORE_INTERRUPT=1 swallows it silently, exercising the daemon's hard-kill fallback.
+  let control = null;
+  try {
+    control = JSON.parse(line);
+  } catch {
+    /* not JSON — fall through to the normal task path */
+  }
+  if (control && control.type === "control_request" && control.request && control.request.subtype === "interrupt") {
+    if (process.env.FAKE_IGNORE_INTERRUPT === "1") return;
+    process.stdout.write(
+      JSON.stringify({ type: "control_response", response: { subtype: "success", request_id: control.request_id } }) + "\n",
+    );
+    if (turnOpen) {
+      if (pendingReplyTimer) {
+        clearTimeout(pendingReplyTimer);
+        pendingReplyTimer = null;
+      }
+      turnOpen = false;
+      process.stdout.write(
+        JSON.stringify({
+          type: "result",
+          subtype: "error_during_execution",
+          is_error: true,
+          result: "[Request interrupted by user]",
+          usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+        }) + "\n",
+      );
+    }
+    return;
+  }
   let task = "";
   try {
     const o = JSON.parse(line);
@@ -121,6 +165,7 @@ rl.on("line", (line) => {
     process.env.FAKE_HANG_AFTER_SESSION === "1" &&
     (!process.env.FAKE_HANG_MATCH || task.includes(process.env.FAKE_HANG_MATCH));
   if (shouldHang) {
+    turnOpen = true; // the hang leaves the turn OPEN — an interrupt during it yields error_during_execution
     emitSession();
     return;
   }
@@ -129,6 +174,22 @@ rl.on("line", (line) => {
   const limit429 = process.env.FAKE_LIMIT_429 === "1" && limitGate;
   const reply = () => {
     emitSession(); // daemon captures + records the pair
+    // FAKE_RATE_LIMIT_STATUS: the real claude stream carries a machine-readable rate_limit_event every
+    // turn. Emit one BEFORE the reply so the daemon's structural classifier sees it before the result.
+    if (process.env.FAKE_RATE_LIMIT_STATUS) {
+      process.stdout.write(
+        JSON.stringify({
+          type: "rate_limit_event",
+          rate_limit_info: {
+            status: process.env.FAKE_RATE_LIMIT_STATUS,
+            resetsAt: Number(process.env.FAKE_RATE_LIMIT_RESETS_AT) || Math.floor(Date.now() / 1000) + 7200,
+            rateLimitType: process.env.FAKE_RATE_LIMIT_TYPE || "five_hour",
+            overageStatus: "rejected",
+            isUsingOverage: false,
+          },
+        }) + "\n",
+      );
+    }
     const nested =
       process.env.FAKE_NESTED_ASK === "1" && task.includes("SPAWN-SUB-LANE") ? ` ${runNestedAsk()}` : "";
     // A capped subscription returns the banner (or the 429 JSON) as an ORDINARY exit-0 result —
@@ -138,6 +199,14 @@ rl.on("line", (line) => {
       : limitMode
         ? CLAUDE_SESSION_LIMIT
         : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
+    // Provenance: the real claude stream stamps the model id on every assistant event. Emit one so
+    // the daemon can prove modelActual (env FAKE_MODEL overrides). The daemon ignores unknown types,
+    // so this is harmless for every existing case. FAKE_TOOL_USE=1 folds a tool_use item into the
+    // SAME assistant event (model + tool_use) — the structural "this turn ran real work" witness.
+    const content = process.env.FAKE_TOOL_USE === "1" ? [{ type: "tool_use", name: "Bash", input: {} }] : [];
+    process.stdout.write(
+      JSON.stringify({ type: "assistant", message: { model: process.env.FAKE_MODEL || "claude-opus-4-8", content } }) + "\n",
+    );
     process.stdout.write(
       JSON.stringify({
         type: "result",
@@ -145,11 +214,14 @@ rl.on("line", (line) => {
         usage: { input_tokens: Number(process.env.FAKE_TOKENS) || 800, output_tokens: 30, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
       }) + "\n",
     );
+    turnOpen = false; // the turn has been answered
+    pendingReplyTimer = null;
   };
   const delayMatches =
     !process.env.FAKE_DELAY_MATCH || task.includes(process.env.FAKE_DELAY_MATCH);
   const delay = delayMatches ? Number(process.env.FAKE_DELAY) || 0 : 0;
-  if (delay > 0) setTimeout(reply, delay);
+  turnOpen = true; // a received turn is OPEN until reply() answers it (or an interrupt ends it)
+  if (delay > 0) pendingReplyTimer = setTimeout(reply, delay);
   else reply();
 });
 rl.on("close", () => process.exit(0)); // stdin EOF = daemon closed

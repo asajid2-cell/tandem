@@ -28,6 +28,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  watch,
   writeFileSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -38,6 +39,7 @@ import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir, 
 import {
   DispatchBusyError,
   acquireDispatch,
+  doneSignalPath,
   finishDispatch,
   forceFinishDispatch,
   inspectDispatch,
@@ -49,8 +51,9 @@ import {
   updateDispatch,
 } from "./jobs.mjs";
 import {
+  CAPTURE_PROMPT,
+  describeGracefulStop,
   hardKillProcessTree,
-  requestGracefulStop,
   supervisionDecision,
 } from "./process-control.mjs";
 import { attachLaneWorktree, ensureLaneWorktree, readLaneMetadata } from "./worktrees.mjs";
@@ -66,6 +69,7 @@ import {
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
+import { provenanceWarning } from "./provenance.mjs";
 import { spawnDebug, spawnDetachedWorker } from "./spawn-escape.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -85,6 +89,7 @@ const SK = jobKey(DRIVER_ID); // per-driver suffix (still isolates within a shar
 const LASTMSG = join(STATE, `last-${SK}.txt`);
 const LEDGER = join(STATE, "TANDEM.md"); // per-tandem ledger (never shared across pairs)
 const COMPACT_OUT = join(STATE, "compact.out"); // handoff-summary turns write HERE, not LASTMSG (keep the real verdict clean)
+const CAPTURE_OUT = join(STATE, "capture.out"); // T5 progress-capture turns write HERE — the stopped turn's LASTMSG/TURNLOG stay untouched
 const CODEX_SEED = join(STATE, "codex.seed"); // handoff summary the next fresh codex turn prepends
 
 // ---- compaction: hand a near-full session off to a fresh one so it never breaks ----
@@ -186,8 +191,36 @@ function loadConfig() {
     // Stop only after a full quiet window; output and tool events refresh activity. The optional
     // absolute backstop is off by default. Both paths request graceful shutdown before tree-kill.
     stallSec: 240,
+    // A single codex tool call (a build, a test suite, an install) emits NOTHING on the --json
+    // stream while it runs, so to the raw stall clock it is indistinguishable from a wedge. While a
+    // command_execution item is open the stall clock is SUSPENDED (see runCodex); toolMaxSec bounds
+    // how long one such open tool may run before it is treated as a wedge. 0 = unbounded tools
+    // (suspension still applies). Env TANDEM_TOOL_MAX_SEC > config key toolMaxSec > this default.
+    toolMaxSec: 1800,
+    // Progress-idle detection (W3) — OPT-IN, default 0 = OFF. The raw stall clock (above) measures
+    // stream BYTES: a partner that spins on the SAME failing command, re-prints retry banners, or
+    // loops without touching a file streams bytes forever and never stalls. progressIdleSec adds a
+    // heuristic built ONLY from signals already on the --json stream (see runCodex): a turn is
+    // stopped kind "no-progress" when, for this many seconds, NO novel command AND NO file-change
+    // item appeared, AND the recent output window is mostly repetition. It is CONJUNCTIVE and OFF by
+    // default precisely because a false positive would kill a slow-but-legitimately-working turn —
+    // the raw stall clock and the toolMaxSec bound stay the primary guards. Env TANDEM_PROGRESS_IDLE_SEC.
+    progressIdleSec: 0,
     maxTurnSec: 0,
+    // Optional LOOSE turn-time limit in HOURS — a convenience alias for maxTurnSec, default 0 = off.
+    // When set AND maxTurnSec is 0/unset it maps to maxTurnSec = maxTurnHours*3600 in loadConfig.
+    // Precedence: an explicit maxTurnSec (env or config, >0) ALWAYS wins — hours only fills an unset
+    // seconds value, never double-bounds. Env TANDEM_MAX_TURN_HOURS.
+    maxTurnHours: 0,
     stopGraceSec: 5,
+    // T5 progress capture: after a supervised stop (stall / absolute cap / tool-timeout) the
+    // partner's partial work is stranded in its durable session — run ONE bounded follow-up turn
+    // on that same session asking for a factual progress report, and attach it (additively) to
+    // the SAME job record. captureMaxSec is the capture turn's own absolute+tool bound (it also
+    // inherits the lane's stall window, and never loosens a tighter lane bound). A capture that
+    // itself stalls/errors is recorded ok:false and NEVER retried — one attempt per stop, ever.
+    captureOnStop: true,
+    captureMaxSec: 90,
     // A live worker writes an independent heartbeat. If the PID dies, status reports WEDGED
     // immediately; if the PID survives but its heartbeat stops for this long, status also
     // reports WEDGED. 0 disables heartbeat-age detection (dead-PID detection remains).
@@ -261,13 +294,26 @@ function loadConfig() {
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_STALL_SEC !== undefined) cfg.stallSec = Number(process.env.TANDEM_STALL_SEC) || 0;
+  if (process.env.TANDEM_TOOL_MAX_SEC !== undefined) cfg.toolMaxSec = Number(process.env.TANDEM_TOOL_MAX_SEC) || 0;
+  if (process.env.TANDEM_PROGRESS_IDLE_SEC !== undefined) cfg.progressIdleSec = Number(process.env.TANDEM_PROGRESS_IDLE_SEC) || 0;
   if (process.env.TANDEM_MAX_TURN_SEC !== undefined) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
+  if (process.env.TANDEM_MAX_TURN_HOURS !== undefined) cfg.maxTurnHours = Number(process.env.TANDEM_MAX_TURN_HOURS) || 0;
   if (process.env.TANDEM_STOP_GRACE_SEC !== undefined) cfg.stopGraceSec = Number(process.env.TANDEM_STOP_GRACE_SEC) || 0;
   if (process.env.TANDEM_WEDGE_AFTER_SEC !== undefined) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
+  if (process.env.TANDEM_CAPTURE_ON_STOP !== undefined) cfg.captureOnStop = process.env.TANDEM_CAPTURE_ON_STOP !== "0";
+  if (process.env.TANDEM_CAPTURE_MAX_SEC !== undefined) cfg.captureMaxSec = Number(process.env.TANDEM_CAPTURE_MAX_SEC) || 0;
   cfg.stallSec = Math.max(0, Number(cfg.stallSec) || 0);
+  cfg.toolMaxSec = Math.max(0, Number(cfg.toolMaxSec) || 0);
+  cfg.progressIdleSec = Math.max(0, Number(cfg.progressIdleSec) || 0);
   cfg.maxTurnSec = Math.max(0, Number(cfg.maxTurnSec) || 0);
+  cfg.maxTurnHours = Math.max(0, Number(cfg.maxTurnHours) || 0);
+  // maxTurnHours → maxTurnSec, ONLY when no explicit seconds bound is set. An explicit maxTurnSec
+  // (env or config, >0) always wins, so setting both never double-bounds (the seconds value is used).
+  if (cfg.maxTurnSec === 0 && cfg.maxTurnHours > 0) cfg.maxTurnSec = cfg.maxTurnHours * 3600;
   cfg.stopGraceSec = Math.max(0, Number(cfg.stopGraceSec) || 0);
   cfg.wedgeAfterSec = Math.max(0, Number(cfg.wedgeAfterSec) || 0);
+  cfg.captureOnStop = cfg.captureOnStop !== false;
+  cfg.captureMaxSec = Math.max(0, Number(cfg.captureMaxSec) || 0);
   const laneMetadata = readLaneMetadata(STATE);
   if (laneMetadata.cwd) cfg.cwd = laneMetadata.cwd;
   return cfg;
@@ -364,6 +410,101 @@ function idFromRolloutName(p) {
   // rollout-2026-06-09T00-49-03-019eab24-4ca1-7780-b8f4-05badf42a28f.jsonl
   const m = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i.exec(p);
   return m ? m[1] : null;
+}
+
+// Find the rollout file whose FILENAME ends with <codexId>.jsonl (the session uuid is the filename
+// suffix). Bounded walk like rolloutMatches (depth ≤ 6, honors TANDEM_CODEX_SESSIONS). The newest
+// match wins so a re-used session id resolves to its latest file.
+function findRolloutById(codexId) {
+  const root = codexSessionsRoot();
+  if (!codexId || !existsSync(root)) return null;
+  const target = `${String(codexId).toLowerCase()}.jsonl`;
+  let best = null;
+  let bestMtime = -1;
+  const walk = (dir, depth) => {
+    if (depth > 6) return;
+    let names;
+    try {
+      names = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const name of names) {
+      const file = join(dir, name);
+      let stat;
+      try {
+        stat = statSync(file);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) {
+        walk(file, depth + 1);
+      } else if (/^rollout-.*\.jsonl$/i.test(name) && name.toLowerCase().endsWith(target) && stat.mtimeMs > bestMtime) {
+        best = file;
+        bestMtime = stat.mtimeMs;
+      }
+    }
+  };
+  walk(root, 0);
+  return best;
+}
+
+// Read only the tail of a (possibly large) file — bounded so provenance never loads a huge rollout.
+function readFileTail(file, maxBytes) {
+  let fd;
+  try {
+    fd = openSync(file, "r");
+    const size = statSync(file).size;
+    const start = Math.max(0, size - maxBytes);
+    const len = size - start;
+    const buffer = Buffer.alloc(len);
+    const read = readSync(fd, buffer, 0, len, start);
+    return buffer.subarray(0, read).toString("utf8");
+  } catch {
+    return "";
+  } finally {
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        /* already closed */
+      }
+    }
+  }
+}
+
+// The model/effort the codex rollout PROVES ran this turn. The exec --json stream carries no model
+// field; provenance lives in the rollout's turn_context lines (one per turn). Take the LAST one, but
+// only if its timestamp is at/after this turn's start (minus a small skew) — otherwise it belongs to
+// a PRIOR turn and the fields stay "" (records must not lie). Any failure returns empty strings.
+function rolloutProvenance(codexId, startedAt) {
+  const empty = { modelActual: "", effortActual: "" };
+  try {
+    const file = findRolloutById(codexId);
+    if (!file) return empty;
+    const lines = readFileTail(file, 256 * 1024).split(/\r?\n/);
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const t = lines[i].trim();
+      if (!t.startsWith("{") || !t.includes('"turn_context"')) continue;
+      let o;
+      try {
+        o = JSON.parse(t);
+      } catch {
+        continue;
+      }
+      if (o.type !== "turn_context") continue;
+      const ts = Date.parse(o.timestamp);
+      if (!Number.isFinite(ts) || ts < startedAt - 5000) return empty; // a prior turn's context
+      const p = o.payload || {};
+      return {
+        modelActual: typeof p.model === "string" ? p.model : "",
+        effortActual: typeof p.effort === "string" ? p.effort : "",
+      };
+    }
+  } catch {
+    /* provenance is best-effort — never fail the turn */
+  }
+  return empty;
 }
 
 function readSession() {
@@ -468,6 +609,18 @@ function codexLeaseHooks(lease, cfg) {
   };
 }
 
+// ONE truthful clause about the stop CHANNEL, derived from the termination record — never a guess
+// about what the partner did. deliveryProven distinguishes a signal we can PROVE was delivered
+// (posix kill) from one we cannot (win32 WM_CLOSE to a hidden console child); hardKilled says
+// whether the force tree-kill was actually needed. Absent record → a neutral, non-committal clause.
+function stopChannelClause(stop) {
+  if (!stop) return "a stop was requested before tree-kill";
+  const first = stop.stopDeliveryProven
+    ? "a non-forced stop was delivered first"
+    : "a non-forced stop was issued first (win32: delivery to a hidden console child is unprovable)";
+  return `${first}; hard tree-kill ${stop.hardKilled ? "followed" : "was not needed"}`;
+}
+
 function supervisedStopError(res) {
   const stop = res?.termination;
   if (!stop) return "";
@@ -475,9 +628,15 @@ function supervisedStopError(res) {
     ? `session ${res.codexId} remains coupled; continue resumes it warm`
     : "no session id was captured; inspect the turn log before continuing";
   if (stop.kind === "stall") {
-    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; graceful stop requested before tree-kill; ${warm}`;
+    return `turn STALLED/WEDGED after ${stop.idleSec}s with no partner activity; ${stopChannelClause(stop)}; ${warm}`;
   }
-  return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; graceful stop requested before tree-kill; ${warm}`;
+  if (stop.kind === "tool-timeout") {
+    return `turn stopped: a single tool call ran ${stop.toolSec}s, past the toolMaxSec bound; ${stopChannelClause(stop)}; ${warm}`;
+  }
+  if (stop.kind === "no-progress") {
+    return `turn stopped: no new distinct command or file change for ${stop.progressIdleSec}s and the output stream was ~${stop.repetitionPct}% repetition; ${stopChannelClause(stop)}; ${warm}`;
+  }
+  return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; ${stopChannelClause(stop)}; ${warm}`;
 }
 
 // ---- provider-limit awareness --------------------------------------------------------------
@@ -516,10 +675,11 @@ function providerLimitHit(res) {
 
 // The LOUD replacement line that stands in for a banner-as-verdict everywhere a verdict is shown.
 function loudProviderLine(family, hit, until, alternates) {
-  const iso = new Date(until).toISOString();
+  // Show the reset in UTC AND local: a bare "…Z" ISO was misread in production as a past local time.
+  const when = `${new Date(until).toISOString()} (${new Date(until).toLocaleString()} local)`;
   const alt = alternates ? `${alternates.family}/${alternates.model}` : "none available (all providers capped)";
   return (
-    `(provider limit hit — ${family} parked until ${iso}; this is NOT a task verdict. ` +
+    `(provider limit hit — ${family} parked until ${when}; this is NOT a task verdict. ` +
     `Alternate: ${alt} — or wait and re-ask. See --failover.)`
   );
 }
@@ -548,6 +708,11 @@ function providerLimitRecordFor(family, hit, res) {
     commands: res?.d?.commands || [],
     files: res?.d?.files || [],
     tokens: res?.d?.tokens || null,
+    modelRequested: res?.modelRequested || "",
+    effortRequested: res?.effortRequested || "",
+    modelActual: res?.modelActual || "",
+    effortActual: res?.effortActual || "",
+    warning: provenanceWarning(res || {}) || null,
     termination: res?.termination || null,
     terminationPending: null,
     workerPid: process.pid,
@@ -579,7 +744,8 @@ function parkedPreflightRecord(family) {
 // The loud stderr guidance printed alongside a parked/limit record: reset time, live alternate,
 // and the two LAWFUL moves (wait, or --failover) — never an implicit auto-reroute.
 function parkedStderr(family, rec) {
-  const iso = new Date(rec.resetAt).toISOString();
+  // UTC ISO kept (tests + logs match it) with the local rendering appended — a bare "…Z" was misread.
+  const iso = `${new Date(rec.resetAt).toISOString()} (${new Date(rec.resetAt).toLocaleString()} local)`;
   const alt = rec.alternates
     ? `${rec.alternates.family}/${rec.alternates.model}${rec.alternates.effort ? ` (${rec.alternates.effort})` : ""}`
     : "none available — every provider is currently capped";
@@ -680,10 +846,15 @@ function codexJobRecord(res) {
     files: res.d?.files || [],
     tokens: res.d?.tokens || null,
     lowContext: res.lowContext || null,
-    warning: res.couplingWarning || null,
+    modelRequested: res.modelRequested || "",
+    effortRequested: res.effortRequested || "",
+    modelActual: res.modelActual || "",
+    effortActual: res.effortActual || "",
+    warning: provenanceWarning(res, res.couplingWarning || "") || null,
     termination: res.termination || null,
     terminationPending: null,
     stalled: res.termination?.kind === "stall",
+    progressCapture: res.progressCapture || null, // T5: additive — the bounded post-stop capture, or null
     workerPid: process.pid,
     partnerPid: res.partnerPid || 0,
   };
@@ -736,6 +907,13 @@ async function askUnlocked(task, cfg, lease) {
     if (driverId && cdx) recordGroup(GROUPS, { claudeId: driverId, codexId: cdx, claudeRole: "driver", codexRole: "partner", direction: DRIVER_KIND + "->codex" });
     if (res.lowContext) console.log(res.lowContext); // notify the driver the passenger is running low
     if (res.couplingWarning) console.error(`tandem: WARNING - ${res.couplingWarning}`);
+    // T5: surface the post-stop capture to the driver right after the stop notice — the recovery
+    // report is the whole point of the extra turn. A failed attempt is stated, never dressed up.
+    if (res.progressCapture?.ok) {
+      console.log("\n----- progress captured before the stop -----\n" + String(res.progressCapture.verdict).slice(0, 2000));
+    } else if (res.progressCapture?.attempted) {
+      console.error(`tandem: progress capture failed - ${res.progressCapture.error}`);
+    }
   }
   return res;
 }
@@ -809,6 +987,73 @@ async function ask(task, cfg) {
   }
 }
 
+// ---- bounded run loop -----------------------------------------------------------------------
+// `peer.mjs run "<task>" --max-turns N [--until "<marker>"]` — run up to N ORDINARY bounded turns on
+// the SAME coupled session instead of one very long turn. Every turn goes through the exact `ask`
+// foreground flow (lease acquire/release, provider-limit pre-flight, supervision, T5 capture,
+// coupling), so a parked provider fast-fails identically and each turn is fully covered by the
+// existing machinery. Nothing is reimplemented — the loop only sequences asks and reads the terminal
+// record each leaves behind.
+//
+// Stop conditions / exit codes (disjoint from the other commands: 2 = usage, 3 = WEDGED in waitJob):
+//   - marker found as a LITERAL substring of a turn's verdict → 0 (say which turn).
+//   - a turn ends error-shaped (supervised stop / provider park / nonzero) → stop, 1 (ask already
+//     surfaced the exact error; the last turn's job record is the ordinary stop record).
+//   - N turns run with no marker → 4 (factual: marker never seen in N turns).
+//   - no --until → run exactly N turns; 0 if all completed cleanly.
+// The marker is matched with String.includes — a LITERAL substring test, so regex metacharacters in
+// the marker are inert (never compiled). Turn 1 sends the task; turns 2..N send a constant, honest
+// continuation prompt. With --until, one clear instruction line is appended asking for the marker
+// only when the work is FULLY complete.
+async function runLoop(task, cfg, maxTurns, marker) {
+  ensureState();
+  if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+    return;
+  }
+  const wantMarker = !!marker;
+  const markerInstruction = (m) =>
+    "\n\nContinue working until the task is FULLY complete. Only once everything is genuinely done — never" +
+    ` before — output this exact completion marker as the final line of your reply, verbatim and alone: ${m}`;
+  const firstTask = wantMarker ? task + markerInstruction(marker) : task;
+  // Turns 2..N: a constant, honest continuation. It never claims prior context beyond "continue the
+  // work" and (with a marker) repeats the completion contract so a resumed turn can satisfy it.
+  const contTask = wantMarker
+    ? "Continue the work from where you left off." + markerInstruction(marker)
+    : "Continue the work from where you left off. If it is already fully complete, say so explicitly.";
+  for (let n = 1; n <= maxTurns; n++) {
+    const turnTask = n === 1 ? firstTask : contTask;
+    process.exitCode = 0; // each turn sets its own code on error; start clean so a prior turn can't leak
+    console.error(`tandem: run turn ${n}/${maxTurns}…`);
+    await ask(turnTask, cfg);
+    const job = jobState(cfg);
+    const status = job?.status || "";
+    const verdict = job?.verdict || "";
+    const markerFound = wantMarker ? verdict.includes(marker) : false;
+    logEvent({ type: "run-turn", ts: Date.now(), n, of: maxTurns, markerFound, status });
+    // A turn that did not end `done` is error-shaped: ask() already printed the exact cause and set a
+    // code (1/3). Stop the loop and normalize to exit 1 (the run-level "a turn failed" signal).
+    if (status !== "done") {
+      console.error(`tandem: run stopped at turn ${n}/${maxTurns} — the turn ended ${status || "with no record"} (see its output above)`);
+      process.exitCode = 1;
+      return;
+    }
+    if (markerFound) {
+      console.log(`tandem: run complete — marker found in turn ${n}/${maxTurns}.`);
+      process.exitCode = 0;
+      return;
+    }
+  }
+  if (wantMarker) {
+    console.error(`tandem: run exhausted — the marker was never seen in ${maxTurns} turn(s).`);
+    process.exitCode = 4;
+  } else {
+    console.log(`tandem: run complete — ran ${maxTurns} turn(s) cleanly.`);
+    process.exitCode = 0;
+  }
+}
+
 const CLAUDE_SESSION = join(STATE, "claude.session"); // dedicated partner session id
 const CLAUDE_VERDICT = join(STATE, "claude_verdict.txt");
 const JOB_FILES = jobPaths(STATE, SK);
@@ -818,6 +1063,7 @@ const GROUPS = join(STATE, "groups.json"); // matched tandem pairs (claude id �
 const INBOX = join(STATE, "inbox.txt"); // file relay → persistent Claude daemon
 const STATUS_FILE = join(STATE, "status.txt");
 const SERVE_PID = join(STATE, "serve.pid");
+const SERVE_BOUND = join(STATE, "serve.bound.json"); // the supervision/model values the daemon BOUND at startup
 const CLAUDE_PID_FILE = join(STATE, "claude.pid"); // daemon's claude child — powers the self-ask guard
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
@@ -1602,12 +1848,49 @@ async function swarmCommand(args, cfg) {
   }
 }
 
+// Wait for the lane's completion SIGNAL file to change (push), racing a bounded fallback poll. The
+// job JSON stays authoritative — a woken caller always re-reads it — so a filesystem that never
+// delivers fs.watch events (Z: is a network drive; watch is unreliable there) still resolves on the
+// timeout and correctness never depends on the push. Resolves early only on an event NAMING the done
+// file (or a null-name event, which some platforms emit) so ordinary lane churn — heartbeats, the
+// live turn log — does not busy-spin the caller. The watcher is always torn down before resolving.
+function waitForDoneSignal(dir, doneName, timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let watcher = null;
+    let timer = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (watcher) {
+        try {
+          watcher.close();
+        } catch {
+          /* already closed */
+        }
+      }
+      resolve();
+    };
+    timer = setTimeout(finish, Math.max(0, timeoutMs));
+    try {
+      watcher = watch(dir, (_evt, name) => {
+        if (!name || name === doneName) finish();
+      });
+      watcher.on("error", finish); // an unwatchable dir degrades to the timeout poll, never throws
+    } catch {
+      /* fs.watch unsupported here — the timeout poll is the sole (and authoritative) waker */
+    }
+  });
+}
+
 async function waitJob(maxSec, cfg) {
   if (!jobState(cfg)) {
     console.error("tandem: no job exists for this lane");
     process.exitCode = 2;
     return;
   }
+  const doneName = basename(doneSignalPath(STATE, SK));
   const deadline = Date.now() + maxSec * 1000;
   while (Date.now() < deadline) {
     const j = jobState(cfg);
@@ -1615,17 +1898,29 @@ async function waitJob(maxSec, cfg) {
       if (j.status === "done") {
         printVerdict(j.partner, j.verdict, { commands: j.commands, files: j.files, tokens: j.tokens }, j.durSec, "");
         if (j.lowContext) console.log(j.lowContext);
+        if (j.warning) console.error(`tandem: WARNING - ${j.warning}`);
       } else if (j.status === "WEDGED") {
         console.error(`tandem: job WEDGED - ${j.reason || "worker liveness failed"}`);
         console.error("tandem: inspect `peer.mjs status`, then run `peer.mjs reap` before dispatching a replacement");
         process.exitCode = 3;
       } else {
         console.error(`tandem: job ${j.status}${j.error ? " - " + j.error : ""}`);
+        // T5: an error record from a supervised stop may carry the bounded post-stop capture —
+        // surface it here too, since `wait` is how background dispatches deliver their outcome.
+        if (j.progressCapture?.ok) {
+          console.log("\n----- progress captured before the stop -----\n" + String(j.progressCapture.verdict).slice(0, 2000));
+        } else if (j.progressCapture?.attempted) {
+          console.error(`tandem: progress capture failed - ${j.progressCapture.error}`);
+        }
         process.exitCode = 1;
       }
       return;
     }
-    await sleep(2000);
+    // Push, not poll: wake on the done-file signal, or fall back to a ~2s poll (the same cadence as
+    // before, kept because fs.watch is not reliable on every filesystem/network drive — Z: included).
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    await waitForDoneSignal(STATE, doneName, Math.min(2000, remaining));
   }
   console.error("tandem: wait timed out — job still running; poll `peer.mjs status`");
   process.exitCode = 1;
@@ -1702,6 +1997,8 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   } = await runCodex(cfg.codexBin, args, dispatchedTask, {
     stallSec: cfg.stallSec || 0,
     maxSec: cfg.maxTurnSec || 0,
+    toolMaxSec: cfg.toolMaxSec || 0,
+    progressIdleSec: cfg.progressIdleSec || 0,
     graceSec: cfg.stopGraceSec ?? 5,
     onSpawn: hooks.onSpawn,
     onActivity: hooks.onActivity,
@@ -1731,25 +2028,44 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
 
   // Verdict from THIS turn's stream first; fall back to the -o file. Never a stale prior value.
   let verdict = parseVerdict(out) || (existsSync(outFile) ? readFileSync(outFile, "utf8").trim() : "");
-  if (killed) verdict = `(turn KILLED after ${dur}s — maxTurnSec cap; the ask was oversized or the partner spun. Re-scope smaller and check the tree for partial edits.)`;
+  // The session-persistence clause both supervised verdicts share (a stall/cap kill leaves the
+  // coupled session warm; if no id was captured the driver must inspect the log before continuing).
+  const warmClause = codexId
+    ? `Session ${codexId} is persisted; continue resumes it warm.`
+    : "No session id was captured; inspect the turn log before continuing.";
+  // A maxTurnSec (absolute) kill: state ONLY what the supervisor can know — the cap elapsed. Why it
+  // elapsed (oversized ask / spinning partner / idle-but-working) is UNKNOWABLE from here, so we no
+  // longer editorialize a cause. The stall branch below overwrites this when the kill was a stall.
+  if (killed) verdict = `(turn KILLED after ${dur}s at the maxTurnSec cap — the supervisor knows only that the cap elapsed, not why. Inspect the tree for partial edits; ${warmClause})`;
   if (termination?.kind === "stall") {
     verdict =
       `(turn STALLED/WEDGED after ${termination.idleSec}s with no partner activity. ` +
-      `A graceful stop was requested before hard tree-kill. ` +
-      (codexId
-        ? `Session ${codexId} is persisted; continue resumes it warm.`
-        : "No session id was captured; inspect the turn log before continuing.") +
+      `${stopChannelClause(termination)}. ` +
+      warmClause +
       ")";
-  } else if (termination?.kind === "absolute") {
+  }
+  // A single tool call outran the toolMaxSec bound: the stall clock was suspended (a silent open
+  // tool is legitimate work, not a wedge), so state ONLY the fact — this one tool ran past its bound.
+  if (termination?.kind === "tool-timeout") {
     verdict =
-      `(turn stopped at the optional maxTurnSec backstop after ${termination.elapsedSec}s. ` +
-      `A graceful stop was requested before hard tree-kill. ` +
-      (codexId
-        ? `Session ${codexId} is persisted; continue resumes it warm.`
-        : "No session id was captured; inspect the turn log before continuing.") +
+      `(turn stopped: a single tool call ran ${termination.toolSec}s, past the toolMaxSec bound (${cfg.toolMaxSec}s). ` +
+      warmClause +
+      ")";
+  }
+  // A no-progress stop (W3): bytes kept flowing (the raw stall clock never fired) but for
+  // progressIdleSec there was NO novel command and NO file change while the recent output repeated
+  // itself. State ONLY what the supervisor measured — the FACT of no progress, never a guess at why.
+  if (termination?.kind === "no-progress") {
+    verdict =
+      `(turn stopped: no new distinct command or file change for ${termination.progressIdleSec}s and the ` +
+      `output stream was ~${termination.repetitionPct}% repetition — the supervisor measured no progress, not why. ` +
+      warmClause +
       ")";
   }
   const d = digest(out);
+  // Provenance: the exec stream carries no model; the rollout's turn_context does. Best-effort, and
+  // only once codexId is final (fresh turns resolve it above), so we read THIS turn's rollout.
+  const provenance = rolloutProvenance(codexId, t0);
   return {
     verdict,
     d,
@@ -1762,7 +2078,52 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
     error,
     couplingWarning,
     termination,
+    modelRequested: cfg.codexModel || "",
+    effortRequested: cfg.codexEffort || "",
+    modelActual: provenance.modelActual,
+    effortActual: provenance.effortActual,
   };
+}
+
+// T5 progress capture (codex): ONE bounded follow-up turn on the same durable session right after
+// a supervised stop, asking for a factual progress report. Structurally non-recursive — this calls
+// codexExec directly (never askCodex), so a capture that is itself stopped can only be RECORDED as
+// failed, never re-captured. The capture turn writes to CAPTURE_OUT so the stopped turn's
+// LASTMSG/TURNLOG survive for forensics. Returns the additive progressCapture record; every branch
+// states only what provably happened.
+async function captureCodexProgress(sid, cfg, hooks) {
+  // The capture's bounds NEVER loosen the lane's: captureMaxSec caps the turn absolutely and per-tool,
+  // but a tighter lane maxTurnSec/toolMaxSec wins. The lane's stall window is inherited unchanged, so
+  // a hanging partner ends the capture at the ordinary stall clock even with captureMaxSec unset.
+  const minPositive = (a, b) => (a > 0 && b > 0 ? Math.min(a, b) : a > 0 ? a : b);
+  const cap = cfg.captureMaxSec || 0;
+  const cfg2 = {
+    ...cfg,
+    maxTurnSec: minPositive(cap, cfg.maxTurnSec || 0),
+    toolMaxSec: minPositive(cap, cfg.toolMaxSec || 0),
+  };
+  try {
+    const res = await codexExec(sid, CAPTURE_PROMPT, cfg2, CAPTURE_OUT, hooks);
+    const hit = providerLimitHit(res);
+    if (hit) {
+      // A capture answer that IS a limit banner is not captured progress — park for future asks
+      // (markDown, same as the primary path) and record the honest failure.
+      try {
+        policy.markDown("codex", hit.msg);
+      } catch {
+        /* a park that can't be recorded never hides the capture failure */
+      }
+      return { attempted: true, ok: false, durSec: res.dur, error: `provider limit during the capture turn: ${hit.msg.slice(0, 200)}` };
+    }
+    if (res.killed) return { attempted: true, ok: false, durSec: res.dur, error: `the capture turn was itself stopped: ${supervisedStopError(res)}` };
+    const v = (res.verdict || "").trim();
+    if (res.code !== 0 || !v) {
+      return { attempted: true, ok: false, durSec: res.dur, error: `the capture turn exited ${res.code}${v ? "" : " with an empty answer"}` };
+    }
+    return { attempted: true, ok: true, durSec: res.dur, verdict: v };
+  } catch (error) {
+    return { attempted: true, ok: false, error: `the capture turn could not run: ${String(error && error.message ? error.message : error)}` };
+  }
 }
 
 // Delegate a turn. Compaction keeps the session from breaking at its context limit:
@@ -1804,6 +2165,26 @@ async function askCodex(task, cfg, sidOverride, hooks = {}) {
       /* ignore */
     }
     r = await codexExec("", handoffSeed(summary || "(the previous session hit its context limit before it could summarize)") + task, cfg, LASTMSG, hooks);
+  }
+
+  // T5: a supervised stop (r.termination — stall / absolute / tool-timeout) strands the turn's
+  // partial work inside the durable session. Run the ONE bounded capture turn on that same session
+  // (fg ask and detached bg runJob both flow through here) and attach the result ADDITIVELY —
+  // the stop record itself (status/error/termination/stalled) is untouched. Skips are honest:
+  // disabled → attempted:false with the reason; no durable sid → nothing to resume.
+  if (r.killed && r.termination) {
+    if (!cfg.captureOnStop) {
+      r.progressCapture = { attempted: false, reason: "captureOnStop disabled" };
+    } else {
+      const capSid = r.codexId || sid || "";
+      if (!capSid) {
+        r.progressCapture = { attempted: false, reason: "no durable session id was captured before the stop" };
+      } else {
+        console.error(`tandem: turn stopped — capturing progress from codex ${capSid.slice(0, 8)} (one bounded follow-up turn)`);
+        r.progressCapture = await captureCodexProgress(capSid, cfg, hooks);
+        logEvent({ type: "progress-capture", ts: Date.now(), partner: "codex", sid: capSid, ok: !!r.progressCapture.ok, durSec: r.progressCapture.durSec || 0, error: r.progressCapture.error || null });
+      }
+    }
   }
 
   if (r.codexId) setUsage(r.codexId, r.d?.tokens?.in || 0); // remember context size for next time
@@ -1873,6 +2254,8 @@ function runCodex(
   {
     stallSec = 0,
     maxSec = 0,
+    toolMaxSec = 0,
+    progressIdleSec = 0,
     graceSec = 5,
     onSpawn,
     onActivity,
@@ -1895,6 +2278,44 @@ function runCodex(
     let settled = false;
     const startedAt = Date.now();
     let lastActivityAt = startedAt;
+    // Codex emits NOTHING on the --json stream while one tool call (a command_execution item) runs,
+    // so a long-but-legitimate build/test/install is indistinguishable from a wedge to the raw stall
+    // clock. We line-buffer stdout to track OPEN tool items (item.started … item.completed/failed);
+    // while any is open the stall clock is suspended (only the absolute cap fires) and toolMaxSec
+    // bounds a single tool. This never disturbs the raw `stdout` accumulation or the TURNLOG write.
+    const openItems = new Map(); // open item id → observed-start ms
+    let toolLineBuf = ""; // partial trailing line carried between stdout chunks
+    // Progress-idle detection (W3, opt-in via progressIdleSec). Built ONLY from signals already on the
+    // --json stream that trackToolItems / digest recognize — no new parsing shape is invented:
+    //   (a) distinct-new-command rate — a command_execution whose command STRING is novel this turn is
+    //       progress; the SAME failing command re-run 40x is not (seenCommands dedupes).
+    //   (b) file-change recency — a file_change / apply_patch / patch item is progress (reuses digest's
+    //       field patterns: .changes/.item.changes/.fileChanges/.item.path/apply_patch).
+    //   (c) output-repetition — a rolling set of recent NORMALIZED output lines; a high duplicate ratio
+    //       over the window means the stream is repeating itself.
+    // lastProgressAt is the single progress clock (max of the two "recency" signals): whenever a novel
+    // command OR a file change is seen it advances to now. A turn is stopped kind "no-progress" ONLY
+    // when ALL hold (see the supervisor loop): progressIdle >= progressIdleSec AND repetition >=
+    // REPETITION_THRESHOLD. Conjunctive by design — a false positive would kill a slow-but-working turn.
+    const seenCommands = new Set(); // normalized command strings seen this turn (distinct-new-command)
+    let lastProgressAt = startedAt; // last novel command OR file change — the progress clock's baseline
+    const recentLines = []; // rolling window of recent normalized output lines (repetition hash)
+    const REPETITION_WINDOW = 12; // lines — a small recent window, enough to catch a tight retry loop
+    // A high-duplicate window means the stream is repeating. A CONSTANT, not a knob (per the brief): it
+    // only ever gates ALONGSIDE the two stronger recency signals above, so it needs no per-lane tuning.
+    const REPETITION_THRESHOLD = 0.6; // >=60% of the recent window are duplicates → the stream repeats
+    // Collapse volatile ids/digits so the SAME command re-emitted with a fresh item id/counter still
+    // reads as a DUPLICATE (a retry loop repeats with new ids — the whole point of the repetition signal).
+    const normalizeLine = (line) =>
+      line
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<uuid>")
+        .replace(/\d+/g, "#")
+        .trim();
+    const repetitionRatio = () => {
+      const n = recentLines.length;
+      if (n < REPETITION_WINDOW) return 0; // not enough data yet — never trip on a short/young stream
+      return 1 - new Set(recentLines).size / n;
+    };
 
     const invoke = (fn, value) => {
       if (!fn) return;
@@ -1907,6 +2328,68 @@ function runCodex(
     const noteActivity = (kind, bytes = 0) => {
       lastActivityAt = Date.now();
       invoke(onActivity, { ts: lastActivityAt, kind, bytes });
+    };
+    // Parse only COMPLETE stdout lines to track open command_execution items. Every parse is
+    // guarded; a partial/non-JSON line, a malformed record, or an unknown id is ignored. Fed from
+    // the stdout handler AFTER the raw append, so it can never disturb the captured stream.
+    const trackToolItems = (text) => {
+      toolLineBuf += text;
+      let nl;
+      while ((nl = toolLineBuf.indexOf("\n")) >= 0) {
+        const line = toolLineBuf.slice(0, nl).trim();
+        toolLineBuf = toolLineBuf.slice(nl + 1);
+        if (line) {
+          // Repetition window (progress-idle signal c): a rolling set of NORMALIZED complete lines.
+          // Fed for EVERY non-empty line, before the JSON gate, so a repeating stream registers even
+          // if a line ever fails to parse. Bounded to REPETITION_WINDOW — O(1) memory.
+          recentLines.push(normalizeLine(line));
+          if (recentLines.length > REPETITION_WINDOW) recentLines.shift();
+        }
+        if (!line.startsWith("{")) continue;
+        let o;
+        try {
+          o = JSON.parse(line);
+        } catch {
+          continue; // not a complete JSON record — ignore
+        }
+        try {
+          // Track ONLY by the item's real id. codex exec --json always stamps a command_execution
+          // item with an id (e.g. "item_0"); we deliberately invent NO fallback key for a (never-
+          // observed) id-less item, because two id-less items would both collapse onto one key and a
+          // single close would then drop BOTH from the open-count — prematurely resuming the stall
+          // clock on a tool still running. An untrackable item is simply not tracked (honest: its
+          // lifecycle is unprovable), never miscounted. A completed id we never saw started is a
+          // harmless no-op delete.
+          const id = o.item?.id;
+          const hasId = (typeof id === "string" && id !== "") || typeof id === "number";
+          if (hasId && o.item?.type === "command_execution") {
+            if (o.type === "item.started") openItems.set(id, Date.now());
+            else if (o.type === "item.completed" || o.type === "item.failed") openItems.delete(id);
+          }
+        } catch {
+          /* observing tool boundaries must never take down the supervised partner */
+        }
+        try {
+          // Progress signals (W3), reusing digest()'s exact field patterns — NO new shape invented.
+          // A NOVEL command string OR any file-change item advances the progress clock. A command
+          // re-run with the same string is NOT novel (seenCommands dedupes), so a retry loop leaves
+          // the clock frozen while its bytes still keep the raw stall clock alive.
+          const cmd = o.command ?? o.item?.command ?? o.payload?.command;
+          if (cmd !== undefined && cmd !== null) {
+            const cmdStr = Array.isArray(cmd) ? cmd.join(" ") : String(cmd);
+            if (!seenCommands.has(cmdStr)) {
+              seenCommands.add(cmdStr);
+              lastProgressAt = Date.now();
+            }
+          }
+          const ch = o.changes ?? o.item?.changes ?? o.fileChanges ?? o.item?.fileChanges;
+          let fileChanged = (ch && typeof ch === "object" && Object.keys(ch).length > 0) || typeof o.item?.path === "string";
+          if (!fileChanged && cmd && JSON.stringify(o).includes("apply_patch")) fileChanged = true;
+          if (fileChanged) lastProgressAt = Date.now();
+        } catch {
+          /* observing progress signals must never take down the supervised partner */
+        }
+      }
     };
     const settle = (value) => {
       if (settled) return;
@@ -1927,11 +2410,21 @@ function runCodex(
         triggeredTs: now,
         graceSec,
         gracefulAttempted: true,
+        // The stop CHANNEL, described truthfully (see describeGracefulStop). Populated after the
+        // onTermination notify so a persisted terminationPending never claims more than it knows.
+        stopChannel: "",
+        stopCallAccepted: false,
+        stopDeliveryProven: false,
+        // Kept for backward compat: the channel CALL succeeded — NOT proof the partner observed it.
         gracefulSignalAccepted: false,
         hardKilled: false,
       };
       invoke(onTermination, termination);
-      termination.gracefulSignalAccepted = requestGracefulStop(child.pid);
+      const stop = describeGracefulStop(child.pid);
+      termination.stopChannel = stop.channel;
+      termination.stopCallAccepted = stop.callAccepted;
+      termination.stopDeliveryProven = stop.deliveryProven;
+      termination.gracefulSignalAccepted = stop.callAccepted;
       if (graceSec > 0) {
         hardStopTimer = setTimeout(hardStop, graceSec * 1000);
       } else {
@@ -1970,12 +2463,44 @@ function runCodex(
       });
     });
 
-    const enabledWindows = [stallSec, maxSec].filter((seconds) => seconds > 0);
+    // toolMaxSec AND progressIdleSec are INDEPENDENT bounds: each must be able to fire even when stall
+    // detection and the absolute cap are both disabled (a user who sets stallSec:0 to never idle-kill
+    // can still want a silent tool bounded, or a no-progress spin caught). If either were omitted here
+    // the supervisor loop would never start and that bound would be silently unenforced. They also
+    // tighten checkMs when one is the only window.
+    const enabledWindows = [stallSec, maxSec, toolMaxSec, progressIdleSec].filter((seconds) => seconds > 0);
     if (enabledWindows.length) {
       const checkMs = Math.max(20, Math.min(250, ...enabledWindows.map((seconds) => (seconds * 1000) / 4)));
       supervisorTimer = setInterval(() => {
         if (termination || settled) return;
         const now = Date.now();
+        if (openItems.size > 0) {
+          // A codex tool call is legitimately open (a build/test can run silently for minutes). The
+          // raw stall clock is SUSPENDED — the ordinary stall check is skipped by passing stallSec:0,
+          // so only toolMaxSec (this single tool) and the absolute maxSec cap may fire. Refresh the
+          // driver-side job record each tick (kind "tool-open", throttled in codexLeaseHooks) so a
+          // silent-but-working tool is never painted WEDGED by inspectDispatch's activity heuristic.
+          let oldestStart = Infinity;
+          for (const startTs of openItems.values()) if (startTs < oldestStart) oldestStart = startTs;
+          const toolElapsedMs = Math.max(0, now - oldestStart);
+          if (toolMaxSec > 0 && toolElapsedMs >= toolMaxSec * 1000) {
+            beginStop({
+              kind: "tool-timeout",
+              elapsedSec: Number(((now - startedAt) / 1000).toFixed(3)),
+              idleSec: Number(((now - lastActivityAt) / 1000).toFixed(3)),
+              toolSec: Math.round(toolElapsedMs / 1000),
+            });
+            return;
+          }
+          invoke(onActivity, { ts: now, kind: "tool-open", bytes: 0 });
+          // Suspend the PROGRESS clock too while a tool is open (T6 interaction): a legitimate silent
+          // tool is not "no progress". Freezing lastProgressAt to now each open tick means the moment
+          // the tool closes the progress window measures from ~0, never counting the tool's silence.
+          lastProgressAt = now;
+          const capOnly = supervisionDecision({ now, startedAt, lastActivityAt, stallSec: 0, maxSec });
+          if (capOnly) beginStop(capOnly);
+          return;
+        }
         const decision = supervisionDecision({
           now,
           startedAt,
@@ -1983,7 +2508,30 @@ function runCodex(
           stallSec,
           maxSec,
         });
-        if (decision) beginStop(decision);
+        if (decision) {
+          beginStop(decision);
+          return;
+        }
+        // No-progress (W3): stall/absolute are the PRIMARY guards (checked above); this only fires when
+        // neither did. ALL must hold — the progress clock has been idle for progressIdleSec (no novel
+        // command, no file change) AND the recent output window is mostly repetition. A slow-but-working
+        // turn keeps emitting novel commands / file changes, so its progress clock stays fresh and it is
+        // never stopped here. `stalled` is left false downstream — this is a NEW kind, not a stall.
+        if (progressIdleSec > 0) {
+          const progressIdleMs = now - lastProgressAt;
+          if (progressIdleMs >= progressIdleSec * 1000) {
+            const ratio = repetitionRatio();
+            if (ratio >= REPETITION_THRESHOLD) {
+              beginStop({
+                kind: "no-progress",
+                elapsedSec: Number(((now - startedAt) / 1000).toFixed(3)),
+                idleSec: Number(((now - lastActivityAt) / 1000).toFixed(3)),
+                progressIdleSec: Number((progressIdleMs / 1000).toFixed(3)),
+                repetitionPct: Math.round(ratio * 100),
+              });
+            }
+          }
+        }
       }, checkMs);
     }
 
@@ -1997,6 +2545,7 @@ function runCodex(
       } catch {
         /* ignore */
       }
+      trackToolItems(text); // track open command_execution items → stall-clock suspension
     });
     child.stderr.on("data", (b) => {
       stderr += b.toString();
@@ -2097,6 +2646,32 @@ function status(cfg) {
     `supervision: stall ${cfg.stallSec > 0 ? `${cfg.stallSec}s` : "off"} | absolute max ${cfg.maxTurnSec > 0 ? `${cfg.maxTurnSec}s` : "off"}`,
   );
   console.log(`lane: ${laneName}`);
+  // Bound-config visibility: a LIVE serve daemon enforces the supervision windows + model/effort it
+  // BOUND at startup, NOT whatever tandem.config.json says now — `maxTurnSec:0` in the config changes
+  // nothing for a running daemon. Surface what it bound, and DRIFT loudly per field when the config
+  // has since diverged. A bound file whose pid isn't the live daemon (a crashed daemon) is ignored so
+  // it can't paint drift onto a fresh one. All reads are try/caught — status must never crash.
+  if (cfg.partner === "claude") {
+    try {
+      const servePid = existsSync(SERVE_PID) ? Number(readFileSync(SERVE_PID, "utf8").trim()) : 0;
+      const bound = servePid && isPidAlive(servePid) && existsSync(SERVE_BOUND) ? JSON.parse(readFileSync(SERVE_BOUND, "utf8")) : null;
+      if (bound && Number(bound.pid) === servePid) {
+        console.log(
+          `daemon: pid ${servePid} | bound stall ${bound.stallSec}s | bound max ${bound.maxTurnSec}s | bound model ${bound.model || "(cli default)"} (${bound.effort || "-"})`,
+        );
+        const drift = [];
+        if (Number(bound.stallSec) !== Number(cfg.stallSec)) drift.push(`stallSec ${bound.stallSec} != config ${cfg.stallSec}`);
+        if (Number(bound.maxTurnSec) !== Number(cfg.maxTurnSec)) drift.push(`maxTurnSec ${bound.maxTurnSec} != config ${cfg.maxTurnSec}`);
+        if ((bound.model || "") !== (cfg.claudeModel || "")) drift.push(`model ${bound.model || "(cli default)"} != config ${cfg.claudeModel || "(cli default)"}`);
+        if ((bound.effort || "") !== (cfg.claudeEffort || "")) drift.push(`effort ${bound.effort || "-"} != config ${cfg.claudeEffort || "-"}`);
+        for (const d of drift) {
+          console.log(`daemon DRIFT: bound ${d} — the daemon keeps enforcing its startup values; \`peer.mjs stop\` then re-ask to apply the current config`);
+        }
+      }
+    } catch {
+      /* bound-config visibility is best-effort — never crash the status command */
+    }
+  }
   const j = jobState(cfg);
   if (j) {
     const age = j.elapsedSec ?? Math.max(0, Math.round((Date.now() - (j.startedTs || j.ts || Date.now())) / 1000));
@@ -2111,6 +2686,10 @@ function status(cfg) {
     else if (j.status === "WEDGED") {
       console.log(`reason: ${j.reason || "worker liveness failed"}`);
       console.log("recovery: run `peer.mjs reap`; only then dispatch a replacement");
+    }
+    if (j.modelRequested || j.modelActual) {
+      const part = (m, e) => (m || "(unspecified)") + (e ? ` (${e})` : "");
+      console.log(`model: requested ${part(j.modelRequested, j.effortRequested)} -> actual ${part(j.modelActual, j.effortActual)}`);
     }
     if (j.warning) console.log(`warning: ${j.warning}`);
   } else if (existsSync(LASTMSG)) {
@@ -2190,6 +2769,50 @@ if (cmd === "ask" || cmd === "continue") {
   if (task === "-" || !task) task = readFileSync(0, "utf8"); // stdin
   if (bg) await startJob(task, cfg);
   else await ask(task, cfg);
+} else if (cmd === "run") {
+  // run "<task>" --max-turns N [--until "<marker>"] — N ordinary bounded turns on the coupled session.
+  // --max-turns is REQUIRED (no unbounded loop), integer, clamped to 1..50; outside that is a usage
+  // error. --until without --max-turns is a usage error. --max-turns without --until runs exactly N.
+  let maxTurnsRaw = null;
+  let until = null;
+  let untilSeen = false;
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--max-turns") maxTurnsRaw = argv[++i];
+    else if (a.startsWith("--max-turns=")) maxTurnsRaw = a.slice("--max-turns=".length);
+    else if (a === "--until") {
+      untilSeen = true;
+      until = argv[++i];
+    } else if (a.startsWith("--until=")) {
+      untilSeen = true;
+      until = a.slice("--until=".length);
+    } else if (stripFlags(a)) rest.push(a);
+  }
+  let task = rest.join(" ");
+  if (task === "-" || !task) {
+    try {
+      task = readFileSync(0, "utf8");
+    } catch {
+      task = "";
+    }
+  }
+  const n = Number(maxTurnsRaw);
+  if (maxTurnsRaw == null) {
+    console.error("tandem: run requires --max-turns N (integer 1..50)");
+    process.exitCode = 2;
+  } else if (!Number.isInteger(n) || n < 1 || n > 50) {
+    console.error(`tandem: run --max-turns must be an integer 1..50 (got "${maxTurnsRaw}")`);
+    process.exitCode = 2;
+  } else if (untilSeen && !String(until || "").length) {
+    console.error("tandem: run --until requires a non-empty marker string");
+    process.exitCode = 2;
+  } else if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+  } else {
+    await runLoop(task, cfg, n, untilSeen ? until : "");
+  }
 } else if (cmd === "compact") {
   // hand the near-full partner off to a fresh session, with a driver-crafted handoff prompt
   let prompt = argv.join(" ");
@@ -2317,6 +2940,9 @@ else if (cmd === "new") {
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +
       "  ask \"<task>\" [--bg]   delegate a turn (Claude partner = open session; --bg = background)\n" +
       "  continue \"<task>\"      explicit alias for another turn on the same coupled session\n" +
+      "  run \"<task>\" --max-turns N [--until \"<marker>\"]\n" +
+      "                        N ordinary bounded turns on the coupled session (no single mega-turn).\n" +
+      "                        exit 0 marker found / all N clean · 1 a turn errored · 4 marker unseen in N\n" +
       "  ask -                 read task from stdin (long/multiline)\n" +
       "  compact [\"<prompt>\"]  hand the near-full partner off to a FRESH thread, seeded with a\n" +
       "                        handoff summary you craft (omit prompt for the default summary)\n" +

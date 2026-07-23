@@ -7,7 +7,7 @@
   "scripts": {
     "watch": "node bin/watch.mjs",
     "status": "node bin/peer.mjs status",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test --test-concurrency=4 test/*.test.mjs"
   },
   "keywords": [],
   "author": "",

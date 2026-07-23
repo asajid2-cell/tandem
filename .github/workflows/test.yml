@@ -11,4 +11,7 @@ jobs:
         with:
           node-version: "22"
       # No install needed — the suite uses only node:test + a fake partner (no deps).
-      - run: node --test "test/*.test.mjs"
+      # Concurrency is BOUNDED: these are real-time supervision tests (sub-second stall windows
+      # measured against freshly spawned process trees). Unbounded file parallelism on a many-core
+      # machine floods the box with node cold-starts and blows the very windows under test.
+      - run: node --test --test-concurrency=4 "test/*.test.mjs"
