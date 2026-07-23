@@ -28,6 +28,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  watch,
   writeFileSync,
 } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -38,6 +39,7 @@ import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir, 
 import {
   DispatchBusyError,
   acquireDispatch,
+  doneSignalPath,
   finishDispatch,
   forceFinishDispatch,
   inspectDispatch,
@@ -985,6 +987,73 @@ async function ask(task, cfg) {
   }
 }
 
+// ---- bounded run loop -----------------------------------------------------------------------
+// `peer.mjs run "<task>" --max-turns N [--until "<marker>"]` — run up to N ORDINARY bounded turns on
+// the SAME coupled session instead of one very long turn. Every turn goes through the exact `ask`
+// foreground flow (lease acquire/release, provider-limit pre-flight, supervision, T5 capture,
+// coupling), so a parked provider fast-fails identically and each turn is fully covered by the
+// existing machinery. Nothing is reimplemented — the loop only sequences asks and reads the terminal
+// record each leaves behind.
+//
+// Stop conditions / exit codes (disjoint from the other commands: 2 = usage, 3 = WEDGED in waitJob):
+//   - marker found as a LITERAL substring of a turn's verdict → 0 (say which turn).
+//   - a turn ends error-shaped (supervised stop / provider park / nonzero) → stop, 1 (ask already
+//     surfaced the exact error; the last turn's job record is the ordinary stop record).
+//   - N turns run with no marker → 4 (factual: marker never seen in N turns).
+//   - no --until → run exactly N turns; 0 if all completed cleanly.
+// The marker is matched with String.includes — a LITERAL substring test, so regex metacharacters in
+// the marker are inert (never compiled). Turn 1 sends the task; turns 2..N send a constant, honest
+// continuation prompt. With --until, one clear instruction line is appended asking for the marker
+// only when the work is FULLY complete.
+async function runLoop(task, cfg, maxTurns, marker) {
+  ensureState();
+  if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+    return;
+  }
+  const wantMarker = !!marker;
+  const markerInstruction = (m) =>
+    "\n\nContinue working until the task is FULLY complete. Only once everything is genuinely done — never" +
+    ` before — output this exact completion marker as the final line of your reply, verbatim and alone: ${m}`;
+  const firstTask = wantMarker ? task + markerInstruction(marker) : task;
+  // Turns 2..N: a constant, honest continuation. It never claims prior context beyond "continue the
+  // work" and (with a marker) repeats the completion contract so a resumed turn can satisfy it.
+  const contTask = wantMarker
+    ? "Continue the work from where you left off." + markerInstruction(marker)
+    : "Continue the work from where you left off. If it is already fully complete, say so explicitly.";
+  for (let n = 1; n <= maxTurns; n++) {
+    const turnTask = n === 1 ? firstTask : contTask;
+    process.exitCode = 0; // each turn sets its own code on error; start clean so a prior turn can't leak
+    console.error(`tandem: run turn ${n}/${maxTurns}…`);
+    await ask(turnTask, cfg);
+    const job = jobState(cfg);
+    const status = job?.status || "";
+    const verdict = job?.verdict || "";
+    const markerFound = wantMarker ? verdict.includes(marker) : false;
+    logEvent({ type: "run-turn", ts: Date.now(), n, of: maxTurns, markerFound, status });
+    // A turn that did not end `done` is error-shaped: ask() already printed the exact cause and set a
+    // code (1/3). Stop the loop and normalize to exit 1 (the run-level "a turn failed" signal).
+    if (status !== "done") {
+      console.error(`tandem: run stopped at turn ${n}/${maxTurns} — the turn ended ${status || "with no record"} (see its output above)`);
+      process.exitCode = 1;
+      return;
+    }
+    if (markerFound) {
+      console.log(`tandem: run complete — marker found in turn ${n}/${maxTurns}.`);
+      process.exitCode = 0;
+      return;
+    }
+  }
+  if (wantMarker) {
+    console.error(`tandem: run exhausted — the marker was never seen in ${maxTurns} turn(s).`);
+    process.exitCode = 4;
+  } else {
+    console.log(`tandem: run complete — ran ${maxTurns} turn(s) cleanly.`);
+    process.exitCode = 0;
+  }
+}
+
 const CLAUDE_SESSION = join(STATE, "claude.session"); // dedicated partner session id
 const CLAUDE_VERDICT = join(STATE, "claude_verdict.txt");
 const JOB_FILES = jobPaths(STATE, SK);
@@ -1779,12 +1848,49 @@ async function swarmCommand(args, cfg) {
   }
 }
 
+// Wait for the lane's completion SIGNAL file to change (push), racing a bounded fallback poll. The
+// job JSON stays authoritative — a woken caller always re-reads it — so a filesystem that never
+// delivers fs.watch events (Z: is a network drive; watch is unreliable there) still resolves on the
+// timeout and correctness never depends on the push. Resolves early only on an event NAMING the done
+// file (or a null-name event, which some platforms emit) so ordinary lane churn — heartbeats, the
+// live turn log — does not busy-spin the caller. The watcher is always torn down before resolving.
+function waitForDoneSignal(dir, doneName, timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let watcher = null;
+    let timer = null;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (watcher) {
+        try {
+          watcher.close();
+        } catch {
+          /* already closed */
+        }
+      }
+      resolve();
+    };
+    timer = setTimeout(finish, Math.max(0, timeoutMs));
+    try {
+      watcher = watch(dir, (_evt, name) => {
+        if (!name || name === doneName) finish();
+      });
+      watcher.on("error", finish); // an unwatchable dir degrades to the timeout poll, never throws
+    } catch {
+      /* fs.watch unsupported here — the timeout poll is the sole (and authoritative) waker */
+    }
+  });
+}
+
 async function waitJob(maxSec, cfg) {
   if (!jobState(cfg)) {
     console.error("tandem: no job exists for this lane");
     process.exitCode = 2;
     return;
   }
+  const doneName = basename(doneSignalPath(STATE, SK));
   const deadline = Date.now() + maxSec * 1000;
   while (Date.now() < deadline) {
     const j = jobState(cfg);
@@ -1810,7 +1916,11 @@ async function waitJob(maxSec, cfg) {
       }
       return;
     }
-    await sleep(2000);
+    // Push, not poll: wake on the done-file signal, or fall back to a ~2s poll (the same cadence as
+    // before, kept because fs.watch is not reliable on every filesystem/network drive — Z: included).
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    await waitForDoneSignal(STATE, doneName, Math.min(2000, remaining));
   }
   console.error("tandem: wait timed out — job still running; poll `peer.mjs status`");
   process.exitCode = 1;
@@ -2659,6 +2769,50 @@ if (cmd === "ask" || cmd === "continue") {
   if (task === "-" || !task) task = readFileSync(0, "utf8"); // stdin
   if (bg) await startJob(task, cfg);
   else await ask(task, cfg);
+} else if (cmd === "run") {
+  // run "<task>" --max-turns N [--until "<marker>"] — N ordinary bounded turns on the coupled session.
+  // --max-turns is REQUIRED (no unbounded loop), integer, clamped to 1..50; outside that is a usage
+  // error. --until without --max-turns is a usage error. --max-turns without --until runs exactly N.
+  let maxTurnsRaw = null;
+  let until = null;
+  let untilSeen = false;
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--max-turns") maxTurnsRaw = argv[++i];
+    else if (a.startsWith("--max-turns=")) maxTurnsRaw = a.slice("--max-turns=".length);
+    else if (a === "--until") {
+      untilSeen = true;
+      until = argv[++i];
+    } else if (a.startsWith("--until=")) {
+      untilSeen = true;
+      until = a.slice("--until=".length);
+    } else if (stripFlags(a)) rest.push(a);
+  }
+  let task = rest.join(" ");
+  if (task === "-" || !task) {
+    try {
+      task = readFileSync(0, "utf8");
+    } catch {
+      task = "";
+    }
+  }
+  const n = Number(maxTurnsRaw);
+  if (maxTurnsRaw == null) {
+    console.error("tandem: run requires --max-turns N (integer 1..50)");
+    process.exitCode = 2;
+  } else if (!Number.isInteger(n) || n < 1 || n > 50) {
+    console.error(`tandem: run --max-turns must be an integer 1..50 (got "${maxTurnsRaw}")`);
+    process.exitCode = 2;
+  } else if (untilSeen && !String(until || "").length) {
+    console.error("tandem: run --until requires a non-empty marker string");
+    process.exitCode = 2;
+  } else if (!task || !task.trim()) {
+    console.error("tandem: empty task");
+    process.exitCode = 2;
+  } else {
+    await runLoop(task, cfg, n, untilSeen ? until : "");
+  }
 } else if (cmd === "compact") {
   // hand the near-full partner off to a fresh session, with a driver-crafted handoff prompt
   let prompt = argv.join(" ");
@@ -2786,6 +2940,9 @@ else if (cmd === "new") {
     "tandem peer bridge — persistent, resumable pair sessions both ways\n" +
       "  ask \"<task>\" [--bg]   delegate a turn (Claude partner = open session; --bg = background)\n" +
       "  continue \"<task>\"      explicit alias for another turn on the same coupled session\n" +
+      "  run \"<task>\" --max-turns N [--until \"<marker>\"]\n" +
+      "                        N ordinary bounded turns on the coupled session (no single mega-turn).\n" +
+      "                        exit 0 marker found / all N clean · 1 a turn errored · 4 marker unseen in N\n" +
       "  ask -                 read task from stdin (long/multiline)\n" +
       "  compact [\"<prompt>\"]  hand the near-full partner off to a FRESH thread, seeded with a\n" +
       "                        handoff summary you craft (omit prompt for the default summary)\n" +

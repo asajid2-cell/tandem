@@ -21,12 +21,14 @@ import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
+  clearDoneSignal,
   finishDispatch,
   isPidAlive,
   jobPaths,
   leaseFrom,
   leaseIsOwned,
   markDispatchActivity,
+  signalDone,
   startHeartbeat,
   updateDispatch,
 } from "./jobs.mjs";
@@ -324,6 +326,7 @@ let inTurn = false;
 // under the asking driver's files even across driver restarts. Startup SK is the fallback.
 let curJob = JOB;
 let curLast = LASTMSG;
+let curSk = SK; // the job key for the CURRENT dispatch — names its `job-<sk>.done` signal (no-lease path)
 let curLease = null;
 let stopTurnHeartbeat = null;
 let curHoldLease = false;
@@ -356,7 +359,11 @@ function finishWithCapture(progressCapture) {
   try {
     if (!c.lease || leaseIsOwned(c.lease)) writeFileSync(c.last, c.verdict);
     if (c.lease) finishDispatch(c.lease, { ...c.record, progressCapture });
-    else writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture, ts: Date.now() }));
+    else {
+      // Legacy no-lease finish bypasses finishDispatch → signal explicitly (the lease path signals inside it).
+      writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture, ts: Date.now() }));
+      signalDone(STATE, curSk, { dispatchId: "", status: c.record.status || "error" });
+    }
   } catch {
     /* ignore — same tolerance as the normal finish path */
   }
@@ -781,6 +788,7 @@ claude.stdout.on("data", (b) => {
             else finishDispatch(curLease, errRecord);
           } else {
             writeFileSync(curJob, JSON.stringify({ ...errRecord, ts: Date.now() }));
+            signalDone(STATE, curSk, { dispatchId: "", status: "error" }); // legacy no-lease finish → signal explicitly
           }
         } catch {
           /* ignore */
@@ -938,6 +946,7 @@ claude.stdout.on("data", (b) => {
               ts: Date.now(),
             }),
           );
+          signalDone(STATE, curSk, { dispatchId: "", status: stopped ? "error" : "done" }); // legacy no-lease finish
         }
       } catch {
         /* ignore */
@@ -1010,7 +1019,10 @@ claude.on("exit", (code) => {
     try {
       if (!c.lease || leaseIsOwned(c.lease)) writeFileSync(c.last, c.verdict);
       if (c.lease) finishDispatch(c.lease, { ...c.record, progressCapture: pc });
-      else writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture: pc, ts: Date.now() }));
+      else {
+        writeFileSync(c.job, JSON.stringify({ ...c.record, progressCapture: pc, ts: Date.now() }));
+        signalDone(STATE, curSk, { dispatchId: "", status: c.record.status || "error" }); // legacy no-lease finish
+      }
     } catch {
       /* ignore */
     }
@@ -1105,10 +1117,10 @@ setInterval(() => {
   // Unwrap the peer envelope (carries the sender's job key); bare text = legacy sender.
   curJob = JOB;
   curLast = LASTMSG;
+  curSk = SK;
   curLease = null;
   curHoldLease = false;
   curControllerPid = 0;
-  let curSk = SK;
   let dispatchId = "";
   try {
     const env2 = JSON.parse(task);
@@ -1155,7 +1167,13 @@ setInterval(() => {
   writeFileSync(STATUS, "RUNNING");
   try {
     writeFileSync(TURNLOG, ""); // reset the live stream for this turn
-    if (!curLease) writeFileSync(curJob, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
+    // No-lease legacy path: the lease path clears the done signal in acquireDispatch, but a bare-text
+    // dispatch has no lease, so clear it HERE as the running record is first written — same staleness
+    // discipline, so a leftover signal from a prior legacy turn can never wake a waiter early.
+    if (!curLease) {
+      clearDoneSignal(STATE, curSk);
+      writeFileSync(curJob, JSON.stringify({ status: "running", partner: "claude", ts: Date.now() }));
+    }
   } catch {
     /* ignore */
   }
