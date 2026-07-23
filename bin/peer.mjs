@@ -195,7 +195,21 @@ function loadConfig() {
     // how long one such open tool may run before it is treated as a wedge. 0 = unbounded tools
     // (suspension still applies). Env TANDEM_TOOL_MAX_SEC > config key toolMaxSec > this default.
     toolMaxSec: 1800,
+    // Progress-idle detection (W3) — OPT-IN, default 0 = OFF. The raw stall clock (above) measures
+    // stream BYTES: a partner that spins on the SAME failing command, re-prints retry banners, or
+    // loops without touching a file streams bytes forever and never stalls. progressIdleSec adds a
+    // heuristic built ONLY from signals already on the --json stream (see runCodex): a turn is
+    // stopped kind "no-progress" when, for this many seconds, NO novel command AND NO file-change
+    // item appeared, AND the recent output window is mostly repetition. It is CONJUNCTIVE and OFF by
+    // default precisely because a false positive would kill a slow-but-legitimately-working turn —
+    // the raw stall clock and the toolMaxSec bound stay the primary guards. Env TANDEM_PROGRESS_IDLE_SEC.
+    progressIdleSec: 0,
     maxTurnSec: 0,
+    // Optional LOOSE turn-time limit in HOURS — a convenience alias for maxTurnSec, default 0 = off.
+    // When set AND maxTurnSec is 0/unset it maps to maxTurnSec = maxTurnHours*3600 in loadConfig.
+    // Precedence: an explicit maxTurnSec (env or config, >0) ALWAYS wins — hours only fills an unset
+    // seconds value, never double-bounds. Env TANDEM_MAX_TURN_HOURS.
+    maxTurnHours: 0,
     stopGraceSec: 5,
     // T5 progress capture: after a supervised stop (stall / absolute cap / tool-timeout) the
     // partner's partial work is stranded in its durable session — run ONE bounded follow-up turn
@@ -279,14 +293,21 @@ function loadConfig() {
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_STALL_SEC !== undefined) cfg.stallSec = Number(process.env.TANDEM_STALL_SEC) || 0;
   if (process.env.TANDEM_TOOL_MAX_SEC !== undefined) cfg.toolMaxSec = Number(process.env.TANDEM_TOOL_MAX_SEC) || 0;
+  if (process.env.TANDEM_PROGRESS_IDLE_SEC !== undefined) cfg.progressIdleSec = Number(process.env.TANDEM_PROGRESS_IDLE_SEC) || 0;
   if (process.env.TANDEM_MAX_TURN_SEC !== undefined) cfg.maxTurnSec = Number(process.env.TANDEM_MAX_TURN_SEC) || 0;
+  if (process.env.TANDEM_MAX_TURN_HOURS !== undefined) cfg.maxTurnHours = Number(process.env.TANDEM_MAX_TURN_HOURS) || 0;
   if (process.env.TANDEM_STOP_GRACE_SEC !== undefined) cfg.stopGraceSec = Number(process.env.TANDEM_STOP_GRACE_SEC) || 0;
   if (process.env.TANDEM_WEDGE_AFTER_SEC !== undefined) cfg.wedgeAfterSec = Number(process.env.TANDEM_WEDGE_AFTER_SEC) || 0;
   if (process.env.TANDEM_CAPTURE_ON_STOP !== undefined) cfg.captureOnStop = process.env.TANDEM_CAPTURE_ON_STOP !== "0";
   if (process.env.TANDEM_CAPTURE_MAX_SEC !== undefined) cfg.captureMaxSec = Number(process.env.TANDEM_CAPTURE_MAX_SEC) || 0;
   cfg.stallSec = Math.max(0, Number(cfg.stallSec) || 0);
   cfg.toolMaxSec = Math.max(0, Number(cfg.toolMaxSec) || 0);
+  cfg.progressIdleSec = Math.max(0, Number(cfg.progressIdleSec) || 0);
   cfg.maxTurnSec = Math.max(0, Number(cfg.maxTurnSec) || 0);
+  cfg.maxTurnHours = Math.max(0, Number(cfg.maxTurnHours) || 0);
+  // maxTurnHours → maxTurnSec, ONLY when no explicit seconds bound is set. An explicit maxTurnSec
+  // (env or config, >0) always wins, so setting both never double-bounds (the seconds value is used).
+  if (cfg.maxTurnSec === 0 && cfg.maxTurnHours > 0) cfg.maxTurnSec = cfg.maxTurnHours * 3600;
   cfg.stopGraceSec = Math.max(0, Number(cfg.stopGraceSec) || 0);
   cfg.wedgeAfterSec = Math.max(0, Number(cfg.wedgeAfterSec) || 0);
   cfg.captureOnStop = cfg.captureOnStop !== false;
@@ -609,6 +630,9 @@ function supervisedStopError(res) {
   }
   if (stop.kind === "tool-timeout") {
     return `turn stopped: a single tool call ran ${stop.toolSec}s, past the toolMaxSec bound; ${stopChannelClause(stop)}; ${warm}`;
+  }
+  if (stop.kind === "no-progress") {
+    return `turn stopped: no new distinct command or file change for ${stop.progressIdleSec}s and the output stream was ~${stop.repetitionPct}% repetition; ${stopChannelClause(stop)}; ${warm}`;
   }
   return `turn stopped at the optional maxTurnSec backstop after ${stop.elapsedSec}s; ${stopChannelClause(stop)}; ${warm}`;
 }
@@ -1864,6 +1888,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
     stallSec: cfg.stallSec || 0,
     maxSec: cfg.maxTurnSec || 0,
     toolMaxSec: cfg.toolMaxSec || 0,
+    progressIdleSec: cfg.progressIdleSec || 0,
     graceSec: cfg.stopGraceSec ?? 5,
     onSpawn: hooks.onSpawn,
     onActivity: hooks.onActivity,
@@ -1914,6 +1939,16 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   if (termination?.kind === "tool-timeout") {
     verdict =
       `(turn stopped: a single tool call ran ${termination.toolSec}s, past the toolMaxSec bound (${cfg.toolMaxSec}s). ` +
+      warmClause +
+      ")";
+  }
+  // A no-progress stop (W3): bytes kept flowing (the raw stall clock never fired) but for
+  // progressIdleSec there was NO novel command and NO file change while the recent output repeated
+  // itself. State ONLY what the supervisor measured — the FACT of no progress, never a guess at why.
+  if (termination?.kind === "no-progress") {
+    verdict =
+      `(turn stopped: no new distinct command or file change for ${termination.progressIdleSec}s and the ` +
+      `output stream was ~${termination.repetitionPct}% repetition — the supervisor measured no progress, not why. ` +
       warmClause +
       ")";
   }
@@ -2110,6 +2145,7 @@ function runCodex(
     stallSec = 0,
     maxSec = 0,
     toolMaxSec = 0,
+    progressIdleSec = 0,
     graceSec = 5,
     onSpawn,
     onActivity,
@@ -2139,6 +2175,37 @@ function runCodex(
     // bounds a single tool. This never disturbs the raw `stdout` accumulation or the TURNLOG write.
     const openItems = new Map(); // open item id → observed-start ms
     let toolLineBuf = ""; // partial trailing line carried between stdout chunks
+    // Progress-idle detection (W3, opt-in via progressIdleSec). Built ONLY from signals already on the
+    // --json stream that trackToolItems / digest recognize — no new parsing shape is invented:
+    //   (a) distinct-new-command rate — a command_execution whose command STRING is novel this turn is
+    //       progress; the SAME failing command re-run 40x is not (seenCommands dedupes).
+    //   (b) file-change recency — a file_change / apply_patch / patch item is progress (reuses digest's
+    //       field patterns: .changes/.item.changes/.fileChanges/.item.path/apply_patch).
+    //   (c) output-repetition — a rolling set of recent NORMALIZED output lines; a high duplicate ratio
+    //       over the window means the stream is repeating itself.
+    // lastProgressAt is the single progress clock (max of the two "recency" signals): whenever a novel
+    // command OR a file change is seen it advances to now. A turn is stopped kind "no-progress" ONLY
+    // when ALL hold (see the supervisor loop): progressIdle >= progressIdleSec AND repetition >=
+    // REPETITION_THRESHOLD. Conjunctive by design — a false positive would kill a slow-but-working turn.
+    const seenCommands = new Set(); // normalized command strings seen this turn (distinct-new-command)
+    let lastProgressAt = startedAt; // last novel command OR file change — the progress clock's baseline
+    const recentLines = []; // rolling window of recent normalized output lines (repetition hash)
+    const REPETITION_WINDOW = 12; // lines — a small recent window, enough to catch a tight retry loop
+    // A high-duplicate window means the stream is repeating. A CONSTANT, not a knob (per the brief): it
+    // only ever gates ALONGSIDE the two stronger recency signals above, so it needs no per-lane tuning.
+    const REPETITION_THRESHOLD = 0.6; // >=60% of the recent window are duplicates → the stream repeats
+    // Collapse volatile ids/digits so the SAME command re-emitted with a fresh item id/counter still
+    // reads as a DUPLICATE (a retry loop repeats with new ids — the whole point of the repetition signal).
+    const normalizeLine = (line) =>
+      line
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<uuid>")
+        .replace(/\d+/g, "#")
+        .trim();
+    const repetitionRatio = () => {
+      const n = recentLines.length;
+      if (n < REPETITION_WINDOW) return 0; // not enough data yet — never trip on a short/young stream
+      return 1 - new Set(recentLines).size / n;
+    };
 
     const invoke = (fn, value) => {
       if (!fn) return;
@@ -2161,6 +2228,13 @@ function runCodex(
       while ((nl = toolLineBuf.indexOf("\n")) >= 0) {
         const line = toolLineBuf.slice(0, nl).trim();
         toolLineBuf = toolLineBuf.slice(nl + 1);
+        if (line) {
+          // Repetition window (progress-idle signal c): a rolling set of NORMALIZED complete lines.
+          // Fed for EVERY non-empty line, before the JSON gate, so a repeating stream registers even
+          // if a line ever fails to parse. Bounded to REPETITION_WINDOW — O(1) memory.
+          recentLines.push(normalizeLine(line));
+          if (recentLines.length > REPETITION_WINDOW) recentLines.shift();
+        }
         if (!line.startsWith("{")) continue;
         let o;
         try {
@@ -2184,6 +2258,26 @@ function runCodex(
           }
         } catch {
           /* observing tool boundaries must never take down the supervised partner */
+        }
+        try {
+          // Progress signals (W3), reusing digest()'s exact field patterns — NO new shape invented.
+          // A NOVEL command string OR any file-change item advances the progress clock. A command
+          // re-run with the same string is NOT novel (seenCommands dedupes), so a retry loop leaves
+          // the clock frozen while its bytes still keep the raw stall clock alive.
+          const cmd = o.command ?? o.item?.command ?? o.payload?.command;
+          if (cmd !== undefined && cmd !== null) {
+            const cmdStr = Array.isArray(cmd) ? cmd.join(" ") : String(cmd);
+            if (!seenCommands.has(cmdStr)) {
+              seenCommands.add(cmdStr);
+              lastProgressAt = Date.now();
+            }
+          }
+          const ch = o.changes ?? o.item?.changes ?? o.fileChanges ?? o.item?.fileChanges;
+          let fileChanged = (ch && typeof ch === "object" && Object.keys(ch).length > 0) || typeof o.item?.path === "string";
+          if (!fileChanged && cmd && JSON.stringify(o).includes("apply_patch")) fileChanged = true;
+          if (fileChanged) lastProgressAt = Date.now();
+        } catch {
+          /* observing progress signals must never take down the supervised partner */
         }
       }
     };
@@ -2259,11 +2353,12 @@ function runCodex(
       });
     });
 
-    // toolMaxSec is an INDEPENDENT bound: it must be able to fire even when stall detection and the
-    // absolute cap are both disabled (a user who sets stallSec:0 to never idle-kill can still want a
-    // silent tool bounded). If it were omitted here the supervisor loop would never start and the
-    // tool bound would be silently unenforced. It also tightens checkMs when it is the only window.
-    const enabledWindows = [stallSec, maxSec, toolMaxSec].filter((seconds) => seconds > 0);
+    // toolMaxSec AND progressIdleSec are INDEPENDENT bounds: each must be able to fire even when stall
+    // detection and the absolute cap are both disabled (a user who sets stallSec:0 to never idle-kill
+    // can still want a silent tool bounded, or a no-progress spin caught). If either were omitted here
+    // the supervisor loop would never start and that bound would be silently unenforced. They also
+    // tighten checkMs when one is the only window.
+    const enabledWindows = [stallSec, maxSec, toolMaxSec, progressIdleSec].filter((seconds) => seconds > 0);
     if (enabledWindows.length) {
       const checkMs = Math.max(20, Math.min(250, ...enabledWindows.map((seconds) => (seconds * 1000) / 4)));
       supervisorTimer = setInterval(() => {
@@ -2288,6 +2383,10 @@ function runCodex(
             return;
           }
           invoke(onActivity, { ts: now, kind: "tool-open", bytes: 0 });
+          // Suspend the PROGRESS clock too while a tool is open (T6 interaction): a legitimate silent
+          // tool is not "no progress". Freezing lastProgressAt to now each open tick means the moment
+          // the tool closes the progress window measures from ~0, never counting the tool's silence.
+          lastProgressAt = now;
           const capOnly = supervisionDecision({ now, startedAt, lastActivityAt, stallSec: 0, maxSec });
           if (capOnly) beginStop(capOnly);
           return;
@@ -2299,7 +2398,30 @@ function runCodex(
           stallSec,
           maxSec,
         });
-        if (decision) beginStop(decision);
+        if (decision) {
+          beginStop(decision);
+          return;
+        }
+        // No-progress (W3): stall/absolute are the PRIMARY guards (checked above); this only fires when
+        // neither did. ALL must hold — the progress clock has been idle for progressIdleSec (no novel
+        // command, no file change) AND the recent output window is mostly repetition. A slow-but-working
+        // turn keeps emitting novel commands / file changes, so its progress clock stays fresh and it is
+        // never stopped here. `stalled` is left false downstream — this is a NEW kind, not a stall.
+        if (progressIdleSec > 0) {
+          const progressIdleMs = now - lastProgressAt;
+          if (progressIdleMs >= progressIdleSec * 1000) {
+            const ratio = repetitionRatio();
+            if (ratio >= REPETITION_THRESHOLD) {
+              beginStop({
+                kind: "no-progress",
+                elapsedSec: Number(((now - startedAt) / 1000).toFixed(3)),
+                idleSec: Number(((now - lastActivityAt) / 1000).toFixed(3)),
+                progressIdleSec: Number((progressIdleMs / 1000).toFixed(3)),
+                repetitionPct: Math.round(ratio * 100),
+              });
+            }
+          }
+        }
       }, checkMs);
     }
 

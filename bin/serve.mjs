@@ -59,10 +59,17 @@ const STALL_SEC =
   process.env.TANDEM_STALL_SEC !== undefined
     ? Math.max(0, Number(process.env.TANDEM_STALL_SEC) || 0)
     : Math.max(0, Number(cfg().stallSec ?? 240) || 0);
+// Optional LOOSE turn-time limit in HOURS — a convenience alias for maxTurnSec (mirrors peer.mjs).
+const MAX_TURN_HOURS =
+  process.env.TANDEM_MAX_TURN_HOURS !== undefined
+    ? Math.max(0, Number(process.env.TANDEM_MAX_TURN_HOURS) || 0)
+    : Math.max(0, Number(cfg().maxTurnHours) || 0);
 const MAX_TURN_SEC =
-  process.env.TANDEM_MAX_TURN_SEC !== undefined
+  // An explicit maxTurnSec (env or config, >0) ALWAYS wins; maxTurnHours only fills an unset seconds
+  // value (hours*3600), never double-bounds — the same precedence loadConfig applies on the codex side.
+  (process.env.TANDEM_MAX_TURN_SEC !== undefined
     ? Math.max(0, Number(process.env.TANDEM_MAX_TURN_SEC) || 0)
-    : Math.max(0, Number(cfg().maxTurnSec) || 0);
+    : Math.max(0, Number(cfg().maxTurnSec) || 0)) || (MAX_TURN_HOURS > 0 ? MAX_TURN_HOURS * 3600 : 0);
 const STOP_GRACE_SEC =
   process.env.TANDEM_STOP_GRACE_SEC !== undefined
     ? Math.max(0, Number(process.env.TANDEM_STOP_GRACE_SEC) || 0)
@@ -691,6 +698,7 @@ claude.stdout.on("data", (b) => {
       // the provider for FUTURE asks. LIMIT_ENABLED gates the whole ladder; every parse is caught.
       let park = null; // { msg, kind, signal } → error-shaped park
       let keepVerdictPark = null; // { msg, signal } → verdict survives; park future asks only
+      let proximityWarn = null; // W3: a warn-shaped rate_limit_event → additive headroom notice, NEVER a park
       if (LIMIT_ENABLED) {
         try {
           const rli = turnRateLimitInfo;
@@ -708,7 +716,18 @@ claude.stdout.on("data", (b) => {
               if (worthless) park = { msg, kind: "limit", signal: "rate_limit_event" };
               else keepVerdictPark = { msg, signal: "rate_limit_event" };
             } else if (/warn/i.test(status)) {
-              /* PROXIMITY (e.g. allowed_warning): never a park — persisted for the predictive item only. */
+              // PROXIMITY (e.g. allowed_warning): NEVER a park. Cash the persisted groundwork into an
+              // ADDITIVE, driver-facing headroom warning built from the event's OWN fields only —
+              // status, rateLimitType, and resetsAt when it is a plausible epoch (the same hasEpoch
+              // guard the reject branch uses). It never blocks, error-shapes, or reshapes the verdict.
+              const type = rli.rateLimitType || "unknown";
+              const resetsAt = rli.resetsAt;
+              const hasEpoch = typeof resetsAt === "number" && /^\d{10}$/.test(String(resetsAt));
+              proximityWarn =
+                `claude usage headroom warning (${type}): approaching the limit; status ${status}` +
+                (hasEpoch ? `; resets ~${new Date(resetsAt * 1000).toISOString()}` : "");
+              console.error(`tandem serve: ${proximityWarn}`);
+              log({ type: "usage-headroom-warning", ts: Date.now(), partner: "claude", status, rateLimitType: type, resetsAt: hasEpoch ? resetsAt : null });
             } else if (status !== "allowed") {
               // unrecognized non-allowed status: forensics only, prefer false-negative per the doctrine.
               log({ type: "rate-limit-status-unknown", ts: Date.now(), status });
@@ -801,6 +820,11 @@ claude.stdout.on("data", (b) => {
         }
       }
 
+      // W3: compose the driver-facing warning ADDITIVELY. A proximity headroom notice rides ALONGSIDE
+      // whatever provenance/park warning the turn already carries — a warn-shaped event is never a
+      // park, never error-shaped, and never blocks the verdict; it only annotates the record.
+      const turnWarn = [proximityWarn, verdictParkWarn || provenanceWarn || null].filter(Boolean).join("; ") || null;
+
       // T5: a CHECKPOINTED stop leaves the partner ALIVE with the stopped turn's work in its warm
       // context — capture progress BEFORE finishing the dispatch, so the record the driver is
       // waiting on already carries the recovery report. Held-lease (compact) dispatches are
@@ -816,7 +840,7 @@ claude.stdout.on("data", (b) => {
           lowContext: low,
           ...provenance,
           ...(verdictParkFields || {}),
-          warning: verdictParkWarn || provenanceWarn || null,
+          warning: turnWarn,
           status: "error",
           error: checkpointError(stopped),
           termination: stopped,
@@ -881,7 +905,7 @@ claude.stdout.on("data", (b) => {
             lowContext: low,
             ...provenance,
             ...(verdictParkFields || {}),
-            warning: verdictParkWarn || provenanceWarn || null,
+            warning: turnWarn,
           };
           if (curHoldLease) updateDispatch(curLease, { ...result, resultReady: true });
           else {
@@ -906,7 +930,7 @@ claude.stdout.on("data", (b) => {
               lowContext: low,
               ...provenance,
               ...(verdictParkFields || {}),
-              warning: verdictParkWarn || provenanceWarn || null,
+              warning: turnWarn,
               error: stopped ? (checkpoint ? checkpointError(stopped) : stopError(stopped)) : undefined,
               termination: stopped,
               stalled: stopped?.kind === "stall",
