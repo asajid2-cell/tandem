@@ -136,6 +136,40 @@ test("prepareSwarm: gates pass, registry stamped with driver->junior edge, chart
   });
 });
 
+test("prepareSwarm: TANDEM_PARENT_ID links a forked mind under its parent; unknown parent falls back to root", () => {
+  const root = freshTmp("prep-parent-");
+  const state = join(root, "st");
+  mkdirSync(state, { recursive: true });
+  withEnv({ TANDEM_FLEET_DIR: undefined, TANDEM_STATE: state }, () => {
+    const fleet = join(state, "fleet");
+    registerSession(fleet, { id: "apex-1", kind: "apex", label: "apex" });
+    const manifestPath = writeManifest(root, { lanes: [sealedLane("a")] });
+    // a branch mind forked BY the apex knows its parent
+    withEnv({ TANDEM_PARENT_ID: "apex-1", TANDEM_ROLE: "branch-mind", TANDEM_LABEL: "bm-1" }, () => {
+      prepareSwarm({ root, parentState: state, driverId: "bm-drv", name: "bm", manifestPath, baseCwd: root });
+    });
+    const sessions = JSON.parse(readFileSync(join(fleet, "registry.json"), "utf8")).sessions;
+    assert.equal(sessions["bm-drv"].parent, "apex-1", "branch mind hangs under the apex, not as a root");
+    assert.equal(sessions["bm-drv"].label, "bm-1");
+    assert.equal(sessions["bm/a"].parent, "bm-drv", "its juniors hang under it — one connected tree");
+    // a stale/unknown parent must not refuse the swarm: register as a root instead
+    const dir2 = join(root, "x2");
+    mkdirSync(dir2, { recursive: true });
+    const manifest2 = writeManifest(dir2, { lanes: [sealedLane("b")] });
+    withEnv({ TANDEM_PARENT_ID: "ghost-id" }, () => {
+      prepareSwarm({ root, parentState: state, driverId: "orphan-drv", name: "orph", manifestPath: manifest2, baseCwd: root });
+    });
+    const after = JSON.parse(readFileSync(join(fleet, "registry.json"), "utf8")).sessions;
+    assert.equal(after["orphan-drv"].parent, null, "unknown parent fails SAFE (root), never refuses dispatch");
+  });
+});
+
+test("laneEnvironment: a lane's own id becomes TANDEM_PARENT_ID for anything it forks", () => {
+  const root = freshTmp("lane-parent-");
+  const env = laneEnvironment({ state: join(root, "s"), label: "s--l", laneId: "s/l", cwd: root }, {});
+  assert.equal(env.TANDEM_PARENT_ID, "s/l");
+});
+
 test("prepareSwarm: missing writes[] refused before reserving anything", () => {
   const root = freshTmp("prep-neg1-");
   const state = join(root, "st");

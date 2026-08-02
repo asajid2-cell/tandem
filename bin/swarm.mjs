@@ -230,10 +230,21 @@ export function prepareSwarm({
 
   const registered = [];
   try {
-    // the driver itself must exist in the family tree before its juniors can name it as parent
+    // the driver itself must exist in the family tree before its juniors can name it as parent.
+    // TANDEM_PARENT_ID is how a forked mind learns who forked it — without it every branch mind
+    // registers as its own ROOT and the "family tree" is really a flat list of unrelated trees.
     if (!getSession(fleet, driverId)) {
+      const declaredParent = process.env.TANDEM_PARENT_ID || null;
+      // fail SAFE, not closed: an unknown/stale parent id registers as a root rather than
+      // refusing the whole swarm over a bookkeeping edge
+      const parent = declaredParent && getSession(fleet, declaredParent) ? declaredParent : null;
       try {
-        registerSession(fleet, { id: driverId, parent: null, kind: "branch", label: "driver" });
+        registerSession(fleet, {
+          id: driverId,
+          parent,
+          kind: "branch",
+          label: process.env.TANDEM_LABEL || "driver",
+        });
       } catch (error) {
         // two swarms starting concurrently under one driver may race this insert — losing is fine
         if (!/duplicate session id/.test(String(error.message || error))) throw error;
@@ -322,6 +333,8 @@ export function laneEnvironment(lane, baseEnv = process.env) {
   if (lane.effort) env.TANDEM_EFFORT = lane.effort;
   if (lane.profile) env.TANDEM_PROFILE = lane.profile;
   if (lane.role) env.TANDEM_ROLE = lane.role;
+  // a lane that forks its own swarm registers UNDER this lane, keeping one connected family tree
+  env.TANDEM_PARENT_ID = lane.laneId;
   if (lane.posture) env.TANDEM_POSTURE = lane.posture;
   if (lane.stallSec != null) env.TANDEM_STALL_SEC = String(lane.stallSec);
   if (lane.maxTurnSec != null) env.TANDEM_MAX_TURN_SEC = String(lane.maxTurnSec);
