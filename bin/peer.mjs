@@ -1292,6 +1292,35 @@ async function compactClaude(prompt, cfg, lease) {
   }
 }
 
+// REFRESH — the clear-and-reload primitive. Compaction is generation loss: each cycle summarizes
+// a context that already contains a summary. A refresh instead FORGETS the session outright and
+// lets the next ask rebuild a brief from the on-disk ledger, so the mind is always exactly one hop
+// from source and fidelity never decays.
+//
+// This is compact's teardown MINUS the seed. There is deliberately no CLAUDE_SEED write: a seed is
+// consumed once (serve.mjs deletes it before the first turn runs) and a failure there leaves a mind
+// both memoryless and briefless. The brief is DERIVED at ask time from the ledger, idempotently.
+//
+// Unlike `stop` — which leaves the session resumable and would reload the exact context we are
+// shedding — this removes CLAUDE_SESSION so the next ask opens a genuinely fresh body. The SEAT id
+// persists in the fleet registry via succeedSeat, so `fleet tree` survives the rebirth.
+function refreshClaude({ ledgerDir, seatId, force }) {
+  const running = jobState({}) || {};
+  if (running.status === "running" && !force) {
+    console.error("tandem: refresh refused — a turn is in flight. Refresh at a clean seam, or pass --force (backstop only).");
+    process.exitCode = 1;
+    return;
+  }
+  killDaemon();
+  if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
+  if (existsSync(CLAUDE_SEED)) rmSync(CLAUDE_SEED); // a stale seed would re-introduce the loss path
+  markDetached(DETACHED, DRIVER_ID);
+  logEvent({ type: "refresh", ts: Date.now(), partner: "claude", reason: force ? "backstop" : "seam", seatId: seatId || "" });
+  console.log("tandem: apex REFRESHED — session forgotten, no seed written.");
+  console.log(`  the next ask opens a fresh body and rebuilds its brief from: ${ledgerDir}`);
+  console.log("  (a refresh is one hop from source; a compaction is a copy of a copy)");
+}
+
 // Launch a turn in a DETACHED child so long delegations don't block (or time out)
 // the driver's shell. The driver then polls `status` (instant) or blocks on `wait`.
 async function startJob(task, cfg) {
@@ -3116,6 +3145,37 @@ else if (cmd === "fleet") {
     const { readEvents } = await import("./fleet-inbox.mjs");
     const n = Number(argv[1]) || 20;
     for (const event of readEvents(fleet, n)) console.log(JSON.stringify(event));
+  } else if (sub === "context") {
+    // the REAL context of the live apex turn — the last per-call assistant record. The `result`
+    // record is a per-turn aggregate (measured: 53,152,747 vs a true 491,739) and reading it as
+    // context is defect F7; it would trip the refresh threshold hundreds of times too early.
+    const { liveContext, refreshDecision } = await import("./apex-memory.mjs");
+    const ctx = liveContext(join(STATE, "turn.jsonl"));
+    const running = (jobState(cfg) || {}).status === "running";
+    const d = refreshDecision({ context: ctx, busy: running });
+    console.log(JSON.stringify({ context: ctx, busy: running, ...d }));
+  } else if (sub === "refresh") {
+    const { planRefresh, succeedSeat, detectCompactBoundary } = await import("./apex-refresh.mjs");
+    const { liveContext } = await import("./apex-memory.mjs");
+    const seatId = process.env.TANDEM_SELF_ID || "";
+    const ledgerDir = join(fleet, "apex");
+    const turnLog = join(STATE, "turn.jsonl");
+    // auto-compact is invisible by construction — if it fired, context DROPPED, so the trigger
+    // never fires and the session silently became a summary of a summary. Say so loudly.
+    const compact = detectCompactBoundary(existsSync(turnLog) ? readFileSync(turnLog, "utf8") : "");
+    if (compact.compacted) console.error(`⚠ tandem: INVARIANT VIOLATION — this session appears to have been auto-compacted (${compact.evidence}). Disable auto-compact on the apex; fidelity is already degraded.`);
+    const force = argv.includes("--force");
+    const plan = planRefresh({ context: force ? Number.MAX_SAFE_INTEGER : liveContext(turnLog), busy: (jobState(cfg) || {}).status === "running" });
+    if (argv.includes("--plan")) {
+      console.log(JSON.stringify({ ...plan, compacted: compact.compacted, evidence: compact.evidence }, null, 2));
+    } else if (!plan.act) {
+      console.log(JSON.stringify({ refreshed: false, ...plan }));
+    } else {
+      if (plan.warning) console.error(`⚠ tandem: ${plan.warning}`);
+      if (plan.dumpFirst) console.error("⚠ tandem: BACKSTOP refresh mid-sweep — dump in-flight hypotheses to the ledger FIRST; this is the maximal-loss path.");
+      refreshClaude({ ledgerDir, seatId, force: plan.bypassLaneGuard });
+      if (seatId) succeedSeat(fleet, seatId, `refreshed-${Date.now()}`);
+    }
   } else if (sub === "ledger") {
     // deduped by default — the raw file is the append-only audit trail, this is the analysis view
     const { readLedger, dedupeLedger } = await import("./lane-ledger.mjs");
@@ -3193,6 +3253,10 @@ else if (cmd === "new") {
       "                                                   one waiter for the whole fleet) / recent events\n" +
       "  fleet sessions [n]           every bridge-spawned provider session + tandem identity (for\n" +
       "                               hiding the [TANDEM ...]-branded flood from chat backlogs)\n" +
+      "  fleet context                REAL live context of this lane + whether a refresh is due\n" +
+      "  fleet refresh [--plan|--force]  clear-and-reload: forget the session, rebuild the brief\n" +
+      "                               from the on-disk ledger (one hop from source, never a\n" +
+      "                               summary of a summary). --force = the backstop path\n" +
       "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
       "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",
