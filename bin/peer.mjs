@@ -70,6 +70,13 @@ import {
 import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
+
+// Fleet role for branding/manifest: explicit TANDEM_ROLE (the apex forking a branch mind, a
+// swarm lane's manifest role) > lane-derived "junior" > the plain partner default. Role
+// granularity is what lets backlog filters hide juniors while keeping branch minds visible.
+function fleetKind(defaultKind) {
+  return process.env.TANDEM_ROLE || (process.env.TANDEM_LANE_ID ? "junior" : defaultKind);
+}
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
@@ -2028,7 +2035,7 @@ function persistCodexCoupling(id) {
   recordSpawnedSession({
     provider: "codex",
     sessionId: id,
-    kind: process.env.TANDEM_LANE_ID ? "lane" : "codex-partner",
+    kind: fleetKind("codex-partner"),
     label: process.env.TANDEM_LABEL || basename(STATE),
     laneId: process.env.TANDEM_LANE_ID || "",
     cwd: cfgCwdForManifest(),
@@ -2073,7 +2080,7 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   // (brand line first — it becomes the session title — then the coupling marker, then the task).
   const dispatchedTask = couplingMarker
     ? brandTask(`[${couplingMarker}; internal continuity marker - ignore this line]\n${task}`, {
-        kind: "codex-partner",
+        kind: fleetKind("codex-partner"),
         label: process.env.TANDEM_LABEL || basename(STATE),
         laneId: process.env.TANDEM_LANE_ID || "",
       })

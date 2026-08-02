@@ -132,6 +132,9 @@ export function prepareSwarm({
       model: lane.model || "",
       effort: lane.effort || "",
       profile: lane.profile || "",
+      // fleet ROLE for branding/registry: juniors by default; a manifest may declare a lane a
+      // "branch-mind" (persistent sub-problem owner) so backlog filters can treat roles apart
+      role: lane.role || "junior",
       posture: lane.posture || "",
       stallSec: lane.stallSec ?? stallSec,
       maxTurnSec: lane.maxTurnSec ?? null,
@@ -219,6 +222,7 @@ export function prepareSwarm({
       writesResolved: lane.writesResolved,
       verify: lane.verify,
       verifyTimeoutSec: lane.verifyTimeoutSec,
+      role: lane.role,
       dispatch: "pending",
     })),
   };
@@ -240,7 +244,7 @@ export function prepareSwarm({
       registerSession(fleet, {
         id: lane.laneId,
         parent: driverId,
-        kind: "junior",
+        kind: lane.role === "branch-mind" ? "branch" : "junior",
         label: lane.label,
         charter: lane.task,
         writes: lane.writesResolved,
@@ -317,6 +321,7 @@ export function laneEnvironment(lane, baseEnv = process.env) {
   if (lane.model) env.TANDEM_MODEL = lane.model;
   if (lane.effort) env.TANDEM_EFFORT = lane.effort;
   if (lane.profile) env.TANDEM_PROFILE = lane.profile;
+  if (lane.role) env.TANDEM_ROLE = lane.role;
   if (lane.posture) env.TANDEM_POSTURE = lane.posture;
   if (lane.stallSec != null) env.TANDEM_STALL_SEC = String(lane.stallSec);
   if (lane.maxTurnSec != null) env.TANDEM_MAX_TURN_SEC = String(lane.maxTurnSec);

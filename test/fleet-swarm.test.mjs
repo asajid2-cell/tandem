@@ -100,6 +100,10 @@ test("laneEnvironment: propagates parent TANDEM_FLEET_DIR verbatim and TANDEM_PR
   const withParent = laneEnvironment(lane, { TANDEM_FLEET_DIR: join(root, "pinned") });
   assert.equal(withParent.TANDEM_FLEET_DIR, join(root, "pinned"));
   assert.equal(withParent.TANDEM_PROFILE, "deepseek-flash");
+  // role flows into lane env: juniors by default (runtime lanes always carry a role),
+  // branch-mind when the manifest says so
+  assert.equal(laneEnvironment({ ...lane, role: "junior" }, {}).TANDEM_ROLE, "junior");
+  assert.equal(laneEnvironment({ ...lane, role: "branch-mind" }, {}).TANDEM_ROLE, "branch-mind");
   const noProfile = laneEnvironment({ ...lane, profile: "" }, { TANDEM_FLEET_DIR: join(root, "pinned") });
   assert.equal(noProfile.TANDEM_PROFILE, undefined);
   // without a parent value the fallback still lands on ONE shared fleet dir for the tree
@@ -120,6 +124,7 @@ test("prepareSwarm: gates pass, registry stamped with driver->junior edge, chart
     const record = prep(root, state, manifestPath, "ok");
     assert.equal(record.setupStatus, "ready");
     assert.equal(record.lanes[1].profile, "deepseek-flash");
+    assert.equal(record.lanes[0].role, "junior", "lanes default to the junior role");
     const registry = JSON.parse(readFileSync(join(state, "fleet", "registry.json"), "utf8"));
     const sessions = registry.sessions;
     assert.equal(sessions["drv-1"].kind, "branch");

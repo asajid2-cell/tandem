@@ -613,7 +613,7 @@ claude.stdout.on("data", (b) => {
       recordSpawnedSession({
         provider: "claude",
         sessionId,
-        kind: process.env.TANDEM_LANE_ID ? "lane" : "claude-partner",
+        kind: process.env.TANDEM_ROLE || (process.env.TANDEM_LANE_ID ? "junior" : "claude-partner"),
         label: process.env.TANDEM_LABEL || "",
         laneId: process.env.TANDEM_LANE_ID || "",
         cwd,
@@ -1204,7 +1204,7 @@ setInterval(() => {
   // brand goes OUTERMOST (above any seed) — the first line of the session titles it everywhere
   if (brandPending) {
     task = brandTask(task, {
-      kind: "claude-partner",
+      kind: process.env.TANDEM_ROLE || (process.env.TANDEM_LANE_ID ? "junior" : "claude-partner"),
       label: process.env.TANDEM_LABEL || "",
       laneId: process.env.TANDEM_LANE_ID || "",
     });
