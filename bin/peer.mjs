@@ -1811,7 +1811,8 @@ async function swarmCommand(args, cfg) {
       // the account's rate_limits snapshot — the snapshot is ground truth, raw counters are not)
       // and its fleet-registry status synced (done/error).
       const snapshot = inspectSwarm(record);
-      const selector = args[2];
+      const proveRed = args.includes("--prove-red");
+      const selector = args.filter((a) => a !== "--prove-red")[2];
       const lanes = selector ? [findSwarmLane(snapshot, selector)].filter(Boolean) : snapshot.lanes;
       if (!lanes.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
       const fleet = fleetDir(ROOT);
@@ -1830,14 +1831,32 @@ async function swarmCommand(args, cfg) {
           console.log(`  ${lane.name}: (no verify command declared)`);
           continue;
         }
-        const run = spawnSync(lane.verify, {
-          cwd: lane.cwd,
-          shell: true,
-          encoding: "utf8",
-          timeout: (lane.verifyTimeoutSec || 300) * 1000,
-        });
-        const pass = run.status === 0 && !run.error;
-        const tailText = `${run.stdout || ""}\n${run.stderr || ""}`.trim().split(/\r?\n/).slice(-3).join(" | ");
+        let pass;
+        let tailText;
+        let verdictWord = "";
+        if (proveRed) {
+          // the anti-vacuity form: withhold the lane's declared writes, demand RED, restore,
+          // demand GREEN — a verifier that passes without the work counts for nothing
+          const { proveRedLane } = await import("./prove-red.mjs");
+          const probe = proveRedLane({
+            cwd: lane.cwd,
+            writes: lane.writesResolved && lane.writesResolved.length ? lane.writesResolved : lane.writes,
+            verify: lane.verify,
+            timeoutSec: lane.verifyTimeoutSec || 300,
+          });
+          pass = probe.ok;
+          tailText = probe.detail;
+          verdictWord = probe.vacuous ? "VACUOUS" : probe.ok ? "PASS-PROVEN" : "FAIL";
+        } else {
+          const run = spawnSync(lane.verify, {
+            cwd: lane.cwd,
+            shell: true,
+            encoding: "utf8",
+            timeout: (lane.verifyTimeoutSec || 300) * 1000,
+          });
+          pass = run.status === 0 && !run.error;
+          tailText = `${run.stdout || ""}\n${run.stderr || ""}`.trim().split(/\r?\n/).slice(-3).join(" | ");
+        }
         let usage = {};
         try {
           const streamFile = join(lane.state, "turn.jsonl");
@@ -1852,7 +1871,7 @@ async function swarmCommand(args, cfg) {
             lane: lane.name,
             model: lane.model,
             effort: lane.effort,
-            verify: pass ? "pass" : "fail",
+            verify: verdictWord ? verdictWord.toLowerCase() : pass ? "pass" : "fail",
             ...usage,
             quota,
           });
@@ -1864,7 +1883,7 @@ async function swarmCommand(args, cfg) {
         } catch {
           /* registry sync is best-effort here; the printed verdict is authoritative */
         }
-        console.log(`  ${lane.name}: ${pass ? "PASS" : "FAIL"}${tailText ? ` — ${tailText}` : ""}`);
+        console.log(`  ${lane.name}: ${verdictWord || (pass ? "PASS" : "FAIL")}${tailText ? ` — ${tailText}` : ""}`);
         if (!pass) failed = true;
       }
       if (failed) process.exitCode = 1;
@@ -3025,10 +3044,27 @@ else if (cmd === "fleet") {
     const result = argv.includes("--heal") ? heal(fleet, { apply }) : diagnose(fleet);
     console.log(JSON.stringify(result, null, 2));
   } else if (sub === "quota") {
+    // both pools: codex from the local rollout snapshot (free), claude from the vendored
+    // zero-token usage probes (one tiny metadata GET per model; branch minds burn this pool)
     const sessionsDir = process.env.CODEX_HOME
       ? join(process.env.CODEX_HOME, "sessions")
       : join(homedir(), ".codex", "sessions");
-    console.log(JSON.stringify(latestRateLimits(sessionsDir)));
+    const probe = join(HERE, "shared", "provider-policy", "usage-probes", "probe-claude.mjs");
+    const claudeRemaining = (model) => {
+      try {
+        const out = spawnSync(process.execPath, [probe, model], { encoding: "utf8", timeout: 15000 });
+        const n = Number(String(out.stdout || "").match(/-?\d+/)?.[0]);
+        return Number.isFinite(n) ? n : null;
+      } catch {
+        return null;
+      }
+    };
+    console.log(
+      JSON.stringify({
+        codex: latestRateLimits(sessionsDir),
+        claudeRemainingPct: existsSync(probe) ? { opus: claudeRemaining("opus"), fable: claudeRemaining("fable") } : null,
+      }),
+    );
   } else if (sub === "wake") {
     // ONE waiter for the whole fleet: blocks until the NEXT turn-done event (optionally scoped
     // to a swarm via --swarm <name>), prints it, exit 0. Timeout → exit 1. Run it as a
