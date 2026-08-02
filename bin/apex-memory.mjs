@@ -56,8 +56,10 @@ export function liveContext(turnLogFile) {
 // read) while carrying context is charged on every call of every turn, so quality and cost point
 // the same way: refresh early and often.
 
-export const DEFAULT_REFRESH_TOKENS = 100_000;
-export const DEFAULT_HARD_TOKENS = 300_000;
+// Overridable so a campaign can tune them and so the loop can be exercised end-to-end without
+// burning 100k of real context to reach the trigger.
+export const DEFAULT_REFRESH_TOKENS = Number(process.env.TANDEM_REFRESH_AT) || 100_000;
+export const DEFAULT_HARD_TOKENS = Number(process.env.TANDEM_HARD_AT) || 300_000;
 
 export function refreshDecision({
   context = 0,

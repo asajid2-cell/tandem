@@ -69,6 +69,7 @@ import {
 } from "./swarm.mjs";
 import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
 import { reapDisposition } from "./fleet-doctor.mjs";
+import { buildRehydrationBrief } from "./apex-memory.mjs";
 import { auditLaneScope } from "./write-scope.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
@@ -1208,7 +1209,29 @@ async function ensureClaudeDaemon(cfg) {
 }
 
 // Send a turn to the OPEN Claude session via the relay; daemon logs delegate/verdict.
+// REHYDRATE-ON-NEXT-ASK. The refresh deliberately writes no seed file (a seed is consumed once
+// and lost if the first turn fails, leaving a mind both memoryless and briefless), so the brief
+// must be DERIVED here, at ask time, from the on-disk ledger — idempotently, every time. It is
+// prepended only when this is an apex whose session was genuinely forgotten: a resumed session
+// already holds its context and must not be re-briefed.
+function apexRehydrationPrefix(cfg) {
+  if (process.env.TANDEM_ROLE !== "apex") return "";
+  if (existsSync(CLAUDE_SESSION)) return ""; // a live session is not reborn
+  try {
+    const ledgerDir = join(fleetDir(ROOT), "apex");
+    if (!existsSync(join(ledgerDir, "CURRENT.md"))) return "";
+    const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: cfg.cwd, encoding: "utf8" }).stdout?.trim() || "";
+    const brief = buildRehydrationBrief(ledgerDir, { maxTokens: Number(process.env.TANDEM_BRIEF_TOKENS) || 20_000, head });
+    console.error("tandem: apex REHYDRATED from the ledger (one hop from source — no summary of a summary)");
+    return `${brief}\n---\nThe brief above is your durable memory, rebuilt from disk. Anything not in it was not recorded and you do not know it. Continue from here.\n\n`;
+  } catch {
+    return ""; // rehydration is additive; never block a turn on it
+  }
+}
+
 async function askClaudeDaemon(task, cfg, bg, lease) {
+  const prefix = apexRehydrationPrefix(cfg);
+  if (prefix) task = prefix + task;
   for (const file of [LASTMSG, TURNLOG]) {
     try {
       if (existsSync(file)) rmSync(file);
@@ -3245,7 +3268,7 @@ else if (cmd === "fleet") {
     const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: cfg.cwd, encoding: "utf8" }).stdout?.trim() || "";
     console.log(mem.buildRehydrationBrief(join(fleet, "apex"), { maxTokens: Number(argv[1]) || 20_000, head }));
   } else if (sub === "refresh") {
-    const { planRefresh, succeedSeat, detectCompactBoundary } = await import("./apex-refresh.mjs");
+    const { planRefresh, detectCompactBoundary } = await import("./apex-refresh.mjs");
     const { liveContext } = await import("./apex-memory.mjs");
     const seatId = process.env.TANDEM_SELF_ID || "";
     const ledgerDir = join(fleet, "apex");
@@ -3264,7 +3287,9 @@ else if (cmd === "fleet") {
       if (plan.warning) console.error(`⚠ tandem: ${plan.warning}`);
       if (plan.dumpFirst) console.error("⚠ tandem: BACKSTOP refresh mid-sweep — dump in-flight hypotheses to the ledger FIRST; this is the maximal-loss path.");
       refreshClaude({ ledgerDir, seatId, force: plan.bypassLaneGuard });
-      if (seatId) succeedSeat(fleet, seatId, `refreshed-${Date.now()}`);
+      // NOTE: succession is NOT stamped here — the new body does not exist yet, so this could
+      // only record a placeholder (the live test caught exactly that). serve.mjs stamps the real
+      // session id the moment the reborn session proves it.
     }
   } else if (sub === "ledger") {
     // deduped by default — the raw file is the append-only audit trail, this is the analysis view

@@ -638,6 +638,14 @@ claude.stdout.on("data", (b) => {
       // as a branch mind used to be invisible to `fleet tree`, the surface doctrine tells minds
       // to consult. Advisory; never throws into the dispatch path.
       try {
+        // seat succession: the SEAT id is stable across rebirths, the session id is the current
+        // BODY. Stamp it HERE, where the new body is first proven — at refresh time it does not
+        // exist yet, so stamping there could only record a placeholder.
+        if (process.env.TANDEM_ROLE === "apex" && process.env.TANDEM_SELF_ID) {
+          import("./apex-refresh.mjs")
+            .then((m) => m.succeedSeat(fleetDirFor(ROOT), process.env.TANDEM_SELF_ID, sessionId))
+            .catch(() => {});
+        }
         const id = resolveIdentity(process.env, "claude-partner", sessionId);
         ensureRegistered(fleetDirFor(ROOT), {
           selfId: id.selfId || sessionId,
