@@ -1,5 +1,45 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+// D7 (live wave-0 finding): a sealed brief that CONTRADICTS ITSELF passed all of R1–R6 — the
+// junior lane caught it, the gate did not. R7 catches the specific, mechanical class: a brief
+// that forbids reading other files AND elsewhere instructs the lane to read one.
+import { lintBrief as lintBriefR7, RULES as RULES_R7 } from "../bin/brief-lint.mjs";
+import test0 from "node:test";
+import assert0 from "node:assert/strict";
+
+const SEALED_OK = `## FROZEN CONTRACT
+Build one module.
+DELIVERABLE: bin/x.mjs
+VERIFY: node --test test/x.test.mjs
+Do NOT open, read, or modify any other file. Everything you need is in this brief.
+Report AMBIGUITIES: every judgment call this contract did not decide.
+${"filler ".repeat(80)}`;
+
+test0("R7 exists in the rule table", () => {
+  assert0.ok(RULES_R7.some((r) => r.id === "R7-self-contradiction"));
+});
+
+test0("R7: a brief that forbids other-file reads AND tells the lane to read one is a violation", () => {
+  const contradictory = `${SEALED_OK}
+You may read crates/xen-be-wasm/src/accept_alu.rs to see the assertions you must satisfy.`;
+  const { ok, violations } = lintBriefR7(contradictory);
+  assert0.equal(ok, false);
+  assert0.ok(violations.some((v) => v.rule === "R7-self-contradiction"), JSON.stringify(violations));
+});
+
+test0("R7: a consistent sealed brief does NOT trip it (no false positives on the good shape)", () => {
+  assert0.equal(lintBriefR7(SEALED_OK).ok, true, JSON.stringify(lintBriefR7(SEALED_OK).violations));
+});
+
+test0("R7: a brief with NO no-read clause may reference files freely", () => {
+  const open = `## FROZEN CONTRACT
+DELIVERABLE: bin/y.mjs
+VERIFY: node --test test/y.test.mjs
+Read docs/spec.md for the wire format. Report AMBIGUITIES you hit.
+${"filler ".repeat(80)}`;
+  assert0.equal(lintBriefR7(open).ok, true);
+});
+
 import { lintBrief } from "../bin/brief-lint.mjs";
 
 const sample = `# Sealed Brief

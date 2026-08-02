@@ -4,7 +4,7 @@
 // lands one turn-done event in the fleet inbox.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { appendFileSync, mkdtempSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendEvent, defaultFleetDir, fleetDirFor, inboxPath, readEvents, waitForEvent } from "../bin/fleet-inbox.mjs";
@@ -84,6 +84,41 @@ test("waitForEvent: timeout resolves null, never throws", async () => {
   const dir = freshTmp("inbox-timeout-");
   const event = await waitForEvent(dir, { timeoutSec: 1, pollMs: 100 });
   assert.equal(event, null);
+});
+
+// D5 (live wave-0 finding): a turn-done event fired for a job that was still running. The event
+// is a HINT; the job record is truth. A confirmed wait must re-read the record and ignore any
+// event whose job is not actually terminal.
+test("D5: waitForEvent with confirm ignores an event whose job record is still running", async () => {
+  const root = freshTmp("inbox-confirm-");
+  const state = join(root, "lane");
+  mkdirSync(state, { recursive: true });
+  const fleet = join(root, "fleet");
+  // a RUNNING job record, and a (false) turn-done event pointing at it
+  writeFileSync(join(state, "job-sk1.json"), JSON.stringify({ status: "running", dispatchId: "d1" }));
+  const since = Date.now() - 1;
+  appendEvent(fleet, { kind: "turn-done", state, sk: "sk1", dispatchId: "d1", status: "done", laneId: "s/a" });
+  const ignored = await waitForEvent(fleet, { sinceTs: since, timeoutSec: 1, pollMs: 100, confirm: true });
+  assert.equal(ignored, null, "a false turn-done must not wake a confirmed waiter");
+  // now the job really finishes; the same event becomes valid
+  writeFileSync(join(state, "job-sk1.json"), JSON.stringify({ status: "done", dispatchId: "d1" }));
+  const woken = await waitForEvent(fleet, { sinceTs: since, timeoutSec: 3, pollMs: 100, confirm: true });
+  assert.equal(woken?.laneId, "s/a");
+});
+
+test("D4: one verify run appends exactly ONE ledger record per lane, and dedupe keeps the last", async () => {
+  const { readLedger, appendLedger } = await import("../bin/lane-ledger.mjs");
+  const { dedupeLedger } = await import("../bin/lane-ledger.mjs");
+  const dir = freshTmp("ledger-dedupe-");
+  const file = join(dir, "ledger.jsonl");
+  // the wave-0 symptom: 8 records for 4 verified lanes → any $/proven-leaf is 2x off
+  appendLedger(file, { swarm: "w", lane: "a", dispatchId: "d1", verify: "fail", output_tokens: 1 });
+  appendLedger(file, { swarm: "w", lane: "a", dispatchId: "d1", verify: "pass-proven", output_tokens: 2 });
+  appendLedger(file, { swarm: "w", lane: "b", dispatchId: "d2", verify: "pass-proven", output_tokens: 3 });
+  assert.equal(readLedger(file).length, 3, "the raw ledger stays append-only (audit trail)");
+  const deduped = dedupeLedger(readLedger(file));
+  assert.equal(deduped.length, 2, "one row per (swarm,lane,dispatchId)");
+  assert.equal(deduped.find((r) => r.lane === "a").verify, "pass-proven", "last write wins");
 });
 
 test("signalDone choke point: a terminal job record lands a turn-done inbox event with lane identity", async () => {

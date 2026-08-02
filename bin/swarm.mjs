@@ -8,6 +8,7 @@ import { checkAgainstLive, checkLaneScopes } from "./write-scope.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
 import { lintBrief } from "./brief-lint.mjs";
 import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fleet-registry.mjs";
+import { ensureRegistered } from "./fleet-identity.mjs";
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
 // laneEnvironment) pins nested swarms — a lane that opens its own swarm — into the SAME family
@@ -146,6 +147,9 @@ export function prepareSwarm({
       writesResolved: (writes || []).map((w) => (typeof w === "string" && w.trim() ? resolveFrom(cwd, w) : w)),
       verify: typeof lane.verify === "string" ? lane.verify : "",
       verifyTimeoutSec: lane.verifyTimeoutSec ?? 300,
+      // optional prove-red evidence pins (regex source strings)
+      expectRed: typeof lane.expectRed === "string" ? lane.expectRed : "",
+      expectGreen: typeof lane.expectGreen === "string" ? lane.expectGreen : "",
     };
   });
 
@@ -222,6 +226,8 @@ export function prepareSwarm({
       writesResolved: lane.writesResolved,
       verify: lane.verify,
       verifyTimeoutSec: lane.verifyTimeoutSec,
+      expectRed: lane.expectRed,
+      expectGreen: lane.expectGreen,
       role: lane.role,
       dispatch: "pending",
     })),
@@ -230,31 +236,26 @@ export function prepareSwarm({
 
   const registered = [];
   try {
-    // the driver itself must exist in the family tree before its juniors can name it as parent.
-    // TANDEM_PARENT_ID is how a forked mind learns who forked it — without it every branch mind
-    // registers as its own ROOT and the "family tree" is really a flat list of unrelated trees.
-    if (!getSession(fleet, driverId)) {
-      const declaredParent = process.env.TANDEM_PARENT_ID || null;
-      // fail SAFE, not closed: an unknown/stale parent id registers as a root rather than
-      // refusing the whole swarm over a bookkeeping edge
-      const parent = declaredParent && getSession(fleet, declaredParent) ? declaredParent : null;
-      try {
-        registerSession(fleet, {
-          id: driverId,
-          parent,
-          kind: "branch",
-          label: process.env.TANDEM_LABEL || "driver",
-        });
-      } catch (error) {
-        // two swarms starting concurrently under one driver may race this insert — losing is fine
-        if (!/duplicate session id/.test(String(error.message || error))) throw error;
-      }
-    }
+    // The driver itself must exist in the family tree before its juniors can name it as parent.
+    // TANDEM_SELF_ID is the mind's OWN registry id: a mind that already registered itself (an
+    // apex does) must reuse that node instead of adding a second one under its raw session id —
+    // the "apex appears twice" defect from the first real campaign. TANDEM_PARENT_ID is how a
+    // forked mind learns who forked it; without it every branch mind becomes its own root.
+    const selfId = process.env.TANDEM_SELF_ID && getSession(fleet, process.env.TANDEM_SELF_ID)
+      ? process.env.TANDEM_SELF_ID
+      : driverId;
+    ensureRegistered(fleet, {
+      selfId,
+      sessionId: driverId,
+      parentId: process.env.TANDEM_PARENT_ID || null,
+      kind: process.env.TANDEM_ROLE || "branch",
+      label: process.env.TANDEM_LABEL || "driver",
+    });
     for (const lane of runtime) {
       claimLaneState(lane.state, lane.laneId);
       registerSession(fleet, {
         id: lane.laneId,
-        parent: driverId,
+        parent: selfId,
         kind: lane.role === "branch-mind" ? "branch" : "junior",
         label: lane.label,
         charter: lane.task,

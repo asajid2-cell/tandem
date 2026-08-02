@@ -20,6 +20,8 @@ import {
 import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
+import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
+import { fleetDirFor } from "./fleet-inbox.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   clearDoneSignal,
@@ -618,6 +620,23 @@ claude.stdout.on("data", (b) => {
         laneId: process.env.TANDEM_LANE_ID || "",
         cwd,
       });
+      // D3 — also enter the FLEET TREE, not just the sessions manifest: a claude partner forked
+      // as a branch mind used to be invisible to `fleet tree`, the surface doctrine tells minds
+      // to consult. Advisory; never throws into the dispatch path.
+      try {
+        const id = resolveIdentity(process.env, "claude-partner", sessionId);
+        ensureRegistered(fleetDirFor(ROOT), {
+          selfId: id.selfId || sessionId,
+          sessionId,
+          parentId: id.parentId,
+          kind: id.kind,
+          label: id.label || id.selfId || sessionId,
+          cwd,
+          state: STATE,
+        });
+      } catch {
+        /* identity bookkeeping is advisory */
+      }
     }
     // Provenance: the claude stream stamps the model id on EVERY assistant event (and on the init
     // system event). Keep the LAST seen value — it's what actually ran this turn.

@@ -70,12 +70,29 @@ import {
 import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
+import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
 
 // Fleet role for branding/manifest: explicit TANDEM_ROLE (the apex forking a branch mind, a
 // swarm lane's manifest role) > lane-derived "junior" > the plain partner default. Role
 // granularity is what lets backlog filters hide juniors while keeping branch minds visible.
 function fleetKind(defaultKind) {
-  return process.env.TANDEM_ROLE || (process.env.TANDEM_LANE_ID ? "junior" : defaultKind);
+  return resolveIdentity(process.env, defaultKind).kind;
+}
+
+// D3 — a mind forked by plain `peer.mjs ask` (the doctrinal way to fork a branch mind) used to
+// be branded and manifested but NEVER registered, so `fleet tree` under-reported the fleet it
+// exists to show. Register on the same event that proves the session id. Advisory: never throws.
+function registerSelfInFleet(sessionId, defaultKind) {
+  const id = resolveIdentity(process.env, defaultKind, sessionId);
+  ensureRegistered(fleetDir(ROOT), {
+    selfId: id.selfId || sessionId,
+    sessionId,
+    parentId: id.parentId,
+    kind: id.kind,
+    label: id.label || id.selfId || sessionId,
+    cwd: process.env.TANDEM_CWD || "",
+    state: STATE,
+  });
 }
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
@@ -1843,10 +1860,15 @@ async function swarmCommand(args, cfg) {
             writes: lane.writesResolved && lane.writesResolved.length ? lane.writesResolved : lane.writes,
             verify: lane.verify,
             timeoutSec: lane.verifyTimeoutSec || 300,
+            // a lane may pin WHY the red must happen and WHAT the green must prove; without
+            // them exit codes are the only evidence, which is how a zero-assertion green
+            // certified in the first real campaign
+            expectRed: lane.expectRed ? new RegExp(lane.expectRed) : null,
+            expectGreen: lane.expectGreen ? new RegExp(lane.expectGreen) : null,
           });
           pass = probe.ok;
           tailText = probe.detail;
-          verdictWord = probe.vacuous ? "VACUOUS" : probe.ok ? "PASS-PROVEN" : "FAIL";
+          verdictWord = probe.inconclusive ? "INCONCLUSIVE" : probe.vacuous ? "VACUOUS" : probe.ok ? "PASS-PROVEN" : "FAIL";
         } else {
           const run = spawnSync(lane.verify, {
             cwd: lane.cwd,
@@ -1869,6 +1891,10 @@ async function swarmCommand(args, cfg) {
           appendLedger(join(fleet, "ledger.jsonl"), {
             swarm: record.name,
             lane: lane.name,
+            // dedupe key: re-verifying a lane appends another audit row, and any per-lane
+            // analysis must collapse on (swarm, lane, dispatchId) or every $/proven-leaf
+            // figure doubles (measured in wave 0)
+            dispatchId: lane.job?.dispatchId || "",
             model: lane.model,
             effort: lane.effort,
             verify: verdictWord ? verdictWord.toLowerCase() : pass ? "pass" : "fail",
@@ -2059,6 +2085,7 @@ function persistCodexCoupling(id) {
     laneId: process.env.TANDEM_LANE_ID || "",
     cwd: cfgCwdForManifest(),
   });
+  registerSelfInFleet(id, "codex-partner");
   if (DRIVER_ID) {
     recordGroup(GROUPS, {
       claudeId: DRIVER_ID,
@@ -3076,6 +3103,9 @@ else if (cmd === "fleet") {
     const event = await waitForEvent(fleet, {
       timeoutSec,
       filter: swarmName ? (e) => typeof e.laneId === "string" && e.laneId.startsWith(`${swarmName}/`) : null,
+      // the event is a hint; the job record is truth. Confirm before claiming a wake, so a
+      // false turn-done for a still-running job cannot wake the apex (measured in wave 0).
+      confirm: !argv.includes("--no-confirm"),
     });
     if (event) console.log(JSON.stringify(event));
     else {
@@ -3086,6 +3116,13 @@ else if (cmd === "fleet") {
     const { readEvents } = await import("./fleet-inbox.mjs");
     const n = Number(argv[1]) || 20;
     for (const event of readEvents(fleet, n)) console.log(JSON.stringify(event));
+  } else if (sub === "ledger") {
+    // deduped by default — the raw file is the append-only audit trail, this is the analysis view
+    const { readLedger, dedupeLedger } = await import("./lane-ledger.mjs");
+    const rows = readLedger(join(fleet, "ledger.jsonl"));
+    const out = argv.includes("--raw") ? rows : dedupeLedger(rows);
+    for (const row of out) console.log(JSON.stringify(row));
+    if (!argv.includes("--raw")) console.error(`(${out.length} lanes deduped from ${rows.length} audit rows; --raw for all)`);
   } else if (sub === "sessions") {
     // every provider session the bridge ever spawned, with its tandem identity — the join table
     // chat tooling uses to hide the fleet from human backlogs

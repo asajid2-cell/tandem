@@ -26,6 +26,10 @@ export const LANE_IDENTITY_VARS = [
   "TANDEM_STATE",
   "TANDEM_LABEL",
   "TANDEM_LANE_ID",
+  // identity of THIS session — inherited, it makes a child claim its parent's role in the brand,
+  // the sessions manifest and the fleet tree (measured: a branch mind inheriting "apex")
+  "TANDEM_ROLE",
+  "TANDEM_SELF_ID",
   "TANDEM_PARTNER",
   "TANDEM_MODEL",
   "TANDEM_EFFORT",
@@ -43,7 +47,11 @@ export const LANE_IDENTITY_VARS = [
 // exec worker, interactive attach): lane identity scrubbed, nested marker on.
 export function partnerEnv(base) {
   const out = { ...base };
+  // LINEAGE is inherited even though IDENTITY is not: whoever spawns becomes the child's parent,
+  // so a mind forked by this lane hangs under it in the fleet tree instead of becoming a root.
+  const parent = base.TANDEM_SELF_ID || base.TANDEM_LANE_ID || "";
   for (const k of LANE_IDENTITY_VARS) delete out[k];
+  if (parent) out.TANDEM_PARENT_ID = parent;
   out.TANDEM_NESTED_AGENT = "1";
   return out;
 }
