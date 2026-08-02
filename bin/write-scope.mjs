@@ -194,18 +194,25 @@ async function runCli() {
 // changes the driver has already proven to be whitespace: a brief demanding package-wide
 // `cargo fmt` forces a lane out of scope BY CONSTRUCTION, so that is a brief defect and must be
 // reported as its own class rather than as a rogue lane.
-export function auditLaneScope({ changed = [], writes = [], formattingOnly = [] } = {}) {
+export function auditLaneScope({ changed = [], writes = [], formattingOnly = [], seeds = [] } = {}) {
   if (!Array.isArray(writes) || writes.length === 0) {
     return { ok: false, outside: [], formatting: [], detail: "no declared writes — nothing can be audited" };
   }
   const declared = writes.filter((w) => typeof w === "string" && w.trim()).map(normalizeScopePath);
   const fmtSet = new Set(formattingOnly.map(normalizeScopePath));
+  // SEEDS are the apex's own files, deliberately placed dirty in the lane's worktree so the lane
+  // is graded by assertions it does not own. They show up in `git status` and are outside every
+  // lane's declared scope BY DESIGN — counting them as breaches would fire on every lane of the
+  // proven recipe and teach the operator to ignore the signal. Tampering with them is caught
+  // separately and mechanically by recheckSeeds().
+  const seedSet = new Set(seeds.filter((s) => typeof s === "string" && s.trim()).map(normalizeScopePath));
   const outside = [];
   const formatting = [];
   for (const raw of changed) {
     if (typeof raw !== "string" || !raw.trim()) continue;
     const p = normalizeScopePath(raw);
     if (declared.some((d) => scopesOverlap(d, p))) continue;
+    if (seedSet.has(p)) continue; // the apex's own grader, not a lane breach
     if (fmtSet.has(p)) formatting.push(raw);
     else outside.push(raw);
   }

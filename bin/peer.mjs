@@ -71,6 +71,7 @@ import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-led
 import { reapDisposition } from "./fleet-doctor.mjs";
 import { buildRehydrationBrief } from "./apex-memory.mjs";
 import { auditLaneScope } from "./write-scope.mjs";
+import { recheckSeeds } from "./lane-seeds.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveChildIdentity, resolveIdentity } from "./fleet-identity.mjs";
@@ -1900,7 +1901,10 @@ async function swarmCommand(args, cfg) {
       // the account's rate_limits snapshot — the snapshot is ground truth, raw counters are not)
       // and its fleet-registry status synced (done/error).
       const snapshot = inspectSwarm(record);
-      const proveRed = args.includes("--prove-red");
+      // The audit found that plain `swarm verify` wrote a green "pass" ledger row with no
+      // vacuity check — a certification path with no proof behind it. Prove-red is now the
+      // DEFAULT; the weak form must be asked for and is ledgered as "reran", never "pass".
+      const proveRed = !args.includes("--no-prove-red");
       const selector = args.filter((a) => a !== "--prove-red")[2];
       const lanes = selector ? [findSwarmLane(snapshot, selector)].filter(Boolean) : snapshot.lanes;
       if (!lanes.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
@@ -1969,7 +1973,7 @@ async function swarmCommand(args, cfg) {
             dispatchId: lane.job?.dispatchId || "",
             model: lane.model,
             effort: lane.effort,
-            verify: verdictWord ? verdictWord.toLowerCase() : pass ? "pass" : "fail",
+            verify: verdictWord ? verdictWord.toLowerCase() : proveRed ? (pass ? "pass" : "fail") : pass ? "reran" : "fail",
             ...usage,
             quota,
           });
@@ -1981,10 +1985,20 @@ async function swarmCommand(args, cfg) {
         } catch {
           /* registry sync is best-effort here; the printed verdict is authoritative */
         }
+        // CUSTODY: prove mechanically that the lane did not edit the assertions grading it. This
+        // was the single most important check in two real campaigns and it was done BY HAND.
+        let scopeNote = "";
+        if (lane.seedStamp?.seeds?.length) {
+          const seedCheck = recheckSeeds(lane.cwd, lane.seedStamp);
+          if (!seedCheck.ok) {
+            pass = false;
+            verdictWord = "GRADER-TAMPERED";
+            scopeNote += ` | SEEDS: ${seedCheck.detail}`;
+          }
+        }
         // F1: the write-scope gate ran at DISPATCH and nothing checked what the lane ACTUALLY
         // touched, so an out-of-scope write was invisible unless the driver hashed its own files.
         // Audit at collection, where the evidence exists.
-        let scopeNote = "";
         try {
           const declared = lane.writesResolved?.length ? lane.writesResolved : lane.writes;
           if (declared?.length) {
@@ -1994,7 +2008,7 @@ async function swarmCommand(args, cfg) {
                 .split(/\r?\n/)
                 .filter(Boolean)
                 .map((l) => join(lane.cwd, l.slice(3).trim()));
-              const audit = auditLaneScope({ changed, writes: declared });
+              const audit = auditLaneScope({ changed, writes: declared, seeds: (lane.seeds || []).map((s) => join(lane.cwd, s)) });
               if (!audit.ok) {
                 scopeNote = ` | SCOPE: ${audit.detail}`;
                 if (audit.outside.length) {

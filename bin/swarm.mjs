@@ -9,6 +9,7 @@ import { fleetDirFor } from "./fleet-inbox.mjs";
 import { lintBrief } from "./brief-lint.mjs";
 import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fleet-registry.mjs";
 import { ensureRegistered } from "./fleet-identity.mjs";
+import { hashSeeds } from "./lane-seeds.mjs";
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
 // laneEnvironment) pins nested swarms — a lane that opens its own swarm — into the SAME family
@@ -150,6 +151,10 @@ export function prepareSwarm({
       // optional prove-red evidence pins (regex source strings)
       expectRed: typeof lane.expectRed === "string" ? lane.expectRed : "",
       expectGreen: typeof lane.expectGreen === "string" ? lane.expectGreen : "",
+      // files the APEX seeds into this lane's worktree so the lane is graded by assertions it
+      // does not own. Hashed at dispatch, re-checked at collection, and excluded from the scope
+      // audit (they are outside the lane's writes[] by design).
+      seeds: Array.isArray(lane.seeds) ? lane.seeds.filter((s) => typeof s === "string" && s.trim()) : [],
     };
   });
 
@@ -228,6 +233,8 @@ export function prepareSwarm({
       verifyTimeoutSec: lane.verifyTimeoutSec,
       expectRed: lane.expectRed,
       expectGreen: lane.expectGreen,
+      seeds: lane.seeds,
+      seedStamp: null,
       role: lane.role,
       dispatch: "pending",
     })),
@@ -278,6 +285,15 @@ export function prepareSwarm({
         });
         lane.cwd = info.cwd;
         lane.worktree = info;
+      }
+      // stamp the apex's seeded graders so a lane editing its own assertions is caught
+      // mechanically at collection instead of by a hand-maintained hash file
+      if (lane.seeds?.length) {
+        try {
+          record.lanes[lane.index].seedStamp = hashSeeds(lane.cwd, lane.seeds);
+        } catch {
+          /* seeding is the apex's business; a failed stamp must not block dispatch */
+        }
       }
       writeLaneMetadata(lane.state, {
         version: 1,

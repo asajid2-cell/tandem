@@ -3,7 +3,7 @@
   "claudeBin": "claude",
   "cwd": ".",
   "posture": "config",
-  "autoCompact": true,
+  "autoCompact": false,
   "compactAtTokens": 300000,
   "stallSec": 240,
   "toolMaxSec": 1800,
