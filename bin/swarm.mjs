@@ -5,18 +5,18 @@ import { inspectDispatch, readJson, writeJsonAtomic } from "./jobs.mjs";
 import { jobKey, sanitizeLabel } from "./groups.mjs";
 import { ensureLaneWorktree, writeLaneMetadata } from "./worktrees.mjs";
 import { checkAgainstLive, checkLaneScopes } from "./write-scope.mjs";
+import { fleetDirFor } from "./fleet-inbox.mjs";
 import { lintBrief } from "./brief-lint.mjs";
 import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fleet-registry.mjs";
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
 // laneEnvironment) pins nested swarms — a lane that opens its own swarm — into the SAME family
 // tree instead of forking a private registry per nesting level. Without it, TANDEM_STATE keeps
-// test/CI harnesses isolated in their own registry (mirrors storage()), and the default is the
-// repo-level fleet.
+// test/CI harnesses isolated in their own registry, and the default is the repo-level fleet.
+// Resolution logic lives in fleet-inbox.mjs (jobs.mjs needs it too, and importing swarm.mjs
+// from jobs.mjs would be a cycle).
 export function fleetDir(root) {
-  if (process.env.TANDEM_FLEET_DIR) return process.env.TANDEM_FLEET_DIR;
-  if (process.env.TANDEM_STATE) return join(resolve(process.env.TANDEM_STATE), "fleet");
-  return join(root, "tandems", ".fleet");
+  return fleetDirFor(root);
 }
 
 function storage(root, parentState) {

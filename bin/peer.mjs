@@ -3001,8 +3001,29 @@ else if (cmd === "fleet") {
       ? join(process.env.CODEX_HOME, "sessions")
       : join(homedir(), ".codex", "sessions");
     console.log(JSON.stringify(latestRateLimits(sessionsDir)));
+  } else if (sub === "wake") {
+    // ONE waiter for the whole fleet: blocks until the NEXT turn-done event (optionally scoped
+    // to a swarm via --swarm <name>), prints it, exit 0. Timeout → exit 1. Run it as a
+    // background task; its completion IS the apex's wake signal — no per-swarm polling waits.
+    const { waitForEvent } = await import("./fleet-inbox.mjs");
+    const swarmIdx = argv.indexOf("--swarm");
+    const swarmName = swarmIdx >= 0 ? argv[swarmIdx + 1] : "";
+    const timeoutSec = Number(argv.find((a) => /^\d+$/.test(a))) || 1800;
+    const event = await waitForEvent(fleet, {
+      timeoutSec,
+      filter: swarmName ? (e) => typeof e.laneId === "string" && e.laneId.startsWith(`${swarmName}/`) : null,
+    });
+    if (event) console.log(JSON.stringify(event));
+    else {
+      console.error(`tandem: fleet wake timed out after ${timeoutSec}s with no matching event`);
+      process.exitCode = 1;
+    }
+  } else if (sub === "inbox") {
+    const { readEvents } = await import("./fleet-inbox.mjs");
+    const n = Number(argv[1]) || 20;
+    for (const event of readEvents(fleet, n)) console.log(JSON.stringify(event));
   } else {
-    console.error(`tandem: unknown fleet action "${sub}" (tree | doctor [--heal [--apply]] | quota)`);
+    console.error(`tandem: unknown fleet action "${sub}" (tree | doctor [--heal [--apply]] | quota | wake [sec] [--swarm <name>] | inbox [n])`);
     process.exitCode = 2;
   }
 }
@@ -3061,6 +3082,8 @@ else if (cmd === "new") {
       "  swarm start <name> <manifest.json> | status/wait/results <name>\n" +
       "  swarm verify <name> [lane]   driver-side re-run of each lane's declared verifier + ledger\n" +
       "  fleet tree | doctor [--heal [--apply]] | quota   family registry / liveness / rate-limit truth\n" +
+      "  fleet wake [sec] [--swarm <name>] | inbox [n]    block until the NEXT turn-done event (push,\n" +
+      "                                                   one waiter for the whole fleet) / recent events\n" +
       "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
       "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",

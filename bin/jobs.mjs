@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { appendEvent, defaultFleetDir } from "./fleet-inbox.mjs";
 
 const DEFAULT_WEDGE_AFTER_SEC = 60;
 const DEFAULT_SPAWN_GRACE_SEC = 5;
@@ -54,6 +55,22 @@ export function signalDone(state, sk, { dispatchId = "", status = "" } = {}) {
     writeJsonAtomic(doneSignalPath(state, sk), { dispatchId, status, ts: Date.now() });
   } catch {
     /* the job JSON remains the source of truth; a failed signal only costs the waiter one poll cycle */
+  }
+  // Fleet-wide push: every terminal turn also lands one line in the fleet inbox, so an apex
+  // holds ONE `fleet wake` for the whole fleet instead of a polling wait per swarm. Advisory —
+  // a failed append never breaks the dispatch, and a woken reader re-reads job records.
+  try {
+    appendEvent(defaultFleetDir(), {
+      kind: "turn-done",
+      state,
+      sk,
+      dispatchId,
+      status,
+      laneId: process.env.TANDEM_LANE_ID || "",
+      label: process.env.TANDEM_LABEL || "",
+    });
+  } catch {
+    /* inbox is telemetry; the done-signal + job record above remain authoritative */
   }
 }
 
