@@ -28,6 +28,12 @@ export const LIMIT_RE = new RegExp([
   /quota (?:exceeded|exhausted|reached)/.source,
   /exceeded your current quota/.source,
   /insufficient.{0,25}credit/.source,
+  // DeepSeek says "Insufficient Balance", not "credit", and returns 402 — a one-word gap that cost four
+  // nodes 4 attempts each plus a premium governor apiece. An empty account is a provider block, not a node
+  // failure, and no amount of reasoning fixes it.
+  /insufficient.{0,25}balance/.source,
+  /402.{0,40}(?:balance|credit|payment|quota)/.source,
+  /payment required/.source,
   /purchase more credits/.source,
   /rate.?limit(?:ed\b| exceeded| reached)/.source,
   /too many requests/.source,
