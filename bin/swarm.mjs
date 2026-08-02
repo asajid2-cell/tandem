@@ -4,6 +4,20 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { inspectDispatch, readJson, writeJsonAtomic } from "./jobs.mjs";
 import { jobKey, sanitizeLabel } from "./groups.mjs";
 import { ensureLaneWorktree, writeLaneMetadata } from "./worktrees.mjs";
+import { checkAgainstLive, checkLaneScopes } from "./write-scope.mjs";
+import { lintBrief } from "./brief-lint.mjs";
+import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fleet-registry.mjs";
+
+// One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
+// laneEnvironment) pins nested swarms — a lane that opens its own swarm — into the SAME family
+// tree instead of forking a private registry per nesting level. Without it, TANDEM_STATE keeps
+// test/CI harnesses isolated in their own registry (mirrors storage()), and the default is the
+// repo-level fleet.
+export function fleetDir(root) {
+  if (process.env.TANDEM_FLEET_DIR) return process.env.TANDEM_FLEET_DIR;
+  if (process.env.TANDEM_STATE) return join(resolve(process.env.TANDEM_STATE), "fleet");
+  return join(root, "tandems", ".fleet");
+}
 
 function storage(root, parentState) {
   if (process.env.TANDEM_STATE) {
@@ -103,6 +117,7 @@ export function prepareSwarm({
     seen.add(label);
     const state = join(laneRoot, label);
     const cwd = resolveFrom(manifestDir, lane.cwd) || resolve(baseCwd);
+    const writes = Array.isArray(lane.writes) ? lane.writes : lane.writes == null ? [] : null;
     return {
       index,
       name: laneName,
@@ -121,8 +136,58 @@ export function prepareSwarm({
       maxTurnSec: lane.maxTurnSec ?? null,
       wedgeAfterSec: lane.wedgeAfterSec ?? wedgeAfterSec,
       worktree: lane.worktree || null,
+      writes,
+      // resolved against the lane's cwd so "bin/x.mjs" and an absolute spelling of the same file
+      // still collide in the overlap gate regardless of declaration style
+      writesResolved: (writes || []).map((w) => (typeof w === "string" && w.trim() ? resolveFrom(cwd, w) : w)),
+      verify: typeof lane.verify === "string" ? lane.verify : "",
+      verifyTimeoutSec: lane.verifyTimeoutSec ?? 300,
     };
   });
+
+  // ---- fleet gates: fail BEFORE anything is reserved, so a refused swarm leaves no residue ----
+  // "gates": false is the DISPOSABLE-HARNESS opt-out (tests, throwaway fakes) — precedented by
+  // orch's gitIsolation escape. It is loud, machine-readable, and per-manifest; real fleet
+  // manifests never set it. Registry stamping stays on either way.
+  const gatesOn = source.gates !== false;
+  if (!gatesOn) console.error(`swarm ${cleanName}: GATES DISABLED by manifest — sealed-brief lint and write-scope gate skipped`);
+  // G-lint: every lane brief must be a sealed brief (contract, deliverable, verify, ambiguity
+  // section, no repo-exploration phrasing). Escape hatch: "lint": false in the manifest.
+  if (gatesOn && source.lint !== false) {
+    const lintFailures = [];
+    for (const lane of runtime) {
+      const { ok, violations } = lintBrief(lane.task);
+      if (!ok) for (const v of violations) lintFailures.push(`${lane.name}: ${v.rule} — ${v.detail || ""}`);
+    }
+    if (lintFailures.length) {
+      throw new Error(`brief lint failed (sealed-brief contract, set "lint": false to bypass):\n${lintFailures.join("\n")}`);
+    }
+  }
+  // G-scope: writes[] is MANDATORY per lane and no two lanes (nor any live fleet session) may
+  // overlap. This is the anti-42-writers gate — mechanical, at fork time.
+  const fleet = fleetDir(root);
+  if (gatesOn) {
+    const scopeLanes = runtime.map((lane) => ({ name: lane.name, writes: lane.writes === null ? null : lane.writesResolved }));
+    const scoped = checkLaneScopes(scopeLanes);
+    if (!scoped.ok) {
+      const lines = [
+        ...scoped.errors.map((e) => `${e.lane}: ${e.error} — declare the exact files this lane creates/modifies`),
+        ...scoped.conflicts.map((c) => `${c.a} ↯ ${c.b}: ${c.pathA} overlaps ${c.pathB}`),
+      ];
+      throw new Error(`write-scope gate failed:\n${lines.join("\n")}`);
+    }
+    let live = [];
+    try {
+      live = liveWriteScopes(fleet, driverId);
+    } catch {
+      /* a corrupt registry must not wedge dispatch; the in-manifest check above already ran */
+    }
+    const liveCheck = checkAgainstLive(scopeLanes, live);
+    if (!liveCheck.ok) {
+      const lines = liveCheck.conflicts.map((c) => `${c.lane} ↯ live ${c.owner}: ${c.pathA} overlaps ${c.pathB}`);
+      throw new Error(`write-scope gate failed against LIVE sessions:\n${lines.join("\n")}`);
+    }
+  }
 
   const record = {
     version: 1,
@@ -148,14 +213,40 @@ export function prepareSwarm({
       maxTurnSec: lane.maxTurnSec,
       wedgeAfterSec: lane.wedgeAfterSec,
       worktree: lane.worktree || null,
+      writes: lane.writes,
+      writesResolved: lane.writesResolved,
+      verify: lane.verify,
+      verifyTimeoutSec: lane.verifyTimeoutSec,
       dispatch: "pending",
     })),
   };
   reserveSwarm(file, record);
 
+  const registered = [];
   try {
+    // the driver itself must exist in the family tree before its juniors can name it as parent
+    if (!getSession(fleet, driverId)) {
+      try {
+        registerSession(fleet, { id: driverId, parent: null, kind: "branch", label: "driver" });
+      } catch (error) {
+        // two swarms starting concurrently under one driver may race this insert — losing is fine
+        if (!/duplicate session id/.test(String(error.message || error))) throw error;
+      }
+    }
     for (const lane of runtime) {
       claimLaneState(lane.state, lane.laneId);
+      registerSession(fleet, {
+        id: lane.laneId,
+        parent: driverId,
+        kind: "junior",
+        label: lane.label,
+        charter: lane.task,
+        writes: lane.writesResolved,
+        model: lane.model,
+        effort: lane.effort,
+        cwd: lane.cwd,
+      });
+      registered.push(lane.laneId);
       if (lane.worktree) {
         const spec = lane.worktree === true ? {} : lane.worktree;
         const info = ensureLaneWorktree({
@@ -192,6 +283,13 @@ export function prepareSwarm({
     record.setupError = String(error.message || error);
     record.setupFailedTs = Date.now();
     writeJsonAtomic(file, record);
+    for (const id of registered) {
+      try {
+        updateStatus(fleet, id, "gone");
+      } catch {
+        /* best-effort: a failed setup must not be blocked by registry cleanup */
+      }
+    }
     throw new Error(`${record.setupError}; swarm "${cleanName}" remains reserved for inspection`);
   }
 }
@@ -208,6 +306,8 @@ export function laneEnvironment(lane, baseEnv = process.env) {
     TANDEM_LABEL: lane.label,
     TANDEM_LANE_ID: lane.laneId,
     TANDEM_CWD: lane.cwd,
+    // nested swarms opened by this lane register into the SAME family tree
+    TANDEM_FLEET_DIR: baseEnv.TANDEM_FLEET_DIR || fleetDir(resolve(dirname(dirname(lane.state)))),
   };
   if (lane.partner) env.TANDEM_PARTNER = lane.partner;
   if (lane.tier) env.TANDEM_TIER = lane.tier;

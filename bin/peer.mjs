@@ -59,6 +59,7 @@ import {
 import { attachLaneWorktree, ensureLaneWorktree, readLaneMetadata } from "./worktrees.mjs";
 import {
   findSwarmLane,
+  fleetDir,
   inspectSwarm,
   laneEnvironment,
   listSwarms,
@@ -66,6 +67,8 @@ import {
   readSwarm,
   updateSwarm,
 } from "./swarm.mjs";
+import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
+import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
@@ -1790,6 +1793,72 @@ async function swarmCommand(args, cfg) {
       }
       return;
     }
+    if (action === "verify") {
+      // The trust gate as a verb: a lane's self-graded report has the standing of an untested
+      // hypothesis — the DRIVER re-runs every lane's declared verifier before anything is
+      // believed. Each verified lane also gets a ledger record (usage from its turn stream +
+      // the account's rate_limits snapshot — the snapshot is ground truth, raw counters are not)
+      // and its fleet-registry status synced (done/error).
+      const snapshot = inspectSwarm(record);
+      const selector = args[2];
+      const lanes = selector ? [findSwarmLane(snapshot, selector)].filter(Boolean) : snapshot.lanes;
+      if (!lanes.length) throw new Error(`unknown lane "${selector}" in swarm "${record.name}"`);
+      const fleet = fleetDir(ROOT);
+      const sessionsDir = process.env.CODEX_HOME
+        ? join(process.env.CODEX_HOME, "sessions")
+        : join(homedir(), ".codex", "sessions");
+      const quota = latestRateLimits(sessionsDir);
+      let failed = false;
+      for (const lane of lanes) {
+        if (lane.status === "running" || lane.status === "WEDGED") {
+          console.log(`  ${lane.name}: ${lane.status} — not verified`);
+          failed = true;
+          continue;
+        }
+        if (!lane.verify) {
+          console.log(`  ${lane.name}: (no verify command declared)`);
+          continue;
+        }
+        const run = spawnSync(lane.verify, {
+          cwd: lane.cwd,
+          shell: true,
+          encoding: "utf8",
+          timeout: (lane.verifyTimeoutSec || 300) * 1000,
+        });
+        const pass = run.status === 0 && !run.error;
+        const tailText = `${run.stdout || ""}\n${run.stderr || ""}`.trim().split(/\r?\n/).slice(-3).join(" | ");
+        let usage = {};
+        try {
+          const streamFile = join(lane.state, "turn.jsonl");
+          usage = existsSync(streamFile) ? parseUsageFromStream(readFileSync(streamFile, "utf8")) : {};
+          delete usage.rate_limits;
+        } catch {
+          usage = {};
+        }
+        try {
+          appendLedger(join(fleet, "ledger.jsonl"), {
+            swarm: record.name,
+            lane: lane.name,
+            model: lane.model,
+            effort: lane.effort,
+            verify: pass ? "pass" : "fail",
+            ...usage,
+            quota,
+          });
+        } catch {
+          /* ledger is telemetry; verification verdicts never depend on it */
+        }
+        try {
+          updateFleetStatus(fleet, lane.laneId, pass ? "done" : "error");
+        } catch {
+          /* registry sync is best-effort here; the printed verdict is authoritative */
+        }
+        console.log(`  ${lane.name}: ${pass ? "PASS" : "FAIL"}${tailText ? ` — ${tailText}` : ""}`);
+        if (!pass) failed = true;
+      }
+      if (failed) process.exitCode = 1;
+      return;
+    }
     if (action === "tail") {
       const lane = findSwarmLane(record, args[2]);
       if (!lane) throw new Error(`unknown lane "${args[2]}" in swarm "${record.name}"`);
@@ -1837,6 +1906,13 @@ async function swarmCommand(args, cfg) {
         console.log(`\n[${record.name}/${lane.name}]`);
         process.stdout.write(result.out);
         if (result.code !== 0) failed = true;
+        if (action === "reap" && result.code === 0) {
+          try {
+            updateFleetStatus(fleetDir(ROOT), lane.laneId, "gone");
+          } catch {
+            /* best-effort registry sync */
+          }
+        }
       }
       if (failed) process.exitCode = 1;
       return;
@@ -2952,6 +3028,7 @@ else if (cmd === "new") {
       "  groups | resume <N>   list tandems / reopen a tandem by its pair\n" +
       "  worktree status | create [path] [branch] [start] | attach <path>\n" +
       "  swarm start <name> <manifest.json> | status/wait/results <name>\n" +
+      "  swarm verify <name> [lane]   driver-side re-run of each lane's declared verifier + ledger\n" +
       "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
       "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",

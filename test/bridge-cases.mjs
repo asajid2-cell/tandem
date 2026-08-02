@@ -808,6 +808,7 @@ test("swarm start auto-namespaces five same-driver lanes and aggregates their st
   writeFileSync(
     manifest,
     JSON.stringify({
+      gates: false,
       lanes: Array.from({ length: 5 }, (_, index) => ({
         name: `lane-${index + 1}`,
         task: `SWARM-TASK-${index + 1}`,
@@ -859,6 +860,7 @@ test("swarm rejects duplicate labels after sanitization before dispatching any l
   writeFileSync(
     manifest,
     JSON.stringify({
+      gates: false,
       lanes: [
         { name: "same lane", task: "one" },
         { name: "same-lane", task: "two" },
@@ -881,6 +883,7 @@ test("concurrent swarm creation atomically reserves one namespace and dispatches
   writeFileSync(
     manifest,
     JSON.stringify({
+      gates: false,
       lanes: [
         { name: "one", task: "RACE-SWARM-ONE" },
         { name: "two", task: "RACE-SWARM-TWO" },
@@ -909,6 +912,7 @@ test("swarm refuses to reuse a pre-existing lane state and preserves lane identi
   writeFileSync(
     manifest,
     JSON.stringify({
+      gates: false,
       lanes: [
         { name: "alpha", task: "LONG-ALPHA" },
         { name: "beta", task: "LONG-BETA" },
@@ -926,7 +930,7 @@ test("swarm refuses to reuse a pre-existing lane state and preserves lane identi
   assert.ok(record.lanes.every((lane) => lane.label.length <= 60));
 
   const collisionManifest = join(state, "collision-swarm.json");
-  writeFileSync(collisionManifest, JSON.stringify({ lanes: [{ name: "lane", task: "MUST-NOT-DISPATCH" }] }));
+  writeFileSync(collisionManifest, JSON.stringify({ gates: false, lanes: [{ name: "lane", task: "MUST-NOT-DISPATCH" }] }));
   const occupied = join(state, "lanes", "occupied--lane");
   mkdirSync(occupied, { recursive: true });
   writeFileSync(join(occupied, "groups.json"), JSON.stringify({ stale: true }));
@@ -953,6 +957,7 @@ test("editing swarm provisions a distinct git worktree and branch per lane", (t)
   writeFileSync(
     manifest,
     JSON.stringify({
+      gates: false,
       lanes: [
         { name: "editor-a", task: "EDIT-SWARM-A", worktree: true },
         { name: "editor-b", task: "EDIT-SWARM-B", worktree: true },
