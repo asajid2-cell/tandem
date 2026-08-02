@@ -294,6 +294,9 @@ function loadConfig() {
     if (cfg.partner === "claude") cfg.claudeEffort = process.env.TANDEM_EFFORT;
     else cfg.codexEffort = process.env.TANDEM_EFFORT;
   }
+  // TANDEM_PROFILE (codex only): route the lane through a codex CLI profile — the DeepSeek bridge
+  // lanes work this way (profile owns model+provider+effort, so -m/-c are suppressed when set).
+  if (process.env.TANDEM_PROFILE && cfg.partner !== "claude") cfg.codexProfile = process.env.TANDEM_PROFILE;
   if (process.env.TANDEM_COMPACT_AT) cfg.compactAtTokens = Number(process.env.TANDEM_COMPACT_AT);
   if (process.env.TANDEM_AUTO_COMPACT) cfg.autoCompact = process.env.TANDEM_AUTO_COMPACT === "1";
   if (process.env.TANDEM_STALL_SEC !== undefined) cfg.stallSec = Number(process.env.TANDEM_STALL_SEC) || 0;
@@ -2039,8 +2042,14 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   args.push("--json", "--skip-git-repo-check", "-o", outFile, ...postureArgs(cfg.posture, !sid));
   // model/effort are accepted by both `exec` and `exec resume` (unlike -C/--sandbox). Values are
   // passed via spawn (no shell), so the TOML quotes on the effort value arrive intact.
-  if (cfg.codexModel) args.push("-m", cfg.codexModel);
-  if (cfg.codexEffort) args.push("-c", `model_reasoning_effort="${cfg.codexEffort}"`);
+  // A codex PROFILE (DeepSeek bridge lanes) owns model+provider+effort — when set it replaces
+  // -m/-c entirely, mirroring how the orch engine dispatched deepseek workers.
+  if (cfg.codexProfile) {
+    args.push("--profile", cfg.codexProfile);
+  } else {
+    if (cfg.codexModel) args.push("-m", cfg.codexModel);
+    if (cfg.codexEffort) args.push("-c", `model_reasoning_effort="${cfg.codexEffort}"`);
+  }
   if (!sid) args.push("-C", cfg.cwd);
   if (sid) args.push(sid);
   args.push("-");
@@ -2975,6 +2984,28 @@ else if (cmd === "cancel" || cmd === "interrupt") cancelJob(cfg);
 else if (cmd === "reap") reapJob(cfg);
 else if (cmd === "worktree") worktreeCommand(argv, cfg);
 else if (cmd === "swarm") await swarmCommand(argv, cfg);
+else if (cmd === "fleet") {
+  // Unified fleet surface: tree (family registry), doctor (liveness + heal), quota (ground truth).
+  const sub = argv[0] || "tree";
+  const fleet = fleetDir(ROOT);
+  if (sub === "tree") {
+    const { renderTree } = await import("./fleet-registry.mjs");
+    console.log(renderTree(fleet));
+  } else if (sub === "doctor") {
+    const { diagnose, heal } = await import("./fleet-doctor.mjs");
+    const apply = argv.includes("--apply");
+    const result = argv.includes("--heal") ? heal(fleet, { apply }) : diagnose(fleet);
+    console.log(JSON.stringify(result, null, 2));
+  } else if (sub === "quota") {
+    const sessionsDir = process.env.CODEX_HOME
+      ? join(process.env.CODEX_HOME, "sessions")
+      : join(homedir(), ".codex", "sessions");
+    console.log(JSON.stringify(latestRateLimits(sessionsDir)));
+  } else {
+    console.error(`tandem: unknown fleet action "${sub}" (tree | doctor [--heal [--apply]] | quota)`);
+    process.exitCode = 2;
+  }
+}
 else if (cmd === "attach") await attachInteractive(argv, cfg);
 else if (cmd === "tail") tail(Number(argv[0]) || 40);
 else if (cmd === "result") result(cfg);
@@ -3029,6 +3060,7 @@ else if (cmd === "new") {
       "  worktree status | create [path] [branch] [start] | attach <path>\n" +
       "  swarm start <name> <manifest.json> | status/wait/results <name>\n" +
       "  swarm verify <name> [lane]   driver-side re-run of each lane's declared verifier + ledger\n" +
+      "  fleet tree | doctor [--heal [--apply]] | quota   family registry / liveness / rate-limit truth\n" +
       "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
       "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",

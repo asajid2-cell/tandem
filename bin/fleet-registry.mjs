@@ -99,6 +99,8 @@ function normalizeRecord(rec) {
     model: optionalString(rec, "model"),
     effort: optionalString(rec, "effort"),
     cwd: optionalString(rec, "cwd"),
+    // lane state dir (job records live here) — lets fleet-doctor check liveness for this session
+    state: optionalString(rec, "state"),
   };
 }
 

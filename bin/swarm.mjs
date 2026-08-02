@@ -131,6 +131,7 @@ export function prepareSwarm({
       tier: lane.tier || "",
       model: lane.model || "",
       effort: lane.effort || "",
+      profile: lane.profile || "",
       posture: lane.posture || "",
       stallSec: lane.stallSec ?? stallSec,
       maxTurnSec: lane.maxTurnSec ?? null,
@@ -208,6 +209,7 @@ export function prepareSwarm({
       tier: lane.tier,
       model: lane.model,
       effort: lane.effort,
+      profile: lane.profile,
       posture: lane.posture,
       stallSec: lane.stallSec,
       maxTurnSec: lane.maxTurnSec,
@@ -242,9 +244,10 @@ export function prepareSwarm({
         label: lane.label,
         charter: lane.task,
         writes: lane.writesResolved,
-        model: lane.model,
+        model: lane.profile || lane.model,
         effort: lane.effort,
         cwd: lane.cwd,
+        state: lane.state,
       });
       registered.push(lane.laneId);
       if (lane.worktree) {
@@ -313,6 +316,7 @@ export function laneEnvironment(lane, baseEnv = process.env) {
   if (lane.tier) env.TANDEM_TIER = lane.tier;
   if (lane.model) env.TANDEM_MODEL = lane.model;
   if (lane.effort) env.TANDEM_EFFORT = lane.effort;
+  if (lane.profile) env.TANDEM_PROFILE = lane.profile;
   if (lane.posture) env.TANDEM_POSTURE = lane.posture;
   if (lane.stallSec != null) env.TANDEM_STALL_SEC = String(lane.stallSec);
   if (lane.maxTurnSec != null) env.TANDEM_MAX_TURN_SEC = String(lane.maxTurnSec);

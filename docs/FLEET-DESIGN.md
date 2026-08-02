@@ -4,6 +4,13 @@ Status: design agreed 2026-08-02 (Ahmed + Fable session), supersedes the orchest
 long-horizon architecture. The orchestrate repo stays parked on its branch as a measurement archive;
 nothing in it dispatches work anymore.
 
+BUILD STATUS 2026-08-02: Phases A–D implemented in the tandem repo (write-scope / brief-lint /
+fleet-registry / lane-ledger / fleet-doctor modules — all junior-built from sealed briefs and
+driver-verified; prepareSwarm gates + registry stamping + TANDEM_FLEET_DIR nesting; `swarm verify`;
+`fleet tree|doctor|quota`; TANDEM_PROFILE DeepSeek routing). The orchestrate skill is rewritten as
+apex doctrine over these primitives and deployed to workrepo + both agent installs. Deferred:
+watch.mjs family-tree view (CLI tree covers the need); the standing §8 validation experiment.
+
 ## 1. Provenance — why this shape and not the last one
 
 The orchestrate engine (daemon conductor spawning one-shot workers into a machine-owned tree) was
