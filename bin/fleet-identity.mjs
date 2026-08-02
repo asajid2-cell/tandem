@@ -28,6 +28,24 @@ export function resolveIdentity(env = process.env, defaultKind = "other", sessio
   };
 }
 
+// Resolve the identity of a CHILD this process is spawning, from the CALLER's environment.
+//
+// This exists because conflating the two is defect F8: registration read the child's id out of
+// the caller's TANDEM_SELF_ID, so an apex following its own charter (`export TANDEM_SELF_ID=apex`
+// on every call) made every child resolve its id as "apex", find that node already present, and
+// vanish into it. The child's identity is its lane id or the label the caller gave it, falling
+// back to its own session id — and the caller is always the PARENT, never the child.
+export function resolveChildIdentity(callerEnv = process.env, sessionId = "", defaultKind = "other") {
+  const selfId = callerEnv.TANDEM_LANE_ID || callerEnv.TANDEM_LABEL || sessionId || "";
+  return {
+    selfId,
+    parentId: callerEnv.TANDEM_SELF_ID || callerEnv.TANDEM_PARENT_ID || null,
+    kind: callerEnv.TANDEM_ROLE || (callerEnv.TANDEM_LANE_ID ? "junior" : defaultKind),
+    label: callerEnv.TANDEM_LABEL || selfId,
+    laneId: callerEnv.TANDEM_LANE_ID || "",
+  };
+}
+
 // The env a session hands to anything it spawns: its own identity stripped, its own id installed
 // as the child's parent, lineage/config preserved.
 export function childEnv(env = process.env, { selfId = "" } = {}) {

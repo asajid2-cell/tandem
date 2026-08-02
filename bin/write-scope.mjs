@@ -188,6 +188,43 @@ async function runCli() {
   process.exitCode = result.ok ? 0 : 1;
 }
 
+// COLLECTION-TIME audit. The gate checks writes[] at DISPATCH; nothing checked what a lane
+// actually touched, so a lane could write outside its declared scope and only ever be caught by
+// a driver hashing its own seeded files (which is how wave 1 found it). `formattingOnly` names
+// changes the driver has already proven to be whitespace: a brief demanding package-wide
+// `cargo fmt` forces a lane out of scope BY CONSTRUCTION, so that is a brief defect and must be
+// reported as its own class rather than as a rogue lane.
+export function auditLaneScope({ changed = [], writes = [], formattingOnly = [] } = {}) {
+  if (!Array.isArray(writes) || writes.length === 0) {
+    return { ok: false, outside: [], formatting: [], detail: "no declared writes — nothing can be audited" };
+  }
+  const declared = writes.filter((w) => typeof w === "string" && w.trim()).map(normalizeScopePath);
+  const fmtSet = new Set(formattingOnly.map(normalizeScopePath));
+  const outside = [];
+  const formatting = [];
+  for (const raw of changed) {
+    if (typeof raw !== "string" || !raw.trim()) continue;
+    const p = normalizeScopePath(raw);
+    if (declared.some((d) => scopesOverlap(d, p))) continue;
+    if (fmtSet.has(p)) formatting.push(raw);
+    else outside.push(raw);
+  }
+  const ok = outside.length === 0 && formatting.length === 0;
+  return {
+    ok,
+    outside,
+    formatting,
+    detail: ok
+      ? "every change is inside the lane's declared scope"
+      : [
+          outside.length ? `${outside.length} file(s) written OUTSIDE the declared scope` : "",
+          formatting.length ? `${formatting.length} formatting-only excursion(s) — the BRIEF forced this, fix the brief` : "",
+        ]
+          .filter(Boolean)
+          .join("; "),
+  };
+}
+
 if (process.argv[1]?.endsWith("write-scope.mjs")) {
   runCli();
 }

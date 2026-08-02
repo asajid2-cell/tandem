@@ -68,9 +68,11 @@ import {
   updateSwarm,
 } from "./swarm.mjs";
 import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
+import { reapDisposition } from "./fleet-doctor.mjs";
+import { auditLaneScope } from "./write-scope.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
-import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
+import { ensureRegistered, resolveChildIdentity, resolveIdentity } from "./fleet-identity.mjs";
 
 // Fleet role for branding/manifest: explicit TANDEM_ROLE (the apex forking a branch mind, a
 // swarm lane's manifest role) > lane-derived "junior" > the plain partner default. Role
@@ -83,7 +85,10 @@ function fleetKind(defaultKind) {
 // be branded and manifested but NEVER registered, so `fleet tree` under-reported the fleet it
 // exists to show. Register on the same event that proves the session id. Advisory: never throws.
 function registerSelfInFleet(sessionId, defaultKind) {
-  const id = resolveIdentity(process.env, defaultKind, sessionId);
+  // F8: this registers the PARTNER we just spawned — a CHILD — so its identity must come from
+  // resolveChildIdentity, never from the caller's own TANDEM_SELF_ID. Using the caller's id made
+  // every child of an apex resolve as "apex", find that node present, and disappear from the tree.
+  const id = resolveChildIdentity(process.env, sessionId, defaultKind);
   ensureRegistered(fleetDir(ROOT), {
     selfId: id.selfId || sessionId,
     sessionId,
@@ -1530,9 +1535,24 @@ function reapJob(cfg) {
     console.log("tandem: no wedged job to reap");
     return;
   }
-  if (j.status !== "WEDGED") {
-    console.error(`tandem: reap refused - lane state is ${j.status}; reap is only valid for WEDGED jobs`);
+  // F3: a TERMINAL lane used to be refused here, which left its dead self holding the write-scope
+  // so the live-scope gate blocked re-dispatching that very lane — wedged by the guard meant to
+  // protect it, clearable only via `fleet-doctor --heal --apply`. Terminal lanes now sync the
+  // registry and release the scope; a genuinely running lane is still refused.
+  const disposition = reapDisposition(j.status);
+  if (disposition.refuse) {
+    console.error(`tandem: reap refused - ${disposition.reason}`);
     process.exitCode = 3;
+    return;
+  }
+  if (!disposition.forceFinish) {
+    try {
+      const laneId = process.env.TANDEM_LANE_ID || process.env.TANDEM_LABEL || "";
+      if (laneId) updateFleetStatus(fleetDir(ROOT), laneId, disposition.registryStatus);
+    } catch {
+      /* registry sync is best-effort; the printed disposition is authoritative */
+    }
+    console.log(`tandem: ${disposition.reason}`);
     return;
   }
   if (j.partner === "claude") killDaemon();
@@ -1938,7 +1958,33 @@ async function swarmCommand(args, cfg) {
         } catch {
           /* registry sync is best-effort here; the printed verdict is authoritative */
         }
-        console.log(`  ${lane.name}: ${verdictWord || (pass ? "PASS" : "FAIL")}${tailText ? ` — ${tailText}` : ""}`);
+        // F1: the write-scope gate ran at DISPATCH and nothing checked what the lane ACTUALLY
+        // touched, so an out-of-scope write was invisible unless the driver hashed its own files.
+        // Audit at collection, where the evidence exists.
+        let scopeNote = "";
+        try {
+          const declared = lane.writesResolved?.length ? lane.writesResolved : lane.writes;
+          if (declared?.length) {
+            const st = spawnSync("git", ["status", "--porcelain"], { cwd: lane.cwd, encoding: "utf8" });
+            if (!st.error && st.status === 0) {
+              const changed = String(st.stdout || "")
+                .split(/\r?\n/)
+                .filter(Boolean)
+                .map((l) => join(lane.cwd, l.slice(3).trim()));
+              const audit = auditLaneScope({ changed, writes: declared });
+              if (!audit.ok) {
+                scopeNote = ` | SCOPE: ${audit.detail}`;
+                if (audit.outside.length) {
+                  pass = false; // a content write outside the declared scope is never acceptable
+                  verdictWord = "SCOPE-BREACH";
+                }
+              }
+            }
+          }
+        } catch {
+          /* the audit is additive evidence; never let it swallow a real verdict */
+        }
+        console.log(`  ${lane.name}: ${verdictWord || (pass ? "PASS" : "FAIL")}${tailText ? ` — ${tailText}` : ""}${scopeNote}`);
         if (!pass) failed = true;
       }
       if (failed) process.exitCode = 1;

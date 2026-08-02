@@ -200,3 +200,30 @@ if (isMainModule()) {
     process.exitCode = 1;
   }
 }
+
+// What `reap` should DO with a lane, given its job status.
+//
+// Defect F3: an interrupted lane lands `finished-error`; the live-scope gate then blocks
+// re-dispatching that lane because its OWN dead self still holds the scope, and `reap` refused
+// it ("only valid for WEDGED"). The lane was wedged by the guard meant to protect it, and only
+// `fleet-doctor --heal --apply` could break the deadlock. Reap now accepts terminal lanes and
+// syncs the registry; it still refuses a genuinely running one, which is the case the guard
+// actually exists for.
+export function reapDisposition(jobStatus) {
+  const status = String(jobStatus || "").toLowerCase();
+  if (status === "wedged") {
+    return { refuse: false, forceFinish: true, registryStatus: "gone", reason: "wedged — force-finish and release the scope" };
+  }
+  if (status === "done" || status === "error") {
+    return {
+      refuse: false,
+      forceFinish: false,
+      registryStatus: "gone",
+      reason: `lane is already terminal (${status}) — registry synced so its scope stops blocking re-dispatch`,
+    };
+  }
+  if (status === "running") {
+    return { refuse: true, forceFinish: false, registryStatus: "", reason: "lane is running — interrupt it first, or wait" };
+  }
+  return { refuse: false, forceFinish: false, registryStatus: "gone", reason: `no live job (${status || "idle"}) — registry synced` };
+}
