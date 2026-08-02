@@ -1,0 +1,4 @@
+{
+  "_comment": "Settings for a long-lived APEX partner. autoCompactEnabled MUST be false: if the CLI compacts on its own, context DROPS, so the fleet's refresh trigger never fires and the session silently becomes a summary of a summary — the exact generation loss clear-and-reload exists to prevent. The failure is invisible by construction, which is why prevention here is paired with detectCompactBoundary() in bin/apex-refresh.mjs.",
+  "autoCompactEnabled": false
+}

@@ -282,6 +282,20 @@ const claudeModel = process.env.TANDEM_MODEL || tier.model || C.claudeModel || "
 if (claudeModel) args.push("--model", claudeModel);
 const claudeEffort = process.env.TANDEM_EFFORT || tier.effort || C.claudeEffort || "";
 if (claudeEffort) args.push("--effort", claudeEffort);
+// A long-lived APEX must never auto-compact: compaction is generation loss, and its failure mode
+// is INVISIBLE — context drops, so the fleet's refresh trigger never fires and the session quietly
+// becomes a summary of a summary. Prevention here; detection in apex-refresh.detectCompactBoundary.
+// Opt in by role (an apex) or explicitly, so ordinary short-lived partners are unaffected.
+const noAutoCompact = process.env.TANDEM_ROLE === "apex" || process.env.TANDEM_NO_AUTOCOMPACT === "1";
+if (noAutoCompact) {
+  const settingsFile = resolve(ROOT, "runtime", "apex-settings.json");
+  if (existsSync(settingsFile)) {
+    args.push("--settings", settingsFile);
+    console.error("tandem: apex partner — auto-compact DISABLED (clear-and-reload owns context, not compaction)");
+  } else {
+    console.error(`tandem: WARNING — apex partner requested but ${settingsFile} is missing; auto-compact may fire and silently degrade fidelity`);
+  }
+}
 if (sessionId) args.push("--resume", sessionId);
 let bin = process.env.TANDEM_CLAUDE_BIN || C.claudeBin || "claude";
 const cwd = process.env.TANDEM_CWD || C.cwd || process.cwd();

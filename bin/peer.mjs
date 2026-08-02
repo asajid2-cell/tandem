@@ -3154,6 +3154,50 @@ else if (cmd === "fleet") {
     const running = (jobState(cfg) || {}).status === "running";
     const d = refreshDecision({ context: ctx, busy: running });
     console.log(JSON.stringify({ context: ctx, busy: running, ...d }));
+  } else if (sub === "note") {
+    // The apex records a fact with the SAME action that produced it — writes lead the clear, so a
+    // refresh, a crash, or the owner killing the tab are all equally safe. Classes exist for the
+    // knowledge a mind reliably forgets to write: ruled-out hypotheses, calibrated distrust, and
+    // the alternatives a decision rejected.
+    const mem = await import("./apex-memory.mjs");
+    const ledgerDir = join(fleet, "apex");
+    const kindFlag = ["--decision", "--hypothesis", "--distrust", "--surprise"].find((f) => argv.includes(f)) || "--decision";
+    const payload = argv.slice(1).filter((a) => !a.startsWith("--")).join(" ") || readFileSync(0, "utf8");
+    let rec;
+    try {
+      rec = JSON.parse(payload); // structured form: full fields
+    } catch {
+      // terse form — one string, mapped to the field THIS class reads (a distrust entry with an
+      // undefined `why` renders as "undefined" in the brief, which is worse than terse)
+      const text = payload.trim();
+      rec = { "--decision": { what: text }, "--hypothesis": { statement: text }, "--distrust": { target: text, why: text }, "--surprise": { what: text } }[kindFlag];
+    }
+    if (argv.includes("--pin")) rec.tier = "constitution";
+    const write = {
+      "--decision": mem.noteDecision,
+      "--hypothesis": mem.noteHypothesis,
+      "--distrust": mem.noteDistrust,
+      "--surprise": mem.noteSurprise,
+    }[kindFlag];
+    console.log(JSON.stringify(write(ledgerDir, rec)));
+  } else if (sub === "current") {
+    // CURRENT.md is machine-owned by PROVENANCE, not format: machine-class claims (verified[])
+    // must carry the filter that ran, its exit code, the green count and the commit, or they are
+    // refused and the refusal is recorded in the file.
+    const mem = await import("./apex-memory.mjs");
+    const ledgerDir = join(fleet, "apex");
+    if (argv.includes("--show")) console.log(mem.readCurrent(ledgerDir) || "(no CURRENT.md yet)");
+    else {
+      const body = argv.slice(1).filter((a) => !a.startsWith("--")).join(" ") || readFileSync(0, "utf8");
+      const rec = mem.setCurrent(ledgerDir, JSON.parse(body));
+      if (rec.rejected.length) console.error(`⚠ tandem: ${rec.rejected.length} verified claim(s) REFUSED — machine-class state needs machine evidence {test_filter, exit_code, green_count, commit}`);
+      console.log(JSON.stringify({ goal: rec.goal, next: rec.next, verified: rec.verified.length, refused: rec.rejected.length }));
+    }
+  } else if (sub === "brief") {
+    // what a reborn apex would read RIGHT NOW — derived, idempotent, self-authenticating
+    const mem = await import("./apex-memory.mjs");
+    const head = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: cfg.cwd, encoding: "utf8" }).stdout?.trim() || "";
+    console.log(mem.buildRehydrationBrief(join(fleet, "apex"), { maxTokens: Number(argv[1]) || 20_000, head }));
   } else if (sub === "refresh") {
     const { planRefresh, succeedSeat, detectCompactBoundary } = await import("./apex-refresh.mjs");
     const { liveContext } = await import("./apex-memory.mjs");
@@ -3254,6 +3298,10 @@ else if (cmd === "new") {
       "  fleet sessions [n]           every bridge-spawned provider session + tandem identity (for\n" +
       "                               hiding the [TANDEM ...]-branded flood from chat backlogs)\n" +
       "  fleet context                REAL live context of this lane + whether a refresh is due\n" +
+      "  fleet note --decision|--hypothesis|--distrust|--surprise [--pin] \"<text>|<json>\"\n" +
+      "                               record a fact AS it happens (writes lead the clear)\n" +
+      "  fleet current <json> | --show   machine-owned CURRENT.md (verified[] needs machine evidence)\n" +
+      "  fleet brief [maxTokens]      what a reborn apex would read right now (derived, verifiable)\n" +
       "  fleet refresh [--plan|--force]  clear-and-reload: forget the session, rebuild the brief\n" +
       "                               from the on-disk ledger (one hop from source, never a\n" +
       "                               summary of a summary). --force = the backstop path\n" +
