@@ -19,6 +19,7 @@ import {
 } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
+import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   clearDoneSignal,
@@ -265,6 +266,9 @@ function claudePartnerFor(codexId) {
 }
 let sessionId =
   claudePartnerFor(CODEX_DRIVER_ID) || (existsSync(CLAUDE_SESSION) ? readFileSync(CLAUDE_SESSION, "utf8").trim() : "");
+// A FRESH claude session (no --resume) gets the fleet brand as the first line of its first turn,
+// so the session is filterable in chat backlogs from birth. Resumed sessions were branded at birth.
+let brandPending = !sessionId;
 // CLAUDE_HEADLESS_POSTURE (the "never stop to ask a human who isn't here" flag) comes from the
 // shared package so orch and tandem agree on the one posture a headless Claude child runs under.
 let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", CLAUDE_HEADLESS_POSTURE, "--verbose"];
@@ -605,6 +609,15 @@ claude.stdout.on("data", (b) => {
       }
       // register the pair the moment the (possibly fresh) session id is known
       recordGroup(GROUPS, { claudeId: sessionId, codexId: CODEX_DRIVER_ID || null, claudeRole: "partner", codexRole: "driver", direction: "codex->claude" });
+      // fleet sessions manifest — chat tooling can hide bridge sessions by ID (advisory)
+      recordSpawnedSession({
+        provider: "claude",
+        sessionId,
+        kind: process.env.TANDEM_LANE_ID ? "lane" : "claude-partner",
+        label: process.env.TANDEM_LABEL || "",
+        laneId: process.env.TANDEM_LANE_ID || "",
+        cwd,
+      });
     }
     // Provenance: the claude stream stamps the model id on EVERY assistant event (and on the init
     // system event). Keep the LAST seen value — it's what actually ran this turn.
@@ -1187,6 +1200,15 @@ setInterval(() => {
     } catch {
       /* ignore */
     }
+  }
+  // brand goes OUTERMOST (above any seed) — the first line of the session titles it everywhere
+  if (brandPending) {
+    task = brandTask(task, {
+      kind: "claude-partner",
+      label: process.env.TANDEM_LABEL || "",
+      laneId: process.env.TANDEM_LANE_ID || "",
+    });
+    brandPending = false;
   }
   console.log(`  ▸ turn: ${task.replace(/\s+/g, " ").slice(0, 80)}`);
   claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: task }] } }) + "\n");

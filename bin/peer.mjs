@@ -69,6 +69,7 @@ import {
 } from "./swarm.mjs";
 import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
+import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { partnerEnv, scrubbedClaudeEnv } from "./claudeEnv.mjs";
 import { createProviderPolicy } from "./shared/provider-policy/index.mjs";
 import { classifyProviderSignal } from "./limit-signals.mjs";
@@ -2022,6 +2023,16 @@ function persistCodexCoupling(id) {
   }
   ensureState();
   writeFileSync(SESSION_FILE, id);
+  // fleet sessions manifest: map the provider session id to its tandem identity so chat tooling
+  // can hide bridge-spawned sessions by ID (advisory; append never breaks the coupling)
+  recordSpawnedSession({
+    provider: "codex",
+    sessionId: id,
+    kind: process.env.TANDEM_LANE_ID ? "lane" : "codex-partner",
+    label: process.env.TANDEM_LABEL || basename(STATE),
+    laneId: process.env.TANDEM_LANE_ID || "",
+    cwd: cfgCwdForManifest(),
+  });
   if (DRIVER_ID) {
     recordGroup(GROUPS, {
       claudeId: DRIVER_ID,
@@ -2032,6 +2043,10 @@ function persistCodexCoupling(id) {
     });
   }
   return true;
+}
+
+function cfgCwdForManifest() {
+  return process.env.TANDEM_CWD || process.cwd();
 }
 
 async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
@@ -2054,8 +2069,14 @@ async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
   if (sid) args.push(sid);
   args.push("-");
   const couplingMarker = sid ? "" : `tandem-coupling:${randomUUID()}`;
+  // A FRESH session's first message is branded so the whole fleet is filterable in chat backlogs
+  // (brand line first — it becomes the session title — then the coupling marker, then the task).
   const dispatchedTask = couplingMarker
-    ? `[${couplingMarker}; internal continuity marker - ignore this line]\n${task}`
+    ? brandTask(`[${couplingMarker}; internal continuity marker - ignore this line]\n${task}`, {
+        kind: "codex-partner",
+        label: process.env.TANDEM_LABEL || basename(STATE),
+        laneId: process.env.TANDEM_LANE_ID || "",
+      })
     : task;
 
   try {
@@ -3022,8 +3043,14 @@ else if (cmd === "fleet") {
     const { readEvents } = await import("./fleet-inbox.mjs");
     const n = Number(argv[1]) || 20;
     for (const event of readEvents(fleet, n)) console.log(JSON.stringify(event));
+  } else if (sub === "sessions") {
+    // every provider session the bridge ever spawned, with its tandem identity — the join table
+    // chat tooling uses to hide the fleet from human backlogs
+    const { readSpawnedSessions } = await import("./brand.mjs");
+    const n = Number(argv[1]) || 0;
+    for (const rec of readSpawnedSessions(n, fleet)) console.log(JSON.stringify(rec));
   } else {
-    console.error(`tandem: unknown fleet action "${sub}" (tree | doctor [--heal [--apply]] | quota | wake [sec] [--swarm <name>] | inbox [n])`);
+    console.error(`tandem: unknown fleet action "${sub}" (tree | doctor [--heal [--apply]] | quota | wake [sec] [--swarm <name>] | inbox [n] | sessions [n])`);
     process.exitCode = 2;
   }
 }
@@ -3084,6 +3111,8 @@ else if (cmd === "new") {
       "  fleet tree | doctor [--heal [--apply]] | quota   family registry / liveness / rate-limit truth\n" +
       "  fleet wake [sec] [--swarm <name>] | inbox [n]    block until the NEXT turn-done event (push,\n" +
       "                                                   one waiter for the whole fleet) / recent events\n" +
+      "  fleet sessions [n]           every bridge-spawned provider session + tandem identity (for\n" +
+      "                               hiding the [TANDEM ...]-branded flood from chat backlogs)\n" +
       "  swarm continue/tail/attach/interrupt/reap <name> <lane> [...]\n" +
       "  attach [--command]    resume the exact partner session in a human terminal (lane-locked)\n" +
       "  wait [sec] | status | cancel/interrupt | reap | tail [n] | result | new",

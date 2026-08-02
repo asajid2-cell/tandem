@@ -159,8 +159,14 @@ rl.on("line", (line) => {
     task = line;
   }
   const ne = task.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const first = (ne[0] || "").slice(0, 100);
-  const last = (ne[ne.length - 1] || "").slice(0, 100);
+  // `first=` reports the first CONTENT line: the [TANDEM ...] session brand is transport dressing
+  // the bridge prepends to every fresh session's first message — assertions about what a turn
+  // actually said should see through it. Whether the brand itself landed is asserted via
+  // `branded=` below.
+  const branded = ne.length && ne[0].startsWith("[TANDEM") ? 1 : 0;
+  const content = branded ? ne.slice(1) : ne;
+  const first = (content[0] || "").slice(0, 100);
+  const last = (content[content.length - 1] || "").slice(0, 100);
   const shouldHang =
     process.env.FAKE_HANG_AFTER_SESSION === "1" &&
     (!process.env.FAKE_HANG_MATCH || task.includes(process.env.FAKE_HANG_MATCH));
@@ -198,7 +204,7 @@ rl.on("line", (line) => {
       ? CLAUDE_429
       : limitMode
         ? CLAUDE_SESSION_LIMIT
-        : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last}${nested}`;
+        : process.env.FAKE_VERDICT || `FAKE-CLAUDE ok sid=${sid} cwd=${process.cwd()} first=${first} last=${last} branded=${branded}${nested}`;
     // Provenance: the real claude stream stamps the model id on every assistant event. Emit one so
     // the daemon can prove modelActual (env FAKE_MODEL overrides). The daemon ignores unknown types,
     // so this is harmless for every existing case. FAKE_TOOL_USE=1 folds a tool_use item into the

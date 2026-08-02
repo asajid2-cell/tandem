@@ -572,6 +572,9 @@ test("codex→claude: `compact` is lane-locked, preserves the last real verdict,
   assert.notEqual(sid2, sid1);
   assert.match(readLast(s, "claudeCompact"), /CLAUDE-REALWORK-two/);
   assert.match(readLast(s, "claudeCompact"), /Handoff from a previous session/i);
+  // the reseeded session is a FRESH bridge session → it must carry the [TANDEM ...] brand as its
+  // first line (exactly the 1-2 message backlog-spam class the brand exists to make filterable)
+  assert.match(readLast(s, "claudeCompact"), /branded=1/);
 });
 
 // ---------- true parallelism (overlapping turns, not sequential) ----------
