@@ -4,12 +4,14 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { inspectDispatch, readJson, writeJsonAtomic } from "./jobs.mjs";
 import { jobKey, sanitizeLabel } from "./groups.mjs";
 import { ensureLaneWorktree, writeLaneMetadata } from "./worktrees.mjs";
-import { checkAgainstLive, checkLaneScopes } from "./write-scope.mjs";
+import { checkAgainstLive, checkLaneScopes, checkVerifyCustody } from "./write-scope.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
 import { lintBrief } from "./brief-lint.mjs";
 import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fleet-registry.mjs";
 import { ensureRegistered } from "./fleet-identity.mjs";
 import { hashSeeds } from "./lane-seeds.mjs";
+import { heal } from "./fleet-doctor.mjs";
+
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
 // laneEnvironment) pins nested swarms — a lane that opens its own swarm — into the SAME family
@@ -176,6 +178,21 @@ export function prepareSwarm({
       throw new Error(`brief lint failed (sealed-brief contract, set "lint": false to bypass):\n${lintFailures.join("\n")}`);
     }
   }
+  // G-custody: a lane must be graded by assertions it does NOT own, and its evidence must be
+  // pinned. This was doctrine, and doctrine-only control is exactly what failed in the parked
+  // predecessor — the audit walked the path by which a lane writes tests asserting its own wrong
+  // behaviour and earns PASS-PROVEN. Escape hatch: "custody": false, for harnesses only.
+  if (gatesOn && source.custody !== false) {
+    const custodyFailures = [];
+    for (const lane of runtime) {
+      const c = checkVerifyCustody({ verify: lane.verify, seeds: lane.seeds, expectRed: lane.expectRed, expectGreen: lane.expectGreen });
+      if (!c.ok) custodyFailures.push(`${lane.name}: ${c.detail}`);
+    }
+    if (custodyFailures.length) {
+      throw new Error(`verifier custody gate failed (set "custody": false only for throwaway harnesses):\n${custodyFailures.join("\n")}`);
+    }
+  }
+
   // G-scope: writes[] is MANDATORY per lane and no two lanes (nor any live fleet session) may
   // overlap. This is the anti-42-writers gate — mechanical, at fork time.
   const fleet = fleetDir(root);
@@ -190,6 +207,13 @@ export function prepareSwarm({
       throw new Error(`write-scope gate failed:\n${lines.join("\n")}`);
     }
     let live = [];
+    try {
+      // stale `live` rows from a previous wave block overlapping dispatch forever; settle the
+      // finished and the dead first so the gate reflects reality rather than history
+      heal(fleet, { apply: true });
+    } catch {
+      /* healing is hygiene; never let it stop a dispatch */
+    }
     try {
       live = liveWriteScopes(fleet, driverId);
     } catch {

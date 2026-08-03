@@ -1,7 +1,12 @@
 # Apex immortality — clear-and-reload instead of compaction
 
-Status: DESIGN, under adversarial review. Tests are written and RED (`test/apex-memory.test.mjs`);
-nothing is implemented yet.
+Status: IMPLEMENTED and PROVEN LIVE (2026-08-02). Two adversarial passes shaped it; a third
+(cold, independent) audited it afterwards. Live proof: two rebirth cycles on real opus sessions,
+session ids 3ec4dc8f -> 95b02595 -> f2867041 with the SEAT id stable, each reborn apex answering
+from the ledger alone (goal/next, a decision AND its rejected alternative, a ruled-out hypothesis
+with its evidence) while a passphrase given to the first session and deliberately never written
+came back "I-DO-NOT-KNOW" both times. Code: bin/apex-memory.mjs, bin/apex-refresh.mjs;
+CLI: `fleet context|note|current|brief|refresh`; doctrine: orchestrate skill §4b.
 
 ## The thesis
 
@@ -40,20 +45,27 @@ Cost agrees with quality, which is unusual and worth stating: a rehydration is O
 
 ## The three thresholds (config knobs, calibrated from research, to be re-calibrated from data)
 
+> These were 150–200k / 500k in the first draft. An adversarial pass pointed out that those cite
+> CONTEXT-THESIS §1.3 while sitting ~3x above its own "serious" band, so the document refuted
+> itself. Corrected to match the evidence actually cited; overridable via TANDEM_REFRESH_AT /
+> TANDEM_HARD_AT.
+
 | threshold | default | behaviour |
 |---|---|---|
-| `refreshAtTokens` | ~150–200k | at a CLEAN SEAM, refresh |
+| `refreshAtTokens` | **100k** | at a CLEAN SEAM, refresh |
 | defer window | trigger → backstop | wants to refresh, waits for the seam (never mid-sweep) |
-| `hardRefreshTokens` | ~500k | **unconditional forced refresh**, seam or not. Firing often means the trigger is mis-set — it is a backstop, not a workflow |
+| `hardRefreshTokens` | **300k** | **unconditional forced refresh**, seam or not. Firing often means the trigger is mis-set — it is a backstop, not a workflow |
 
 A "clean seam" = no lane in flight, nothing integrated-but-uncommitted, no unresolved raise.
 
 ## Mechanism
 
-- **Meter REAL context, not cumulative spend.** `usage.json` currently sums every turn forever
-  (53,152,747 for the wave-1 apex) and compares it against a 300k "limit" — that produced wave
-  1's bogus low-context warning (F7). Context = the LATEST call's
-  `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`.
+- **Meter REAL context, not cumulative spend.** MEASURED on the wave-1 apex log: the last
+  per-call `assistant` record's usage = 491,739 (true context) while the same turn's `result`
+  record = 53,152,747 (the aggregate over 310 API calls). Reading the result record as context is
+  defect F7 and would trip a 100k threshold ~500x early. Context = the LAST ASSISTANT CALL's
+  `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`; the `result` record is
+  spend accounting, never context.
 - **Ledger** (per campaign, on disk, in the repo): `CURRENT.md` (machine-owned state, REPLACED
   wholesale — stale state is a drift source), `decisions.jsonl` + `surprises.jsonl` (append-only,
   written as the fact occurs), pointers to artifacts (commits, paths) rather than prose.
@@ -62,7 +74,7 @@ A "clean seam" = no lane in flight, nothing integrated-but-uncommitted, no unres
 - **Auto-compact MUST be off on the apex session** — otherwise it fires at its own threshold and
   reintroduces exactly the generation loss this design exists to avoid.
 
-## Open questions for the adversarial pass
+## Answered by the adversarial passes (kept for provenance)
 
 A. What class of knowledge systematically fails to reach the ledger, and does that make
    clear-and-reload lossy in practice rather than in principle?

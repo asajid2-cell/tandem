@@ -245,7 +245,22 @@ export function buildRehydrationBrief(dir, { maxTokens = 20_000, head = "" } = {
   const tactical = decisions.filter((d) => d.tier !== "constitution");
   const fmt = (d) => `- ${d.what}${d.why ? ` — ${d.why}` : ""}${d.alternatives_rejected?.length ? ` (rejected: ${d.alternatives_rejected.join("; ")})` : ""}`;
 
-  const head_block = [...fixed, "", "## DECISIONS (constitution)", ...(pinned.length ? pinned.map(fmt) : ["- (none)"])];
+  // The constitution is never evicted BY AGE against tactical entries — but it is not infinite
+  // either: pinned decisions accumulate forever, so an unbounded block would eventually consume
+  // the whole brief and starve everything else. Bound it to a share of the budget, newest first,
+  // and SAY how many were dropped rather than presenting a truncated constitution as complete.
+  const constitutionBudget = Math.floor(budgetChars * 0.5);
+  const keptPinned = [];
+  let pinnedChars = 0;
+  for (let i = pinned.length - 1; i >= 0; i--) {
+    const line = fmt(pinned[i]);
+    if (pinnedChars + line.length > constitutionBudget) break;
+    keptPinned.unshift(line);
+    pinnedChars += line.length + 1;
+  }
+  const constitutionDropped = pinned.length - keptPinned.length;
+
+  const head_block = [...fixed, "", "## DECISIONS (constitution)", ...(keptPinned.length ? keptPinned : ["- (none)"])];
   let used = head_block.join("\n").length;
   // newest tactical first, dropping the OLDEST unpinned when the budget runs out — age is the
   // eviction key only among tactical entries, never across the constitution
@@ -263,7 +278,8 @@ export function buildRehydrationBrief(dir, { maxTokens = 20_000, head = "" } = {
     "## DECISIONS (tactical, newest kept)",
     ...(keptTactical.length ? keptTactical : ["- (none retained)"]),
     "",
-    `counts: decisions_included=${pinned.length + keptTactical.length} decisions_dropped=${tactical.length - keptTactical.length} surprises_included=${surprises.length} hypotheses_included=${hypotheses.length}`,
+    `counts: decisions_included=${keptPinned.length + keptTactical.length} decisions_dropped=${tactical.length - keptTactical.length} constitution_dropped=${constitutionDropped} surprises_included=${surprises.length} hypotheses_included=${hypotheses.length}`,
+    ...(constitutionDropped ? [`⚠ ${constitutionDropped} constitution-class decision(s) did not fit — the ledger has outgrown the brief budget; raise maxTokens or prune the ledger.`] : []),
     "",
     SENTINEL,
     "",

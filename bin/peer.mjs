@@ -67,7 +67,7 @@ import {
   readSwarm,
   updateSwarm,
 } from "./swarm.mjs";
-import { appendLedger, latestRateLimits, parseUsageFromStream } from "./lane-ledger.mjs";
+import { appendLedger, latestRateLimits, parseUsageFromStream, quotaVerdict } from "./lane-ledger.mjs";
 import { reapDisposition } from "./fleet-doctor.mjs";
 import { buildRehydrationBrief } from "./apex-memory.mjs";
 import { auditLaneScope } from "./write-scope.mjs";
@@ -1265,6 +1265,14 @@ async function askClaudeDaemon(task, cfg, bg, lease) {
 // session, close it, then reopen a FRESH session seeded with that summary (the daemon
 // prepends the seed on its first turn). Re-couples via the detached-stamp + recency.
 async function compactClaude(prompt, cfg, lease) {
+  // An APEX must never compact: compaction is generation loss, and this seat has `fleet refresh`,
+  // which reloads from the ledger one hop from source. Keeping both verbs available is how the
+  // wrong one gets used at 2am.
+  if (process.env.TANDEM_ROLE === "apex") {
+    throw new Error(
+      "refusing to compact an APEX session — compaction is generation loss (a summary of a summary). Use `peer.mjs fleet refresh`, which clears and reloads from the on-disk ledger.",
+    );
+  }
   const stopHeartbeat = startHeartbeat(lease, { pid: process.pid });
   try {
     if (!(await ensureClaudeDaemon(cfg))) throw new Error("persistent Claude daemon did not become ready");
@@ -1826,6 +1834,21 @@ async function swarmCommand(args, cfg) {
 
     if (action === "start") {
       const manifestPath = args[2];
+      // THE CAMPAIGN QUOTA CEILING. FLEET-DESIGN promised one; none existed, so an unattended
+      // campaign could burn a weekly pool to zero and then degrade into INCONCLUSIVE verdicts
+      // with nobody to raise to. Denominated in percent-used of the scarce pool.
+      const ceiling = Number(process.env.TANDEM_QUOTA_CEILING || cfg.quotaCeilingPercent || 0);
+      if (ceiling) {
+        const sessionsDir = process.env.CODEX_HOME ? join(process.env.CODEX_HOME, "sessions") : join(homedir(), ".codex", "sessions");
+        const rl = latestRateLimits(sessionsDir);
+        const used = rl && rl.used_primary !== null && rl.used_primary !== undefined ? rl.used_primary : null;
+        const q = quotaVerdict({ usedPercent: used, ceilingPercent: ceiling });
+        if (q.warn || q.halt) console.error(`tandem: ${q.detail}`);
+        if (q.halt) {
+          process.exitCode = 2;
+          return;
+        }
+      }
       const record = prepareSwarm({
         root: ROOT,
         parentState: STATE,

@@ -50,7 +50,10 @@ function withEnv(overrides, fn) {
 
 function writeManifest(dir, manifest) {
   const file = join(dir, "swarm.json");
-  writeFileSync(file, JSON.stringify(manifest));
+  // these fixtures predate the verifier-custody gate and exercise OTHER contracts (registry
+  // stamping, parent links, scope overlap), so they opt out the way a throwaway harness does.
+  // The gate itself is covered in test/custody-gates.test.mjs and by the test below.
+  writeFileSync(file, JSON.stringify({ custody: false, ...manifest }));
   return file;
 }
 
@@ -227,5 +230,17 @@ test("prepareSwarm: non-sealed brief refused with rule ids; gates:false bypasses
     const bypassed = writeManifest(root, { gates: false, lanes: [badLane] });
     const record = prep(root, state, bypassed, "neg4b");
     assert.equal(record.setupStatus, "ready");
+  });
+});
+
+test("the verifier-custody gate is ON by default: a lane with no apex-owned grader is refused", () => {
+  const root = freshTmp("prep-custody-");
+  const state = join(root, "st");
+  mkdirSync(state, { recursive: true });
+  withEnv({ TANDEM_FLEET_DIR: undefined, TANDEM_STATE: state }, () => {
+    const file = join(root, "custody.json");
+    // note: NO "custody": false here — this is what a real manifest looks like
+    writeFileSync(file, JSON.stringify({ lanes: [sealedLane("a")] }));
+    assert.throws(() => prep(root, state, file, "custody"), /verifier custody gate failed/);
   });
 });

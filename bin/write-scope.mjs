@@ -232,6 +232,37 @@ export function auditLaneScope({ changed = [], writes = [], formattingOnly = [],
   };
 }
 
+// VERIFIER CUSTODY — the audit's central hole, made mechanical.
+//
+// The engine runs whatever verify command the manifest names. Rust unit tests live inside the
+// file a lane owns, so a lane can implement wrong behaviour, write tests asserting that wrong
+// behaviour, and sail through prove-red: withheld it fails to compile (a convincing RED),
+// restored its own tests pass (a convincing GREEN). The campaigns avoided this only because the
+// apex chose apex-owned `accept_<unit>::` filters BY DOCTRINE — and this system's own charter
+// records that doctrine-only control measurably failed in its predecessor.
+//
+// Mechanical rule: a lane must declare the apex-owned grader files it is judged against (seeds),
+// and its verify command must actually REFERENCE one of them. Plus the evidence pins, because
+// exit codes alone are not proof.
+export function checkVerifyCustody({ verify = "", seeds = [], expectRed = "", expectGreen = "" } = {}) {
+  const problems = [];
+  const cmd = String(verify || "");
+  const owned = (seeds || []).filter((s) => typeof s === "string" && s.trim());
+  if (!cmd.trim()) problems.push("no verify command");
+  if (!owned.length) {
+    problems.push("no apex-owned grader declared (seeds[]) — the lane would be graded by assertions it owns and can edit");
+  } else {
+    // the module/file stem of a seeded grader, e.g. src/accept_alu.rs -> accept_alu
+    const stems = owned.map((p) => normalizeScopePath(p).split("/").pop().replace(/\.[a-z0-9]+$/i, "")).filter(Boolean);
+    if (!stems.some((stem) => cmd.includes(stem))) {
+      problems.push(`the verify command references none of the apex-owned graders (${stems.join(", ")}) — it would also run the lane's own tests`);
+    }
+  }
+  if (!String(expectRed || "").trim()) problems.push("no expectRed pin — the withheld phase could fail for an unrelated reason and still certify");
+  if (!String(expectGreen || "").trim()) problems.push("no expectGreen pin — a zero-assertion pass could certify");
+  return { ok: problems.length === 0, problems, detail: problems.join("; ") };
+}
+
 if (process.argv[1]?.endsWith("write-scope.mjs")) {
   runCli();
 }
