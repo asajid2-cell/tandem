@@ -11,7 +11,7 @@ import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fl
 import { ensureRegistered } from "./fleet-identity.mjs";
 import { hashSeeds } from "./lane-seeds.mjs";
 import { heal } from "./fleet-doctor.mjs";
-import { accountHome, checkAccountPolicy } from "./codex-accounts.mjs";
+import { accountHome, checkAccountPolicy, laneAccountDefault } from "./codex-accounts.mjs";
 
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
@@ -160,7 +160,9 @@ export function prepareSwarm({
       seeds: Array.isArray(lane.seeds) ? lane.seeds.filter((s) => typeof s === "string" && s.trim()) : [],
       // which codex ACCOUNT this lane spends. Accounts are directories ($CODEX_HOME), so two can
       // run at once — a second subscription is concurrent capacity, not a fallback.
-      account: typeof lane.account === "string" ? lane.account.trim() : "",
+      // a lane that names no account inherits the configured cheap-builder pool, so the right
+      // account is the DEFAULT rather than something an operator must remember per manifest
+      account: typeof lane.account === "string" && lane.account.trim() ? lane.account.trim() : laneAccountDefault(),
     };
   });
 

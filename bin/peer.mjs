@@ -1230,6 +1230,25 @@ function apexRehydrationPrefix(cfg) {
   }
 }
 
+// BRANCH-MIND SEATING. FLEET-DESIGN seats branch minds on the claude ladder and reserves codex
+// for cheap junior swarms — and both real campaigns broke that rule, which is why the codex weekly
+// went 14% -> 55% in 3.2 hours and is the dominant cost the cold audit found. A rule this
+// expensive to break does not stay in a document.
+function enforceBranchMindSeat(cfg) {
+  if (process.env.TANDEM_ROLE !== "branch-mind") return;
+  const want = cfg.branchMindFamily || "claude";
+  if (!want || want === "any") return;
+  const actual = cfg.partner;
+  if (actual === want) return;
+  if (process.env.TANDEM_ALLOW_OFF_SEAT === "1") {
+    console.error(`tandem: branch mind is OFF-SEAT (${actual}, expected ${want}) — permitted by TANDEM_ALLOW_OFF_SEAT`);
+    return;
+  }
+  throw new Error(
+    `branch minds are seated on "${want}" (FLEET-DESIGN §6), not "${actual}". Both real campaigns broke this and it was the dominant cost: the codex weekly went 14% to 55% in 3.2 hours. Seat it on ${want}, or set TANDEM_ALLOW_OFF_SEAT=1 deliberately and expect to pay for it.`,
+  );
+}
+
 async function askClaudeDaemon(task, cfg, bg, lease) {
   const prefix = apexRehydrationPrefix(cfg);
   if (prefix) task = prefix + task;
@@ -1839,7 +1858,18 @@ async function swarmCommand(args, cfg) {
       // with nobody to raise to. Denominated in percent-used of the scarce pool.
       const ceiling = Number(process.env.TANDEM_QUOTA_CEILING || cfg.quotaCeilingPercent || 0);
       if (ceiling) {
-        const sessionsDir = process.env.CODEX_HOME ? join(process.env.CODEX_HOME, "sessions") : join(homedir(), ".codex", "sessions");
+        // check the pool the LANES will spend, not whichever one happens to be ambient — a gate
+        // that reads the wrong account is worse than none, because it reports "under ceiling"
+        // about a pool nobody is spending
+        const { accountHome, laneAccountDefault } = await import("./codex-accounts.mjs");
+        const laneAcct = laneAccountDefault();
+        const laneHome = laneAcct ? accountHome(laneAcct) : "";
+        const sessionsDir = laneHome
+          ? join(laneHome, "sessions")
+          : process.env.CODEX_HOME
+            ? join(process.env.CODEX_HOME, "sessions")
+            : join(homedir(), ".codex", "sessions");
+        if (laneAcct) console.error(`tandem: quota gate reading account "${laneAcct}" (the pool these lanes spend)`);
         const rl = latestRateLimits(sessionsDir);
         const used = rl && rl.used_primary !== null && rl.used_primary !== undefined ? rl.used_primary : null;
         const q = quotaVerdict({ usedPercent: used, ceilingPercent: ceiling });
@@ -2238,6 +2268,7 @@ function cfgCwdForManifest() {
 }
 
 async function codexExec(sid, task, cfg, outFile = LASTMSG, hooks = {}) {
+  enforceBranchMindSeat(cfg);
   // fresh:  exec [opts] -C <cwd> -
   // resume: exec resume [opts] <sid> -            (resume rejects -C / --sandbox)
   const args = ["exec"];

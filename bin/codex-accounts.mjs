@@ -8,9 +8,10 @@
 //
 // Registration is owned by the operator's `codex-acct` tool (301/orchestrate/bin/codex-acct.mjs);
 // this module only READS what that tool set up, and never touches credentials.
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function defaultAccountsRoot() {
   return process.env.TANDEM_CODEX_ACCOUNTS || join(homedir(), ".codex-accounts");
@@ -66,4 +67,23 @@ export function checkAccountPolicy({ account = "", model = "", profile = "", pol
       ? `"${chosen}" is permitted on account "${label}"`
       : `account "${label}" is restricted to ${allow.join(", ")} — it is cheap builder capacity, and "${chosen}" is not that`,
   };
+}
+
+// Config-driven defaults, read from the user-owned tandem.config.json. These exist so the right
+// pool and the ceiling are not things an operator has to REMEMBER on every campaign — the
+// engine's whole history is a list of correct rules that were bypassed because they lived in a
+// human's head instead of in the dispatch path.
+export function laneAccountDefault(configPath) {
+  try {
+    const file = configPath || join(process.env.TANDEM_ROOT || resolveRoot(), "tandem.config.json");
+    if (!existsSync(file)) return "";
+    const cfg = JSON.parse(readFileSync(file, "utf8"));
+    return typeof cfg.codexLaneAccount === "string" ? cfg.codexLaneAccount.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+function resolveRoot() {
+  return join(dirname(fileURLToPath(import.meta.url)), "..");
 }

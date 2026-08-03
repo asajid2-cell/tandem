@@ -20,12 +20,27 @@
   "claudeEffort": "xhigh",
   "tiers": {
     "codex": {
-      "efficient": { "model": "gpt-5.6-luna", "effort": "medium" },
-      "deep": { "model": "gpt-5.6-sol", "effort": "max" }
+      "efficient": {
+        "model": "gpt-5.6-luna",
+        "effort": "medium"
+      },
+      "deep": {
+        "model": "gpt-5.6-sol",
+        "effort": "max"
+      }
     },
     "claude": {
-      "efficient": { "model": "opus", "effort": "medium" },
-      "deep": { "model": "fable", "effort": "xhigh" }
+      "efficient": {
+        "model": "opus",
+        "effort": "medium"
+      },
+      "deep": {
+        "model": "fable",
+        "effort": "xhigh"
+      }
     }
-  }
+  },
+  "quotaCeilingPercent": 90,
+  "codexLaneAccount": "",
+  "branchMindFamily": "claude"
 }
