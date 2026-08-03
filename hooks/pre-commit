@@ -1,0 +1,27 @@
+#!/bin/sh
+# Substrate guard + gitmap gate, for THIS repo only (repo-local core.hooksPath).
+#
+# WHY A HOOK. A campaign apex, deep in the degradation band, decided to edit peer.mjs/swarm.mjs
+# mid-campaign. It was reverted, but a shared engine changing under running lanes is the worst
+# failure this system can have: every lane's gates, meter and custody checks ARE the files being
+# edited. The rule was written into doctrine, and this repo's own comments record that advisory
+# control "measurably failed" in the predecessor engine — so it is mechanical here.
+#
+# A session carrying a fleet ROLE (apex, branch-mind, junior) is a campaign participant and may
+# not commit to the substrate. A human, or an engineer working on the engine deliberately, has no
+# TANDEM_ROLE set. Deliberate override, for when the engine really is the campaign's subject:
+#   TANDEM_ALLOW_SUBSTRATE_COMMIT=1 git commit ...
+if [ -n "$TANDEM_ROLE" ] && [ "$TANDEM_ALLOW_SUBSTRATE_COMMIT" != "1" ]; then
+  echo "refusing commit: TANDEM_ROLE=$TANDEM_ROLE — a campaign lane may not modify the fleet substrate." >&2
+  echo "  The engine your lanes depend on must not change under them mid-campaign." >&2
+  echo "  If the engine really is this campaign's subject: TANDEM_ALLOW_SUBSTRATE_COMMIT=1 git commit ..." >&2
+  exit 1
+fi
+
+# Chain to the machine-wide gitmap gate. Setting a repo-local hooksPath overrides the global one
+# entirely, so this repo would otherwise LOSE that gate — which is exactly the kind of silent
+# protection-removal this file exists to prevent.
+if [ -f "/c/Users/Ahmed/gitmap/gitmap.mjs" ]; then
+  exec node "/c/Users/Ahmed/gitmap/gitmap.mjs" gate --staged
+fi
+exit 0
