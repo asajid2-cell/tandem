@@ -73,6 +73,11 @@ import { buildRehydrationBrief } from "./apex-memory.mjs";
 import { auditLaneScope } from "./write-scope.mjs";
 import { recheckSeeds } from "./lane-seeds.mjs";
 import { accountHome as accountHomeFor } from "./codex-accounts.mjs";
+import { locateOwnLane } from "./apex-gate.mjs";
+
+// The lane THIS session actually is, discovered by recorded identity rather than derived from an
+// environment that partnerEnv deliberately stripped. Empty for an ordinary driver.
+let LANE_SELF = { found: false, stateDir: "", fleetDir: "", label: "", role: "" };
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveChildIdentity, resolveIdentity } from "./fleet-identity.mjs";
@@ -3263,6 +3268,18 @@ else if (cmd === "swarm") await swarmCommand(argv, cfg);
 else if (cmd === "fleet") {
   // Unified fleet surface: tree (family registry), doctor (liveness + heal), quota (ground truth).
   const sub = argv[0] || "tree";
+  // SELF-LOCATION. A partner session runs these verbs with its lane identity SCRUBBED from its
+  // environment, so deriving the lane from ambient env sent the apex's own `fleet context` and
+  // `fleet refresh` to a directory that does not exist — they measured 0 and did nothing, silently,
+  // for 790,000 tokens. Recorded identity lets a session find its real lane by the session id serve
+  // wrote there. Explicit env still wins; this only fills the hole where there was nothing.
+  const ownSession = process.env.CLAUDE_CODE_SESSION_ID || "";
+  const own = process.env.TANDEM_STATE ? { found: false } : locateOwnLane(ownSession, join(ROOT, "tandems"));
+  if (own.found) {
+    LANE_SELF = own; // used by fleet context/refresh so they act on the RIGHT session
+    if (!process.env.TANDEM_FLEET_DIR && own.fleetDir) process.env.TANDEM_FLEET_DIR = own.fleetDir;
+    console.error(`tandem: self-located as lane "${own.label}"${own.role ? ` (role ${own.role})` : ""}`);
+  }
   const fleet = fleetDir(ROOT);
   if (sub === "tree") {
     const { renderTree } = await import("./fleet-registry.mjs");
@@ -3332,7 +3349,7 @@ else if (cmd === "fleet") {
     // record is a per-turn aggregate (measured: 53,152,747 vs a true 491,739) and reading it as
     // context is defect F7; it would trip the refresh threshold hundreds of times too early.
     const { liveContext, refreshDecision } = await import("./apex-memory.mjs");
-    const ctx = liveContext(join(STATE, "turn.jsonl"));
+    const ctx = liveContext(join(LANE_SELF.stateDir || STATE, "turn.jsonl"));
     const running = (jobState(cfg) || {}).status === "running";
     const d = refreshDecision({ context: ctx, busy: running });
     console.log(JSON.stringify({ context: ctx, busy: running, ...d }));
@@ -3385,7 +3402,7 @@ else if (cmd === "fleet") {
     const { liveContext } = await import("./apex-memory.mjs");
     const seatId = process.env.TANDEM_SELF_ID || "";
     const ledgerDir = join(fleet, "apex");
-    const turnLog = join(STATE, "turn.jsonl");
+    const turnLog = join(LANE_SELF.stateDir || STATE, "turn.jsonl");
     // auto-compact is invisible by construction — if it fired, context DROPPED, so the trigger
     // never fires and the session silently became a summary of a summary. Say so loudly.
     const compact = detectCompactBoundary(existsSync(turnLog) ? readFileSync(turnLog, "utf8") : "");

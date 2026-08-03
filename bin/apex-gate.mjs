@@ -22,7 +22,8 @@
 //     log nobody reads (measured: an hour of nudges logging "sent" into /dev/null). Injecting a
 //     fixed engine-authored turn has precedent in this very daemon — the T5 progress capture
 //     (CAPTURE_PROMPT) is an engine-authored turn already. Fixed text is mechanism, not judgment.
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
 // FIXED TEXT. The engine may compel externalization; it may never tell a mind what to conclude.
@@ -70,6 +71,48 @@ export function readBoundIdentity(boundFile) {
   } catch {
     return {}; // identity bookkeeping must never throw into a dispatch path
   }
+}
+
+// ---- self-location ------------------------------------------------------------------------------
+// The gap that made the apex protocol dead from the inside. A partner session has its lane
+// identity SCRUBBED from its environment (partnerEnv) and the CLI re-sets CLAUDE_CODE_SESSION_ID
+// in its Bash children — so `fleet context` / `fleet refresh` run from inside the session derived
+// a state dir from the session's OWN id, landed somewhere that does not exist, measured 0, and
+// did nothing. Silently, for 790,000 tokens.
+//
+// Recorded identity makes the reverse lookup possible: serve writes its session id into its lane,
+// so a session can ask "which lane am I?" and get a truthful answer. Returns found:false rather
+// than guessing — a wrong directory is how one campaign ran two apex bodies against one ledger.
+export function locateOwnLane(sessionId, lanesRoot) {
+  const empty = { found: false, stateDir: "", fleetDir: "", label: "", role: "" };
+  if (!sessionId || typeof sessionId !== "string") return empty;
+  try {
+    if (!existsSync(lanesRoot)) return empty;
+    for (const entry of readdirSync(lanesRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const dir = join(lanesRoot, entry.name);
+      const sessionFile = join(dir, "claude.session");
+      if (!existsSync(sessionFile)) continue;
+      let recorded = "";
+      try {
+        recorded = readFileSync(sessionFile, "utf8").trim();
+      } catch {
+        continue;
+      }
+      if (recorded !== sessionId) continue;
+      const identity = readBoundIdentity(join(dir, "serve.bound.json"));
+      return {
+        found: true,
+        stateDir: identity.stateDir || dir,
+        fleetDir: identity.fleetDir || "",
+        label: identity.label || entry.name,
+        role: identity.role || "",
+      };
+    }
+  } catch {
+    /* locating is advisory; never throw into a command path */
+  }
+  return empty;
 }
 
 // ---- the gate -----------------------------------------------------------------------------------
