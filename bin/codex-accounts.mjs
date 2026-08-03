@@ -87,3 +87,18 @@ export function laneAccountDefault(configPath) {
 function resolveRoot() {
   return join(dirname(fileURLToPath(import.meta.url)), "..");
 }
+
+// Account policy is CONFIG-OWNED, never manifest-owned. A manifest is authored by a MIND; if it
+// could declare its own policy the gate would be decoration — a lane would simply widen its own
+// permissions. Live validation caught exactly that: the gate read the manifest and a sol lane
+// sailed onto the luna-only account.
+export function accountPolicyFromConfig(configPath) {
+  try {
+    const file = configPath || join(process.env.TANDEM_ROOT || resolveRoot(), "tandem.config.json");
+    if (!existsSync(file)) return {};
+    const cfg = JSON.parse(readFileSync(file, "utf8"));
+    return cfg && typeof cfg.accounts === "object" && cfg.accounts ? cfg.accounts : {};
+  } catch {
+    return {};
+  }
+}

@@ -11,7 +11,7 @@ import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fl
 import { ensureRegistered } from "./fleet-identity.mjs";
 import { hashSeeds } from "./lane-seeds.mjs";
 import { heal } from "./fleet-doctor.mjs";
-import { accountHome, checkAccountPolicy, laneAccountDefault } from "./codex-accounts.mjs";
+import { accountHome, accountPolicyFromConfig, checkAccountPolicy, laneAccountDefault } from "./codex-accounts.mjs";
 
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
@@ -162,7 +162,15 @@ export function prepareSwarm({
       // run at once — a second subscription is concurrent capacity, not a fallback.
       // a lane that names no account inherits the configured cheap-builder pool, so the right
       // account is the DEFAULT rather than something an operator must remember per manifest
-      account: typeof lane.account === "string" && lane.account.trim() ? lane.account.trim() : laneAccountDefault(),
+      // ...defaulted ONLY for lanes that actually target codex. An account is a $CODEX_HOME, so
+      // forcing one onto a claude lane or an unspecified harness lane is meaningless — and it
+      // made the configured policy refuse lanes that never touch codex at all.
+      account:
+        typeof lane.account === "string" && lane.account.trim()
+          ? lane.account.trim()
+          : lane.partner === "codex"
+            ? laneAccountDefault()
+            : "",
     };
   });
 
@@ -202,7 +210,10 @@ export function prepareSwarm({
   // G-account: an account bought as CHEAP BUILDER capacity must not become a place to run
   // expensive tiers. Policy lives in the user-owned config; refusal is mechanical.
   if (gatesOn && source.accountPolicy !== false) {
-    const policy = source.accounts || {};
+    // CONFIG-owned, deliberately ignoring anything the manifest says about accounts: a manifest
+    // is authored by a mind, and a mind must not be able to widen its own spending permissions.
+    const policy = accountPolicyFromConfig();
+    if (source.accounts) console.error("swarm: ignoring manifest-declared account policy — policy is config-owned");
     const bad = [];
     for (const lane of runtime) {
       if (!lane.account) continue;

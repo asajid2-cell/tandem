@@ -76,3 +76,21 @@ test("account policy: an unpoliced account and the ambient default are unaffecte
   assert.equal(checkAccountPolicy({ account: "main", model: "gpt-5.6-sol", policy: LUNA_ONLY }).ok, true);
   assert.equal(checkAccountPolicy({ model: "gpt-5.6-sol", policy: LUNA_ONLY }).ok, true);
 });
+
+test("account policy is CONFIG-owned: a manifest cannot grant itself permission", async () => {
+  // the manifest is authored by a MIND. If policy came from there, a lane could widen its own
+  // permissions — the gate would be decoration. Live validation caught exactly this: the gate
+  // read source.accounts and a sol lane sailed onto the luna-only account.
+  const { accountPolicyFromConfig } = await import("../bin/codex-accounts.mjs");
+  const cfgDir = mkdtempSync(join(tmpdir(), "cxpolicy-"));
+  writeFileSync(join(cfgDir, "tandem.config.json"), JSON.stringify({ accounts: { review: { allow: ["gpt-5.6-luna"] } } }));
+  const policy = accountPolicyFromConfig(join(cfgDir, "tandem.config.json"));
+  assert.deepEqual(policy.review.allow, ["gpt-5.6-luna"]);
+  // and the enforcement uses THAT, so a permissive manifest changes nothing
+  assert.equal(checkAccountPolicy({ account: "review", model: "gpt-5.6-sol", policy }).ok, false);
+});
+
+test("accountPolicyFromConfig: a missing or broken config yields no policy, never a throw", async () => {
+  const { accountPolicyFromConfig } = await import("../bin/codex-accounts.mjs");
+  assert.deepEqual(accountPolicyFromConfig(join(tmpdir(), "nope-12345.json")), {});
+});
