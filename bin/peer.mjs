@@ -72,6 +72,7 @@ import { reapDisposition } from "./fleet-doctor.mjs";
 import { buildRehydrationBrief } from "./apex-memory.mjs";
 import { auditLaneScope } from "./write-scope.mjs";
 import { recheckSeeds } from "./lane-seeds.mjs";
+import { accountHome as accountHomeFor } from "./codex-accounts.mjs";
 import { updateStatus as updateFleetStatus } from "./fleet-registry.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveChildIdentity, resolveIdentity } from "./fleet-identity.mjs";
@@ -1835,6 +1836,25 @@ function requireSwarm(name) {
   return record;
 }
 
+// The quota of the pool a LANE actually spent. Recording the ambient account's number against a
+// lane that ran on another account is an audit trail describing the wrong pool — which is exactly
+// what it did until this was added (every gateval row said 97%, the default pool, for lanes that
+// ran on `review` at 0%).
+function laneQuota(lane) {
+  try {
+    const named = lane.account || "";
+    const home = named && !named.includes("/") && !named.includes("\\") ? accountHomeFor(named) : named;
+    const dir = home
+      ? join(home, "sessions")
+      : process.env.CODEX_HOME
+        ? join(process.env.CODEX_HOME, "sessions")
+        : join(homedir(), ".codex", "sessions");
+    return latestRateLimits(dir);
+  } catch {
+    return null;
+  }
+}
+
 async function swarmCommand(args, cfg) {
   const action = args[0] || "list";
   try {
@@ -2016,28 +2036,6 @@ async function swarmCommand(args, cfg) {
         } catch {
           usage = {};
         }
-        try {
-          appendLedger(join(fleet, "ledger.jsonl"), {
-            swarm: record.name,
-            lane: lane.name,
-            // dedupe key: re-verifying a lane appends another audit row, and any per-lane
-            // analysis must collapse on (swarm, lane, dispatchId) or every $/proven-leaf
-            // figure doubles (measured in wave 0)
-            dispatchId: lane.job?.dispatchId || "",
-            model: lane.model,
-            effort: lane.effort,
-            verify: verdictWord ? verdictWord.toLowerCase() : proveRed ? (pass ? "pass" : "fail") : pass ? "reran" : "fail",
-            ...usage,
-            quota,
-          });
-        } catch {
-          /* ledger is telemetry; verification verdicts never depend on it */
-        }
-        try {
-          updateFleetStatus(fleet, lane.laneId, pass ? "done" : "error");
-        } catch {
-          /* registry sync is best-effort here; the printed verdict is authoritative */
-        }
         // CUSTODY: prove mechanically that the lane did not edit the assertions grading it. This
         // was the single most important check in two real campaigns and it was done BY HAND.
         let scopeNote = "";
@@ -2061,18 +2059,56 @@ async function swarmCommand(args, cfg) {
                 .split(/\r?\n/)
                 .filter(Boolean)
                 .map((l) => join(lane.cwd, l.slice(3).trim()));
-              const audit = auditLaneScope({ changed, writes: declared, seeds: (lane.seeds || []).map((s) => join(lane.cwd, s)) });
+              // exempt the declared graders AND everything already dirty at dispatch (driver
+              // briefs, manifests, pre-existing work) — only NEW changes are the lane's doing
+              const exempt = [
+                ...(lane.seeds || []).map((s) => join(lane.cwd, s)),
+                ...(lane.preDirty || []).map((s) => join(lane.cwd, s)),
+              ];
+              const audit = auditLaneScope({ changed, writes: declared, seeds: exempt });
               if (!audit.ok) {
-                scopeNote = ` | SCOPE: ${audit.detail}`;
+                scopeNote += ` | SCOPE: ${audit.detail}`; // APPEND — a plain assignment here
+                // silently erased the SEEDS finding, which is the graver one
                 if (audit.outside.length) {
                   pass = false; // a content write outside the declared scope is never acceptable
-                  verdictWord = "SCOPE-BREACH";
+                  // GRADER-TAMPERED outranks a scope breach: editing the assertions that judge
+                  // you invalidates the verdict itself, so it must not be overwritten by a
+                  // lesser finding discovered afterwards
+                  if (verdictWord !== "GRADER-TAMPERED") verdictWord = "SCOPE-BREACH";
                 }
               }
             }
           }
         } catch {
           /* the audit is additive evidence; never let it swallow a real verdict */
+        }
+        // The ledger records the FINAL verdict, AFTER every gate has run. It used to be appended
+        // before the custody and scope checks, so a lane printed GRADER-TAMPERED while the ledger
+        // said "vacuous" — an audit trail contradicting the verdict is the one thing a ledger must
+        // never do. (Observed live on gateval/adder, 2026-08-03.)
+        try {
+          appendLedger(join(fleet, "ledger.jsonl"), {
+            swarm: record.name,
+            lane: lane.name,
+            // dedupe key: re-verifying a lane appends another audit row, and any per-lane
+            // analysis must collapse on (swarm, lane, dispatchId) or every $/proven-leaf
+            // figure doubles (measured in wave 0)
+            dispatchId: lane.job?.dispatchId || "",
+            model: lane.model,
+            effort: lane.effort,
+            account: lane.account || "(default)",
+            verify: verdictWord ? verdictWord.toLowerCase() : proveRed ? (pass ? "pass" : "fail") : pass ? "reran" : "fail",
+            ...usage,
+            // the quota of the pool THIS lane spent, not whichever account was ambient
+            quota: laneQuota(lane),
+          });
+        } catch {
+          /* ledger is telemetry; verification verdicts never depend on it */
+        }
+        try {
+          updateFleetStatus(fleet, lane.laneId, pass ? "done" : "error");
+        } catch {
+          /* registry sync is best-effort here; the printed verdict is authoritative */
         }
         console.log(`  ${lane.name}: ${verdictWord || (pass ? "PASS" : "FAIL")}${tailText ? ` — ${tailText}` : ""}${scopeNote}`);
         if (!pass) failed = true;
