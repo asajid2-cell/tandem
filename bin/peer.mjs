@@ -3221,9 +3221,18 @@ else if (cmd === "fleet") {
         return null;
       }
     };
+    // EVERY codex account, not just the default one. Accounts are separate pools; reporting only
+    // the ambient home is how a second subscription stays invisible while the first runs dry.
+    const { allSpendableAccounts } = await import("./codex-accounts.mjs");
+    const codexAccounts = {};
+    for (const acct of allSpendableAccounts()) {
+      const rl = latestRateLimits(acct.sessionsDir);
+      codexAccounts[acct.label] = rl ? { used_primary: rl.used_primary, resets_primary: rl.resets_primary, asof: rl.asof } : null;
+    }
     console.log(
       JSON.stringify({
         codex: latestRateLimits(sessionsDir),
+        codexAccounts,
         claudeRemainingPct: existsSync(probe) ? { opus: claudeRemaining("opus"), fable: claudeRemaining("fable") } : null,
       }),
     );

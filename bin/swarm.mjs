@@ -11,6 +11,7 @@ import { getSession, liveWriteScopes, registerSession, updateStatus } from "./fl
 import { ensureRegistered } from "./fleet-identity.mjs";
 import { hashSeeds } from "./lane-seeds.mjs";
 import { heal } from "./fleet-doctor.mjs";
+import { accountHome, checkAccountPolicy } from "./codex-accounts.mjs";
 
 
 // One fleet registry per driver context. TANDEM_FLEET_DIR (propagated into every lane env by
@@ -157,6 +158,9 @@ export function prepareSwarm({
       // does not own. Hashed at dispatch, re-checked at collection, and excluded from the scope
       // audit (they are outside the lane's writes[] by design).
       seeds: Array.isArray(lane.seeds) ? lane.seeds.filter((s) => typeof s === "string" && s.trim()) : [],
+      // which codex ACCOUNT this lane spends. Accounts are directories ($CODEX_HOME), so two can
+      // run at once — a second subscription is concurrent capacity, not a fallback.
+      account: typeof lane.account === "string" ? lane.account.trim() : "",
     };
   });
 
@@ -191,6 +195,21 @@ export function prepareSwarm({
     if (custodyFailures.length) {
       throw new Error(`verifier custody gate failed (set "custody": false only for throwaway harnesses):\n${custodyFailures.join("\n")}`);
     }
+  }
+
+  // G-account: an account bought as CHEAP BUILDER capacity must not become a place to run
+  // expensive tiers. Policy lives in the user-owned config; refusal is mechanical.
+  if (gatesOn && source.accountPolicy !== false) {
+    const policy = source.accounts || {};
+    const bad = [];
+    for (const lane of runtime) {
+      if (!lane.account) continue;
+      const home = accountHome(lane.account);
+      if (!home) bad.push(`${lane.name}: unknown or unsafe account "${lane.account}"`);
+      const p = checkAccountPolicy({ account: lane.account, model: lane.model, profile: lane.profile, policy });
+      if (!p.ok) bad.push(`${lane.name}: ${p.detail}`);
+    }
+    if (bad.length) throw new Error(`codex account policy failed:\n${bad.join("\n")}`);
   }
 
   // G-scope: writes[] is MANDATORY per lane and no two lanes (nor any live fleet session) may
@@ -259,6 +278,7 @@ export function prepareSwarm({
       expectGreen: lane.expectGreen,
       seeds: lane.seeds,
       seedStamp: null,
+      account: lane.account,
       role: lane.role,
       dispatch: "pending",
     })),
@@ -374,6 +394,11 @@ export function laneEnvironment(lane, baseEnv = process.env) {
   if (lane.effort) env.TANDEM_EFFORT = lane.effort;
   if (lane.profile) env.TANDEM_PROFILE = lane.profile;
   if (lane.role) env.TANDEM_ROLE = lane.role;
+  // an account IS a directory: pointing CODEX_HOME at it is how this lane spends that pool
+  if (lane.account) {
+    const home = lane.account.includes("/") || lane.account.includes("\\") ? lane.account : accountHome(lane.account);
+    if (home) env.CODEX_HOME = home;
+  }
   // a lane that forks its own swarm registers UNDER this lane, keeping one connected family tree
   env.TANDEM_PARENT_ID = lane.laneId;
   if (lane.posture) env.TANDEM_POSTURE = lane.posture;
