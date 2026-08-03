@@ -210,9 +210,16 @@ rl.on("line", (line) => {
     // so this is harmless for every existing case. FAKE_TOOL_USE=1 folds a tool_use item into the
     // SAME assistant event (model + tool_use) — the structural "this turn ran real work" witness.
     const content = process.env.FAKE_TOOL_USE === "1" ? [{ type: "tool_use", name: "Bash", input: {} }] : [];
-    process.stdout.write(
-      JSON.stringify({ type: "assistant", message: { model: process.env.FAKE_MODEL || "claude-opus-4-8", content } }) + "\n",
-    );
+    // Real Claude reports usage on EVERY per-call assistant record, and that per-call number is
+    // the only honest measure of live context (the `result` record's usage is a turn aggregate).
+    // FAKE_CTX lets a test drive that meter; without it the record carries no usage, exactly as
+    // this fake behaved before, so existing expectations are untouched.
+    const fakeCtx = Number(process.env.FAKE_CTX) || 0;
+    const assistantMessage = { model: process.env.FAKE_MODEL || "claude-opus-4-8", content };
+    if (fakeCtx) {
+      assistantMessage.usage = { input_tokens: 2, cache_read_input_tokens: fakeCtx - 2, cache_creation_input_tokens: 0, output_tokens: 5 };
+    }
+    process.stdout.write(JSON.stringify({ type: "assistant", message: assistantMessage }) + "\n");
     process.stdout.write(
       JSON.stringify({
         type: "result",

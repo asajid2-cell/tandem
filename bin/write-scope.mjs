@@ -252,9 +252,14 @@ export function checkVerifyCustody({ verify = "", seeds = [], expectRed = "", ex
   if (!owned.length) {
     problems.push("no apex-owned grader declared (seeds[]) — the lane would be graded by assertions it owns and can edit");
   } else {
-    // the module/file stem of a seeded grader, e.g. src/accept_alu.rs -> accept_alu
+    // The module/file stem of a seeded grader, e.g. src/accept_alu.rs -> accept_alu.
+    // normalizeScopePath LOWERCASES (it exists for case-insensitive path comparison on Windows),
+    // so comparing its output against the raw command meant a camelCase grader could never match:
+    // `acceptAlu` became `acceptalu`, every lane using one was refused, and a live campaign
+    // codified the workaround — lowercase filenames — as doctrine instead. Fold BOTH sides.
     const stems = owned.map((p) => normalizeScopePath(p).split("/").pop().replace(/\.[a-z0-9]+$/i, "")).filter(Boolean);
-    if (!stems.some((stem) => cmd.includes(stem))) {
+    const cmdFolded = cmd.toLowerCase();
+    if (!stems.some((stem) => cmdFolded.includes(stem))) {
       problems.push(`the verify command references none of the apex-owned graders (${stems.join(", ")}) — it would also run the lane's own tests`);
     }
   }

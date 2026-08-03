@@ -94,3 +94,23 @@ test("the brief bounds the CONSTITUTION block too, newest-first, and reports wha
   assert.match(brief, /constitution_dropped=\d+/, "and it says how much it dropped, rather than pretending it is complete");
   assert.ok(brief.length < 1_500 * 4 + 3_000);
 });
+
+test("custody: a camelCase grader matches — the stem was lowercased but the command was not", () => {
+  // Found live: normalizeScopePath lowercases, cmd.includes(stem) is raw, so `acceptAlu` became
+  // `acceptalu` and could never match. Every lane using a camelCase grader was refused, and the
+  // campaign codified the workaround (lowercase filenames) as doctrine instead.
+  const v = checkVerifyCustody({
+    verify: "node --test src/acceptAlu.test.mjs",
+    seeds: ["src/acceptAlu.test.mjs"],
+    expectRed: "ERR_MODULE_NOT_FOUND",
+    expectGreen: "pass 3",
+  });
+  assert.equal(v.ok, true, v.detail);
+});
+
+test("custody: matching is case-insensitive both ways, not by lowercasing one side", () => {
+  assert.equal(
+    checkVerifyCustody({ verify: "cargo test --lib ACCEPT_ALU::", seeds: ["src/accept_alu.rs"], expectRed: "E0583", expectGreen: "12 passed" }).ok,
+    true,
+  );
+});

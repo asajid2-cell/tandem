@@ -21,6 +21,7 @@ import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
+import { apexGateDecision, readBoundIdentity, recordBoundIdentity } from "./apex-gate.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
@@ -271,6 +272,11 @@ let sessionId =
 // A FRESH claude session (no --resume) gets the fleet brand as the first line of its first turn,
 // so the session is filterable in chat backlogs from birth. Resumed sessions were branded at birth.
 let brandPending = !sessionId;
+// Live context of THIS session, measured from the stream this daemon owns (see the meter below).
+// 0 means "not yet measured this daemon's lifetime" — never treated as "under the limit".
+let lastAssistantContext = 0;
+// One engine dump turn per refresh cycle. Without this a gate becomes a loop.
+let dumpedThisCycle = false;
 // CLAUDE_HEADLESS_POSTURE (the "never stop to ask a human who isn't here" flag) comes from the
 // shared package so orch and tandem agree on the one posture a headless Claude child runs under.
 let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", CLAUDE_HEADLESS_POSTURE, "--verbose"];
@@ -337,6 +343,22 @@ try {
   );
 } catch {
   /* visibility only */
+}
+
+// RECORDED IDENTITY. Which lane this daemon is and which ledger it belongs to, stamped ONCE at
+// spawn from the environment that actually created it. Everything downstream reads this rather
+// than re-deriving from ambient env — the derivation is what let one campaign run two apex bodies
+// against one ledger, each blind to the other, and what made the apex's own `fleet refresh`
+// resolve to a directory that did not exist.
+try {
+  recordBoundIdentity(BOUND, {
+    stateDir: STATE,
+    fleetDir: process.env.TANDEM_FLEET_DIR || "",
+    label: process.env.TANDEM_LABEL || "",
+    role: process.env.TANDEM_ROLE || "",
+  });
+} catch {
+  /* identity is bookkeeping; never block the daemon coming up */
 }
 
 let buf = "";
@@ -662,6 +684,16 @@ claude.stdout.on("data", (b) => {
     }
     // Provenance: the claude stream stamps the model id on EVERY assistant event (and on the init
     // system event). Keep the LAST seen value — it's what actually ran this turn.
+    // APEX METER. Retain the last per-call assistant usage IN MEMORY. This is the only place the
+    // real number is reliably visible: peer-side dispatch paths read a per-turn file that is
+    // deleted moments later, so a check there is one statement-ordering mistake away from
+    // certifying "under the limit" forever. The `result` record is a turn AGGREGATE and must
+    // never be read as context (measured: 53,152,747 vs a true 491,739).
+    if (o.type === "assistant" && o.message?.usage) {
+      const u = o.message.usage;
+      lastAssistantContext =
+        (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0);
+    }
     if (o.type === "assistant" && typeof o.message?.model === "string" && o.message.model) {
       turnModelActual = o.message.model;
     } else if (o.type === "system" && o.subtype === "init" && typeof o.model === "string" && o.model) {
@@ -1250,6 +1282,44 @@ setInterval(() => {
       laneId: process.env.TANDEM_LANE_ID || "",
     });
     brandPending = false;
+  }
+  // THE APEX GATE. Keyed on the identity this daemon RECORDED at startup, not on ambient env —
+  // deriving it per-dispatcher is what produced two apex bodies writing one ledger, each blind to
+  // the other. Every turn from every dispatcher passes through here, so there is one place to
+  // meter and one place to act.
+  try {
+    const identity = readBoundIdentity(BOUND);
+    const gate = apexGateDecision({
+      role: identity.role,
+      context: lastAssistantContext,
+      threshold: Number(process.env.TANDEM_REFRESH_AT) || 100_000,
+      hard: Number(process.env.TANDEM_HARD_AT) || 300_000,
+      dumpedThisCycle,
+    });
+    if (gate.injectDump) {
+      // Replace the requested turn with the engine's fixed dump. Precedent: this daemon already
+      // injects an engine-authored turn (the T5 progress capture). Fixed text is mechanism, not
+      // judgment — it compels externalization and never says what to conclude.
+      //
+      // THE EFFECT COMES FIRST, telemetry second. The first version of this called a logger that
+      // did not exist in this module; the ReferenceError was swallowed by the guard's own catch
+      // and the gate silently did nothing — which is precisely the class of failure this gate was
+      // built to end. Nothing below the mutation may be able to prevent it.
+      dumpedThisCycle = true;
+      task = gate.prompt;
+      try {
+        console.log(`  ▸ ENGINE DUMP TURN: ${gate.reason}`);
+        log({ type: "apex-dump", ts: Date.now(), context: lastAssistantContext, reason: gate.reason });
+      } catch {
+        /* telemetry only — the dump has already been installed above */
+      }
+    } else if (gate.notice) {
+      // IN-BAND. A console warning is worthless here: the autonomous dispatcher discards stdout,
+      // which is how an hour of failed nudges logged "sent" and went unseen.
+      task = `${gate.notice}\n\n${task}`;
+    }
+  } catch {
+    /* the gate is a guard, never a reason a turn cannot be delivered */
   }
   console.log(`  ▸ turn: ${task.replace(/\s+/g, " ").slice(0, 80)}`);
   claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text: task }] } }) + "\n");
