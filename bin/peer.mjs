@@ -3265,6 +3265,53 @@ else if (cmd === "cancel" || cmd === "interrupt") cancelJob(cfg);
 else if (cmd === "reap") reapJob(cfg);
 else if (cmd === "worktree") worktreeCommand(argv, cfg);
 else if (cmd === "swarm") await swarmCommand(argv, cfg);
+else if (cmd === "steer") {
+  // Deliver an owner message INTO a turn already running. `ask` cannot do this: the relay refuses
+  // to pick up a task while a turn is in flight, which is what keeps verdict custody and the
+  // dispatch lease coherent — but it also meant a mind working for half an hour could only be
+  // queued at, never redirected. The channel is the same live stdin the daemon already writes
+  // interrupts to mid-turn.
+  //
+  // FRAMING IS PART OF THE MECHANISM. An unlabelled interjection mid-turn reads as disapproval,
+  // and a mind that thinks it is being corrected starts defending or re-doing work instead of
+  // adjusting course. So every steer is wrapped: this is a course change, not a verdict on what
+  // you have done. `--stop` marks the rarer kind that IS "put that down".
+  const body = argv.filter((a) => !a.startsWith("--")).join(" ") || readFileSync(0, "utf8");
+  if (!body.trim()) {
+    console.error('tandem: nothing to steer with — usage: peer.mjs steer "do X instead of Y"  (or - for stdin)');
+    process.exitCode = 2;
+  } else {
+    const stop = argv.includes("--stop");
+    const header = stop
+      ? "[OWNER STEER — STOP AND REDIRECT] Put down what you are doing on this thread and take the direction below. This is a change of course, not a judgement on the work you have done so far."
+      : "[OWNER STEER — course correction, NOT disapproval] Keep going; adjust course as follows. Nothing you have done is being rejected — this is new direction arriving mid-turn because waiting for your turn to end would have cost more than interrupting it. Fold it into what you are doing rather than restarting, and do not apologise or re-litigate.";
+    ensureState();
+    try {
+      writeFileSync(join(STATE, "steer.txt"), `${header}\n\n${body.trim()}\n`);
+      const running = (jobState(cfg) || {}).status === "running";
+      const now = argv.includes("--now");
+      if (!running) {
+        console.log("tandem: steer will be delivered immediately (no turn in flight).");
+      } else if (now) {
+        // The ONLY way to redirect work already in flight. A user message written mid-turn is
+        // silently swallowed in this mode (measured), but the interrupt control_request IS
+        // honoured: it ends the turn with a real result and leaves the session warm, so the
+        // turn's work survives and the steer lands as the next message.
+        console.log("tandem: checkpointing the running turn so the steer lands now…");
+        cancelJob(cfg);
+        console.log("tandem: turn checkpointed — the steer is the next message the partner sees.");
+      } else {
+        console.log("tandem: steer HELD — it is delivered the moment the current turn ends, ahead of anything queued.");
+        console.log("  (a message written into a running turn is swallowed by this CLI mode, so it is not sent now)");
+        console.log("  use `steer --now` to checkpoint the turn and deliver immediately.");
+      }
+      if (!existsSync(SERVE_PID)) console.error("tandem: note — no daemon is open, so this steer waits until one is.");
+    } catch (error) {
+      console.error(`tandem: could not write the steer - ${error.message || error}`);
+      process.exitCode = 1;
+    }
+  }
+}
 else if (cmd === "fleet") {
   // Unified fleet surface: tree (family registry), doctor (liveness + heal), quota (ground truth).
   const sub = argv[0] || "tree";

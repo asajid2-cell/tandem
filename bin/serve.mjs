@@ -48,6 +48,7 @@ const ROOT = resolve(HERE, "..");
 // Same per-driver state folder as peer.mjs (TANDEM_STATE, passed by the spawning peer, overrides).
 const STATE = stateDir(ROOT, process.env.CODEX_SESSION_ID || process.env.CODEX_THREAD_ID || process.env.CODEX_CONVERSATION_ID || "");
 const INBOX = join(STATE, "inbox.txt");
+const STEER = join(STATE, "steer.txt"); // owner message deliverable INTO a turn already running
 const STATUS = join(STATE, "status.txt");
 const TURNLOG = join(STATE, "turn.jsonl");
 const PID = join(STATE, "serve.pid");
@@ -1184,6 +1185,52 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
     process.exit(0);
   });
 }
+
+// STEER loop: deliver an owner message into a turn ALREADY IN FLIGHT.
+//
+// The inbox relay below deliberately refuses to act while `inTurn` — one turn at a time is what
+// makes verdict custody and the dispatch lease coherent. But that serialization also meant the
+// owner could only ever QUEUE: a long-running mind could not be redirected for the twenty-nine
+// minutes it was working, which is exactly when redirection is worth most.
+//
+// The channel already exists and is already trusted: this daemon writes an `interrupt`
+// control_request onto the same live stdin mid-turn, and the CLI honours it without ending the
+// session. A user message is the same kind of write. So steering is a separate file with a
+// separate rule — deliverable DURING a turn, never taking the dispatch lease, never producing a
+// verdict of its own.
+// MEASURED, and the reason this waits: a user message written to the live stdin DURING a turn is
+// SILENTLY SWALLOWED by the CLI in headless stream-json mode. Tested against a real session — the
+// model ran a 200-item task to completion ignoring the steer, and the following turn showed no
+// trace of it either. It is not queued; it is lost. (Interactive Claude Code behaves differently;
+// this mode does not.) So the steer is held until the turn ends and delivered as the very next
+// message, ahead of any queued inbox task. For redirection that cannot wait, `steer --now`
+// checkpoints the turn first — the interrupt control_request IS honoured mid-turn.
+setInterval(() => {
+  if (inTurn || !existsSync(STEER) || !claude.pid) return;
+  let text = "";
+  try {
+    text = readFileSync(STEER, "utf8");
+  } catch {
+    return;
+  }
+  try {
+    rmSync(STEER);
+  } catch {
+    /* a steer delivered twice is worse than one delivered late; drop it if it cannot be consumed */
+    return;
+  }
+  if (!text.trim()) return;
+  try {
+    claude.stdin.write(JSON.stringify({ type: "user", message: { role: "user", content: [{ type: "text", text }] } }) + "\n");
+    inTurn = true;
+    turnStart = Date.now();
+    noteTurnActivity("dispatch");
+    console.log(`  ↪ steer delivered: ${text.replace(/\s+/g, " ").slice(0, 70)}`);
+    log({ type: "steer", ts: Date.now(), chars: text.length });
+  } catch (error) {
+    console.error(`tandem: steer could not be delivered - ${error.message || error}`);
+  }
+}, 250);
 
 // Relay loop: pick up a queued task and feed it into the OPEN session.
 setInterval(() => {
