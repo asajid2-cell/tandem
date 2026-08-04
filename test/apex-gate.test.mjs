@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DUMP_PROMPT, apexGateDecision, ledgerWrittenSince, meterNotice, readBoundIdentity, recordBoundIdentity } from "../bin/apex-gate.mjs";
+import { DUMP_PROMPT, apexGateDecision, ledgerWrittenSince, meterNotice, readBoundIdentity, recordBoundIdentity, stallDecision } from "../bin/apex-gate.mjs";
 
 const fresh = (p) => mkdtempSync(join(tmpdir(), p));
 
@@ -143,6 +143,47 @@ test("meterNotice states the number and what to do, in one line", () => {
   assert.match(n, /220000/);
   assert.match(n, /300000/);
   assert.ok(n.split("\n").length <= 3);
+});
+
+// ---- the pump ------------------------------------------------------------------------------------
+//
+// THE SECOND ROOT CAUSE of the same incident, and the one the context gate alone would not have
+// caught. The heartbeat exists so a finished wave is never left unintegrated overnight; it nudges
+// whenever the lane is idle. It has no notion of whether the previous nudge ACHIEVED anything, so
+// when the apex began replying "Nothing done. Same state." while making zero tool calls, the
+// heartbeat kept feeding it — "the heartbeat has become a pump", in the owner's words.
+//
+// Context exhaustion was only why it stalled THAT time. A freshly refreshed body at 20k tokens
+// that stalls for any other reason would loop just as long, and hit no limit for hours. So the
+// engine counts turns that did no work, and a nudge loop gets a termination condition: one refresh
+// (the cheapest unstick — a stall is often degradation the meter has not caught yet), and if that
+// does not take, the lane PARKS. Parking is loud and requires a human; it can never loop.
+
+test("a lane doing real work is never parked, however long it runs", () => {
+  assert.equal(stallDecision({ idleStreak: 0, stallRefreshes: 0 }).action, "");
+  assert.equal(stallDecision({ idleStreak: 2, stallRefreshes: 0 }).action, "", "an occasional answer-only turn is normal");
+});
+
+test("consecutive turns that make NO tool calls trigger one refresh — the cheapest unstick", () => {
+  const d = stallDecision({ idleStreak: 3, stallRefreshes: 0 });
+  assert.equal(d.action, "refresh");
+  assert.match(d.reason, /no tool calls|did no work/i);
+});
+
+test("a lane that stalls AGAIN after its refresh is parked, not refreshed forever", () => {
+  const d = stallDecision({ idleStreak: 3, stallRefreshes: 1 });
+  assert.equal(d.action, "park", "a second rebirth that changes nothing is just a slower pump");
+});
+
+test("INVARIANT: no stall state refreshes more than the bound, and parking is terminal", () => {
+  for (let streak = 0; streak <= 8; streak++) {
+    for (let refreshes = 0; refreshes <= 4; refreshes++) {
+      const d = stallDecision({ idleStreak: streak, stallRefreshes: refreshes, threshold: 3, maxStallRefreshes: 1 });
+      assert.ok(["", "refresh", "park"].includes(d.action));
+      if (d.action === "refresh") assert.ok(refreshes < 1, `refreshed ${refreshes} times already — this is a rebirth loop`);
+      if (refreshes >= 1 && streak >= 3) assert.equal(d.action, "park", "once the bound is spent the only escalation left is a human");
+    }
+  }
 });
 
 // ---- did the dump actually land? ---------------------------------------------------------------

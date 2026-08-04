@@ -21,7 +21,7 @@ import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
-import { apexGateDecision, ledgerWrittenSince, readBoundIdentity, recordBoundIdentity } from "./apex-gate.mjs";
+import { apexGateDecision, ledgerWrittenSince, readBoundIdentity, recordBoundIdentity, stallDecision } from "./apex-gate.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
@@ -61,6 +61,8 @@ const DETACHED = join(STATE, "detached.json"); // drivers reset by `new` → sta
 const USAGE = join(STATE, "usage.json"); // per-session context size → low-context notice
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary to prepend on a fresh session's first turn
 const RATE_LIMIT = join(STATE, "rate-limit.json"); // last rate_limit_event seen (groundwork for a predictive-warning item)
+const STALL_STATE = join(STATE, "apex-stall.json"); // stall refreshes SPENT — must outlive the body it refreshed
+const PARKED = join(STATE, "STALLED.md"); // present = this lane is parked and waiting for a human
 const COMPACT_AT = Number(process.env.TANDEM_COMPACT_AT) || cfg().compactAtTokens || 300000;
 const STALL_SEC =
   process.env.TANDEM_STALL_SEC !== undefined
@@ -281,6 +283,9 @@ let lastAssistantContext = 0;
 // ledger must have been written after for the dump to count as landed. A bare boolean here is what
 // let the gate latch permanently open once the first dump had run.
 let apexDump = { attempts: 0, firedTs: 0 };
+// Consecutive turns on THIS body that made no tool call. The heartbeat cannot tell whether its
+// last nudge achieved anything — that is how it became a pump — so the daemon counts instead.
+let idleStreak = 0;
 // CLAUDE_HEADLESS_POSTURE (the "never stop to ask a human who isn't here" flag) comes from the
 // shared package so orch and tandem agree on the one posture a headless Claude child runs under.
 let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", CLAUDE_HEADLESS_POSTURE, "--verbose"];
@@ -1056,6 +1061,23 @@ claude.stdout.on("data", (b) => {
         codexRole: "driver",
         direction: "codex->claude",
       });
+      // THE PUMP WITNESS. `turnDidWork` is already the daemon's proof that a turn executed real
+      // work (a tool_use appeared). Counted across turns it is also the only signal that tells a
+      // nudge loop it is achieving nothing: on the live incident this was false 29 times running.
+      // A turn that did work clears the streak AND the spent refreshes — a lane that recovered
+      // must not park on a stall it had months ago.
+      if (myIdentity().role === "apex") {
+        if (turnDidWork) {
+          idleStreak = 0;
+          try {
+            if (existsSync(STALL_STATE)) rmSync(STALL_STATE);
+          } catch {
+            /* ignore */
+          }
+        } else {
+          idleStreak += 1;
+        }
+      }
       inTurn = false;
       // A checkpoint clears supervision and returns to IDLE (warm session, next ask reuses it); a
       // non-checkpoint stop leaves STOPPING for the exit handler as before.
@@ -1202,9 +1224,79 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
 // session pointer and exit, so the next ask opens a genuinely fresh body that derives its brief
 // from the ledger at ask time. No seed is written — a seed is consumed once, and a failure there
 // leaves a mind both memoryless and briefless.
+// Identity is written once at spawn and never changes for this body's lifetime, so read it once.
+// It is also consulted on every tick of two loops, and STATE can live on a network share.
+// Memoized only once a ROLE is actually present: these loops start ticking before the identity file
+// is written, and caching that empty first read would disable the gate for the daemon's whole life —
+// silently, which is this system's signature failure.
+let boundIdentity = null;
+function myIdentity() {
+  if (!boundIdentity || !boundIdentity.role) boundIdentity = readBoundIdentity(BOUND);
+  return boundIdentity;
+}
+
+function stallRefreshesSpent() {
+  try {
+    return Number(JSON.parse(readFileSync(STALL_STATE, "utf8")).refreshes) || 0;
+  } catch {
+    return 0; // absent or unreadable means none spent
+  }
+}
+
+// A stall refresh that is not remembered ACROSS the refresh is a rebirth loop: the new body starts
+// at zero, stalls, refreshes again, forever — a slower pump, which is not an improvement.
+function spendStallRefresh() {
+  try {
+    writeFileSync(STALL_STATE, JSON.stringify({ refreshes: stallRefreshesSpent() + 1, ts: Date.now() }));
+  } catch {
+    /* ignore */
+  }
+}
+
+function evaluateStall() {
+  try {
+    if (myIdentity().role !== "apex") return { action: "", reason: "" };
+    return stallDecision({ idleStreak, stallRefreshes: stallRefreshesSpent() });
+  } catch {
+    return { action: "", reason: "" };
+  }
+}
+
+// PARKING IS LOUD. The failure this engine keeps re-learning is the silent one — an hour of nudges
+// logging "sent" into /dev/null, a self-check reporting 0 for 790,000 tokens. A parked lane stops
+// burning, but a parked lane nobody notices is just a stalled campaign. So it lands in three places
+// a human or a script actually looks: the status file, the event log, and a marker that says what
+// happened and how to clear it.
+function parkApexLane(stall) {
+  try {
+    writeFileSync(
+      PARKED,
+      `# LANE PARKED — ${new Date().toISOString()}\n\n` +
+        `${stall.reason}\n\n` +
+        "The engine stopped dispatching to this lane. It was making no tool calls and a refresh did\n" +
+        "not change that, so continuing would only spend tokens (measured once: 29 turns, 86 minutes,\n" +
+        "zero progress). Queued nudges are still on disk and will run once this clears.\n\n" +
+        "To clear: `peer.mjs fleet refresh` on this lane, or delete this file.\n",
+    );
+  } catch {
+    /* ignore */
+  }
+  try {
+    writeFileSync(STATUS, "STALLED");
+  } catch {
+    /* ignore */
+  }
+  try {
+    console.log(`  ▸ LANE PARKED: ${stall.reason}`);
+    log({ type: "apex-parked", ts: Date.now(), context: lastAssistantContext, idleStreak, reason: stall.reason });
+  } catch {
+    /* telemetry only — the park marker is already on disk */
+  }
+}
+
 function evaluateApexGate() {
   try {
-    const identity = readBoundIdentity(BOUND);
+    const identity = myIdentity();
     if (identity.role !== "apex") return { allow: true, action: "", injectDump: false, notice: "" };
     const ledgerDir = identity.fleetDir ? join(identity.fleetDir, "apex") : "";
     return apexGateDecision({
@@ -1312,9 +1404,24 @@ setInterval(() => {
   // one. Deciding after the read would drop the message and hang the caller waiting on its job.
   // This also runs when the inbox is empty, which is what makes the refresh self-firing: the tick
   // after the dump turn ends performs it, with no dependency on anyone nudging again.
+  // A parked lane refuses dispatch outright. The nudge stays on disk, so nothing is lost and
+  // nothing is spent — the pump runs dry instead of running forever.
+  if (existsSync(PARKED)) return;
   const gate = evaluateApexGate();
   if (gate.action === "refresh") {
     performApexRefresh(gate); // does not return
+    return;
+  }
+  // Context exhaustion is checked first because it is the specific diagnosis; a stall is the
+  // residual one. Both end the same way, and neither can be answered by nudging harder.
+  const stall = evaluateStall();
+  if (stall.action === "refresh") {
+    spendStallRefresh(); // BEFORE the refresh: this process is about to exit
+    performApexRefresh(stall); // does not return
+    return;
+  }
+  if (stall.action === "park") {
+    parkApexLane(stall);
     return;
   }
   if (!existsSync(INBOX)) return;

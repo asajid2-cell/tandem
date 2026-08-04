@@ -1110,6 +1110,8 @@ const SERVE_PID = join(STATE, "serve.pid");
 const SERVE_BOUND = join(STATE, "serve.bound.json"); // the supervision/model values the daemon BOUND at startup
 const CLAUDE_PID_FILE = join(STATE, "claude.pid"); // daemon's claude child — powers the self-ask guard
 const CLAUDE_SEED = join(STATE, "claude.seed"); // handoff summary the fresh daemon prepends on its first turn
+const STALL_STATE = join(STATE, "apex-stall.json"); // stall refreshes spent, kept across bodies
+const PARKED_FILE = join(STATE, "STALLED.md"); // present = the daemon parked this lane, awaiting a human
 const SERVE_SCRIPT = join(HERE, "serve.mjs");
 
 // Definitively shut the serve daemon down and reset its state. On Windows process.kill
@@ -1376,6 +1378,14 @@ function refreshClaude({ ledgerDir, seatId, force }) {
   killDaemon();
   if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
   if (existsSync(CLAUDE_SEED)) rmSync(CLAUDE_SEED); // a stale seed would re-introduce the loss path
+  // A human refresh is the acknowledgement a parked lane was waiting for. Clearing the spent stall
+  // refreshes with it means the lane gets its full escalation ladder again rather than parking on
+  // the first idle turn after someone came and unstuck it.
+  if (existsSync(PARKED_FILE)) {
+    rmSync(PARKED_FILE);
+    console.log("tandem: lane UNPARKED — the engine had stopped dispatching here.");
+  }
+  if (existsSync(STALL_STATE)) rmSync(STALL_STATE);
   markDetached(DETACHED, DRIVER_ID);
   logEvent({ type: "refresh", ts: Date.now(), partner: "claude", reason: force ? "backstop" : "seam", seatId: seatId || "" });
   console.log("tandem: apex REFRESHED — session forgotten, no seed written.");
@@ -3037,6 +3047,24 @@ function status(cfg) {
     } catch {
       /* bound-config visibility is best-effort — never crash the status command */
     }
+  }
+  // A parked lane is the one state where "idle" is a lie — it looks exactly like a lane between
+  // turns, and that is precisely how a stalled campaign goes unnoticed until morning.
+  if (existsSync(PARKED_FILE)) {
+    console.log("PARKED: the engine stopped dispatching to this lane (it was making no progress).");
+    try {
+      console.log(
+        readFileSync(PARKED_FILE, "utf8")
+          .split("\n")
+          .filter((l) => l.trim())
+          .slice(1, 3)
+          .map((l) => `  ${l}`)
+          .join("\n"),
+      );
+    } catch {
+      /* the headline above is the part that matters */
+    }
+    console.log("  clear with: peer.mjs fleet refresh");
   }
   const j = jobState(cfg);
   if (j) {

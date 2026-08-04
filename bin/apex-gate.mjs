@@ -142,6 +142,32 @@ export function ledgerWrittenSince(ledgerDir, sinceTs) {
   }
 }
 
+// ---- the pump breaker ---------------------------------------------------------------------------
+//
+// The heartbeat nudges whenever the lane is idle and has no idea whether the last nudge achieved
+// anything. On the live incident that turned it into a pump: 29 nudges, 29 replies of "Nothing
+// done. Same state.", zero tool calls between them. Context exhaustion was why it stalled that
+// time; the context gate now handles that. A body reborn at 20k that stalls for any OTHER reason
+// would pump just as long and trip no limit for hours.
+//
+// So a nudge loop gets a termination condition. One refresh — a stall is often degradation the
+// meter has not caught yet, and a rebirth is cheap. If that does not take, PARK: refuse further
+// dispatch, say so loudly, and wait for a human. Bounded, so it can never become a rebirth loop,
+// which would just be a slower pump.
+export function stallDecision({ idleStreak = 0, stallRefreshes = 0, threshold = 3, maxStallRefreshes = 1 } = {}) {
+  if (idleStreak < threshold) return { action: "", reason: "" };
+  if (stallRefreshes < maxStallRefreshes) {
+    return {
+      action: "refresh",
+      reason: `${idleStreak} consecutive turns made no tool calls — refreshing this body once before parking the lane`,
+    };
+  }
+  return {
+    action: "park",
+    reason: `${idleStreak} consecutive turns did no work after ${stallRefreshes} stall refresh(es) — parking the lane for a human`,
+  };
+}
+
 // allow      — may the REQUESTED task run this turn? (false does not mean "stall": see action)
 // action     — what the ENGINE must do: "" | "dump" | "refresh"
 // injectDump — replace this turn with the fixed DUMP_PROMPT

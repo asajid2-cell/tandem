@@ -121,6 +121,40 @@ test("once the ledger is written the ENGINE refreshes the body itself — it doe
   assert.ok(existsSync(join(state, "claude.session")), "and the fresh body records its own session");
 });
 
+// THE PUMP, live. Context exhaustion was why the apex stalled that night; it is not the only way
+// to stall. A body reborn at 20k that makes no tool calls trips no limit for hours, and the
+// heartbeat — which cannot tell whether its last nudge achieved anything — keeps feeding it. So the
+// daemon counts turns that did no work and ends the loop itself.
+test("a lane that stops doing work is refreshed once, then PARKED — a nudge loop must terminate", async (t) => {
+  const state = freshState();
+  const fleet = join(state, "campaign-fleet");
+  // The fake emits no tool_use unless asked to (FAKE_TOOL_USE=1), so it replies without ever doing
+  // work — the exact shape of the 29 turns that reported "Nothing done. Same state." No FAKE_CTX
+  // either: this stall must be caught with the context meter reading nothing at all.
+  const env = { TANDEM_ROLE: "apex", TANDEM_LABEL: "pump-apex", TANDEM_FLEET_DIR: fleet };
+  t.after(() => stopDaemon(state, env));
+  mkdirSync(join(fleet, "apex"), { recursive: true });
+  writeFileSync(join(fleet, "apex", "CURRENT.md"), "# orientation\nthe campaign so far\n");
+
+  for (let i = 0; i < 3; i++) runPeer(["ask", `NUDGE-${i}`], { state, env });
+
+  // the engine spends its one refresh...
+  let deadline = Date.now() + 15_000;
+  while (existsSync(join(state, "claude.session")) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 150));
+  assert.match(readFileSync(join(state, "tandem.log.jsonl"), "utf8"), /"apex-refresh"/, "the first escalation is a rebirth — a stall is often degradation the meter has not caught");
+
+  // ...and when the reborn body stalls the same way, the lane parks instead of pumping forever
+  for (let i = 0; i < 4; i++) runPeer(["ask", `NUDGE-AGAIN-${i}`], { state, env });
+  deadline = Date.now() + 15_000;
+  while (!existsSync(join(state, "STALLED.md")) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 150));
+  assert.ok(existsSync(join(state, "STALLED.md")), "the loop must terminate in a park, not a second rebirth");
+  assert.match(readFileSync(join(state, "tandem.log.jsonl"), "utf8"), /"apex-parked"/);
+
+  // and a parked lane spends nothing: the nudge stays on disk, unconsumed
+  const parked = runPeer(["status"], { state, env });
+  assert.match(parked, /PARKED/, "a park that looks like an ordinary idle lane is how a stalled campaign goes unnoticed");
+});
+
 test("between the thresholds the turn is delivered WITH an in-band meter notice", (t) => {
   const state = freshState();
   const env = { TANDEM_ROLE: "apex", TANDEM_LABEL: "warn-apex", FAKE_CTX: "150000", TANDEM_REFRESH_AT: "100000", TANDEM_HARD_AT: "300000" };
