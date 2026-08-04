@@ -17,7 +17,40 @@ how long the apex lives — which is what makes a single apex session genuinely 
 than merely long-lived.
 
 This only works because memory is on disk FIRST. The two decisions are load-bearing on each
-other: without the ledger a `/clear` is destructive; with it a `/clear` is a refresh.
+other: without the ledger a clear is destructive; with it a clear is a refresh.
+
+### `/clear` itself is NOT the mechanism — measured 2026-08-04
+
+This document used to say "a `/clear` is a refresh", and the implementation quietly substituted
+something else without recording why. It is written down now, because the substitution is not
+obvious and the assumption is the kind that gets re-litigated at 2am.
+
+**`/clear` is not honoured by the CLI in the mode the daemon runs** (`claude -p --input-format
+stream-json --output-format stream-json`). It arrives at the model as an ordinary user message.
+Measured on a scratch lane against a real session:
+
+| probe | result |
+|---|---|
+| reply to a `/clear` turn | the MODEL answered it — "Clear something (terminal, cache, state)?" |
+| codeword planted before the clear | still recalled after: `ZEPHYR-7` |
+| context across the clear | 34,261 and rising — no drop |
+
+Slash commands are a TUI feature. The daemon cannot use the TUI, because the whole point is a
+lane something can drive programmatically at 3am.
+
+So a refresh is performed the only way this mode allows: forget the session pointer and let the
+next ask open a fresh body, briefed from the ledger. **This costs nothing in session count** — a
+`/clear` also mints a new session file (verified 2026-08-03; chained to the old one via
+`parentUuid`, old file untouched), so "one persistent session that clears itself" is not on offer
+from either mechanism. The session id changes either way. What differs is that the CLI would
+record the parent link and we must record our own — which is what seat succession is for
+(`succeedSeat`/`seatHistory`: the SEAT id is stable across rebirths, the session id is the current
+BODY). The chain is kept; it is just kept by us.
+
+If a future CLI honours a clear over stream-json — or exposes one as a `control_request` subtype
+alongside `interrupt` — this becomes a strictly simpler implementation and should be taken: it
+keeps the process up and removes the respawn entirely. Re-run the three probes above before
+believing it works.
 
 **The discipline that makes it safe: writes LEAD the clear.** A fact is recorded by the same
 action that produces it — not batched, not written at the threshold. If the apex only wrote at
