@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DUMP_PROMPT, apexGateDecision, meterNotice, readBoundIdentity, recordBoundIdentity } from "../bin/apex-gate.mjs";
+import { DUMP_PROMPT, apexGateDecision, ledgerWrittenSince, meterNotice, readBoundIdentity, recordBoundIdentity } from "../bin/apex-gate.mjs";
 
 const fresh = (p) => mkdtempSync(join(tmpdir(), p));
 
@@ -78,11 +78,56 @@ test("at the hard limit: the engine INJECTS a fixed dump turn instead of refusin
   assert.match(d.reason, /hard limit|backstop/i);
 });
 
-test("the dump injects ONCE per cycle — it can never become a loop", () => {
-  const after = apexGateDecision({ role: "apex", context: 800_000, threshold: SOFT, hard: HARD, dumpedThisCycle: true });
-  assert.equal(after.injectDump, false);
-  assert.equal(after.allow, true, "after the dump has run, work proceeds so the refresh can follow");
-  assert.match(after.notice, /refresh/i);
+// ---- THE BACKSTOP IS AN ACTUATOR, NOT A REQUEST ---------------------------------------------
+//
+// MEASURED FAILURE, and the reason this section exists. The gate's first version detected the
+// limit correctly (it fired at 300,030) and injected the dump correctly (the apex complied and
+// wrote a 4,290-byte CURRENT.md one minute later). Then it latched `dumpedThisCycle = true` and
+// returned `allow: true` with a notice reading "refresh now" — delegating the recovery to the one
+// mind whose judgment was impaired by the very condition being detected. It did not refresh.
+// TWENTY-NINE further turns ran over the next 86 minutes, every one of them allowed, every one
+// reporting "Nothing done. Same state.", until the owner killed the heartbeat by hand.
+//
+// A backstop that asks is not a backstop. Past the hard limit the gate now returns an ACTION the
+// engine performs — and there is no dump state, reachable or not, in which it returns a plain
+// permissive turn.
+
+test("the dump injects ONCE — a second hard-limit turn is not another dump", () => {
+  const after = apexGateDecision({ role: "apex", context: 800_000, threshold: SOFT, hard: HARD, dump: { attempts: 1, landed: true } });
+  assert.equal(after.injectDump, false, "injecting again is how a gate becomes a loop");
+});
+
+test("after a landed dump the gate ORDERS a refresh — it never asks the mind to refresh itself", () => {
+  const after = apexGateDecision({ role: "apex", context: 800_000, threshold: SOFT, hard: HARD, dump: { attempts: 1, landed: true } });
+  assert.equal(after.action, "refresh", "the engine performs it; asking is what burned 29 turns");
+  assert.equal(after.allow, false, "and no further work runs on the exhausted body");
+});
+
+test("a dump that did not land is retried rather than disarming the gate", () => {
+  const retry = apexGateDecision({ role: "apex", context: 800_000, threshold: SOFT, hard: HARD, dump: { attempts: 1, landed: false } });
+  assert.equal(retry.injectDump, true, "a mind that replied without writing must be asked again");
+  assert.equal(retry.action, "dump");
+  assert.equal(retry.allow, false);
+});
+
+test("a dump that never lands STILL ends in a refresh — a lost dump beats an endless burn", () => {
+  const exhausted = apexGateDecision({ role: "apex", context: 800_000, threshold: SOFT, hard: HARD, dump: { attempts: 2, landed: false }, maxDumpAttempts: 2 });
+  assert.equal(exhausted.action, "refresh");
+  assert.equal(exhausted.allow, false);
+  assert.match(exhausted.reason, /without|lost|unwritten/i, "and it records that state was lost, rather than implying a clean dump");
+});
+
+test("INVARIANT: past the hard limit, NO dump state yields an unguarded turn", () => {
+  for (let attempts = 0; attempts <= 6; attempts++) {
+    for (const landed of [true, false]) {
+      const d = apexGateDecision({ role: "apex", context: 700_000, threshold: SOFT, hard: HARD, dump: { attempts, landed } });
+      assert.ok(
+        d.action === "dump" || d.action === "refresh",
+        `attempts=${attempts} landed=${landed} produced action='${d.action}' — this is the 29-turn burn`,
+      );
+      assert.equal(d.allow, false, `attempts=${attempts} landed=${landed} allowed ordinary work past the backstop`);
+    }
+  }
 });
 
 test("the dump prompt is FIXED TEXT and asks only for externalization — never for judgment", () => {
@@ -98,6 +143,29 @@ test("meterNotice states the number and what to do, in one line", () => {
   assert.match(n, /220000/);
   assert.match(n, /300000/);
   assert.ok(n.split("\n").length <= 3);
+});
+
+// ---- did the dump actually land? ---------------------------------------------------------------
+// "The model replied" is not evidence. On the live incident the reply and the write happened to
+// agree, but a mind at 320k that answers "DUMPED" and writes nothing would have latched the old
+// gate permanently open. The engine believes the FILE, not the answer.
+
+test("a ledger write after the dump fired counts as landed", () => {
+  const dir = fresh("gate-land-");
+  const fired = Date.now() - 60_000;
+  writeFileSync(join(dir, "CURRENT.md"), "# orientation\nreal content written by the dump turn\n");
+  assert.equal(ledgerWrittenSince(dir, fired), true);
+});
+
+test("a ledger untouched since the dump fired is NOT landed — the reply is not the evidence", () => {
+  const dir = fresh("gate-stale-");
+  writeFileSync(join(dir, "CURRENT.md"), "# orientation\nwritten long before this cycle\n");
+  assert.equal(ledgerWrittenSince(dir, Date.now() + 60_000), false);
+});
+
+test("a missing ledger is not landed, and never throws into the dispatch path", () => {
+  assert.equal(ledgerWrittenSince(join(fresh("gate-none-"), "nope"), Date.now() - 1000), false);
+  assert.equal(ledgerWrittenSince("", 0), false);
 });
 
 test("a missing/zero context reading never gates — an unmeasured turn is not a violation", () => {

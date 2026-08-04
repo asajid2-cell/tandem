@@ -21,7 +21,7 @@ import { classifyProviderSignal, wholeResultBanner } from "./limit-signals.mjs";
 import { provenanceWarning } from "./provenance.mjs";
 import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
-import { apexGateDecision, readBoundIdentity, recordBoundIdentity } from "./apex-gate.mjs";
+import { apexGateDecision, ledgerWrittenSince, readBoundIdentity, recordBoundIdentity } from "./apex-gate.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
 import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
 import {
@@ -276,8 +276,11 @@ let brandPending = !sessionId;
 // Live context of THIS session, measured from the stream this daemon owns (see the meter below).
 // 0 means "not yet measured this daemon's lifetime" — never treated as "under the limit".
 let lastAssistantContext = 0;
-// One engine dump turn per refresh cycle. Without this a gate becomes a loop.
-let dumpedThisCycle = false;
+// The dump turns taken on THIS body, and when the last one fired. `attempts` bounds the retry so
+// a mind that answers without writing cannot keep the gate cycling; `firedTs` is the instant the
+// ledger must have been written after for the dump to count as landed. A bare boolean here is what
+// let the gate latch permanently open once the first dump had run.
+let apexDump = { attempts: 0, firedTs: 0 };
 // CLAUDE_HEADLESS_POSTURE (the "never stop to ask a human who isn't here" flag) comes from the
 // shared package so orch and tandem agree on the one posture a headless Claude child runs under.
 let args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", CLAUDE_HEADLESS_POSTURE, "--verbose"];
@@ -1186,6 +1189,71 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   });
 }
 
+// ---- the apex backstop, as an ACTUATOR ---------------------------------------------------------
+//
+// Read the incident before changing anything here. The gate's first version metered correctly
+// (fired at 300,030), injected the dump correctly, and the apex complied correctly — writing a
+// 4,290-byte CURRENT.md a minute later. Then it latched a boolean, returned "allow, please refresh
+// yourself", and handed recovery to the one mind whose judgment was impaired by the condition being
+// detected. Twenty-nine turns over 86 minutes followed, each making zero tool calls and replying
+// "Nothing done. Same state.", until a human disabled the heartbeat.
+//
+// So the engine performs the refresh. Mechanically it is `fleet refresh`'s teardown: forget the
+// session pointer and exit, so the next ask opens a genuinely fresh body that derives its brief
+// from the ledger at ask time. No seed is written — a seed is consumed once, and a failure there
+// leaves a mind both memoryless and briefless.
+function evaluateApexGate() {
+  try {
+    const identity = readBoundIdentity(BOUND);
+    if (identity.role !== "apex") return { allow: true, action: "", injectDump: false, notice: "" };
+    const ledgerDir = identity.fleetDir ? join(identity.fleetDir, "apex") : "";
+    return apexGateDecision({
+      role: identity.role,
+      context: lastAssistantContext,
+      threshold: Number(process.env.TANDEM_REFRESH_AT) || 100_000,
+      hard: Number(process.env.TANDEM_HARD_AT) || 300_000,
+      dump: {
+        attempts: apexDump.attempts,
+        // EVIDENCE, not the model's word for it: a reply of "DUMPED" over an untouched ledger is
+        // exactly how a gate gets talked out of firing.
+        landed: apexDump.attempts > 0 && ledgerWrittenSince(ledgerDir, apexDump.firedTs),
+      },
+    });
+  } catch {
+    // A guard may never be the reason a turn cannot be delivered.
+    return { allow: true, action: "", injectDump: false, notice: "" };
+  }
+}
+
+function performApexRefresh(gate) {
+  // THE EFFECT COMES FIRST, telemetry second. The first version of this gate called a logger that
+  // did not exist in this module; the ReferenceError was swallowed by the guard's own catch and the
+  // gate silently did nothing. Nothing below the mutation may be able to prevent it.
+  try {
+    if (existsSync(CLAUDE_SESSION)) rmSync(CLAUDE_SESSION);
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (existsSync(CLAUDE_SEED)) rmSync(CLAUDE_SEED); // a stale seed would re-introduce the loss path
+  } catch {
+    /* ignore */
+  }
+  try {
+    console.log(`  ▸ ENGINE REFRESH: ${gate.reason}`);
+    log({ type: "apex-refresh", ts: Date.now(), context: lastAssistantContext, attempts: apexDump.attempts, reason: gate.reason });
+  } catch {
+    /* telemetry only — the session has already been forgotten above */
+  }
+  try {
+    claude.kill();
+  } catch {
+    /* ignore */
+  }
+  cleanup();
+  process.exit(0);
+}
+
 // STEER loop: deliver an owner message into a turn ALREADY IN FLIGHT.
 //
 // The inbox relay below deliberately refuses to act while `inTurn` — one turn at a time is what
@@ -1207,6 +1275,10 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
 // checkpoints the turn first — the interrupt control_request IS honoured mid-turn.
 setInterval(() => {
   if (inTurn || !existsSync(STEER) || !claude.pid) return;
+  // A steer aimed at a body the engine is about to replace is a lost message, and this loop ticks
+  // faster than the relay — so it must make the same check. Returning leaves the steer file intact
+  // for the fresh body, which is the whole reason steering is a file and not a pipe.
+  if (evaluateApexGate().action === "refresh") return;
   let text = "";
   try {
     text = readFileSync(STEER, "utf8");
@@ -1234,7 +1306,18 @@ setInterval(() => {
 
 // Relay loop: pick up a queued task and feed it into the OPEN session.
 setInterval(() => {
-  if (inTurn || !existsSync(INBOX)) return;
+  if (inTurn) return;
+  // THE APEX GATE, evaluated BEFORE the inbox is consumed. Placement is the whole point: the inbox
+  // file IS the queue, so refusing here leaves the nudge on disk for the body that replaces this
+  // one. Deciding after the read would drop the message and hang the caller waiting on its job.
+  // This also runs when the inbox is empty, which is what makes the refresh self-firing: the tick
+  // after the dump turn ends performs it, with no dependency on anyone nudging again.
+  const gate = evaluateApexGate();
+  if (gate.action === "refresh") {
+    performApexRefresh(gate); // does not return
+    return;
+  }
+  if (!existsSync(INBOX)) return;
   let task = "";
   try {
     task = readFileSync(INBOX, "utf8");
@@ -1330,19 +1413,11 @@ setInterval(() => {
     });
     brandPending = false;
   }
-  // THE APEX GATE. Keyed on the identity this daemon RECORDED at startup, not on ambient env —
-  // deriving it per-dispatcher is what produced two apex bodies writing one ledger, each blind to
-  // the other. Every turn from every dispatcher passes through here, so there is one place to
-  // meter and one place to act.
+  // THE APEX GATE (decided at the top of this tick, before the inbox was consumed). Keyed on the
+  // identity this daemon RECORDED at startup, not on ambient env — deriving it per-dispatcher is
+  // what produced two apex bodies writing one ledger, each blind to the other. Every turn from
+  // every dispatcher passes through here, so there is one place to meter and one place to act.
   try {
-    const identity = readBoundIdentity(BOUND);
-    const gate = apexGateDecision({
-      role: identity.role,
-      context: lastAssistantContext,
-      threshold: Number(process.env.TANDEM_REFRESH_AT) || 100_000,
-      hard: Number(process.env.TANDEM_HARD_AT) || 300_000,
-      dumpedThisCycle,
-    });
     if (gate.injectDump) {
       // Replace the requested turn with the engine's fixed dump. Precedent: this daemon already
       // injects an engine-authored turn (the T5 progress capture). Fixed text is mechanism, not
@@ -1352,11 +1427,16 @@ setInterval(() => {
       // did not exist in this module; the ReferenceError was swallowed by the guard's own catch
       // and the gate silently did nothing — which is precisely the class of failure this gate was
       // built to end. Nothing below the mutation may be able to prevent it.
-      dumpedThisCycle = true;
+      //
+      // The REQUESTED task is deliberately dropped rather than queued: it was authored for a mind
+      // that is about to be replaced, and the body that comes back re-derives what to do next from
+      // the ledger. Re-running a stale instruction against a fresh brief is how a campaign repeats
+      // work it has already integrated.
+      apexDump = { attempts: apexDump.attempts + 1, firedTs: Date.now() };
       task = gate.prompt;
       try {
         console.log(`  ▸ ENGINE DUMP TURN: ${gate.reason}`);
-        log({ type: "apex-dump", ts: Date.now(), context: lastAssistantContext, reason: gate.reason });
+        log({ type: "apex-dump", ts: Date.now(), context: lastAssistantContext, attempts: apexDump.attempts, reason: gate.reason });
       } catch {
         /* telemetry only — the dump has already been installed above */
       }

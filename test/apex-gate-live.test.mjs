@@ -7,7 +7,7 @@
 // consumed.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,14 +71,54 @@ test("an apex past the HARD limit gets the engine's fixed dump turn instead of i
   assert.doesNotMatch(out, /first=SECOND-TASK-MUST-NOT-RUN/, "the requested task must NOT have been delivered");
 });
 
-test("the dump fires ONCE — a gate that re-injects is a loop, not a guard", (t) => {
+// THE 29-TURN BURN, as a live test. The gate's first version passed a test asserting that "work
+// must proceed after the dump" — and that assertion WAS the defect. On the live campaign the gate
+// fired at 300,030, the apex complied and wrote its ledger a minute later, and then the gate
+// returned allow+notice forever: 29 turns over 86 minutes, every one making zero tool calls and
+// replying "Nothing done. Same state.", stopped only by a human disabling the heartbeat. What
+// follows is the corrected contract — the engine performs the recovery, and no dump state lets
+// ordinary work resume on an exhausted body.
+
+test("a dump the mind did not honour is RETRIED — a reply is not evidence of a write", (t) => {
   const state = freshState();
-  const env = { TANDEM_ROLE: "apex", TANDEM_LABEL: "once-apex", FAKE_CTX: "800000", TANDEM_HARD_AT: "300000" };
+  const env = { TANDEM_ROLE: "apex", TANDEM_LABEL: "retry-apex", FAKE_CTX: "800000", TANDEM_HARD_AT: "300000", TANDEM_FLEET_DIR: join(state, "campaign-fleet") };
   t.after(() => stopDaemon(state, env));
   runPeer(["ask", "PRIME"], { state, env });
-  runPeer(["ask", "TASK-A"], { state, env }); // consumed by the dump
-  const third = runPeer(["ask", "TASK-B-MUST-RUN"], { state, env });
-  assert.match(third, /TASK-B-MUST-RUN/, `work must proceed after the dump; got: ${third.slice(-400)}`);
+  runPeer(["ask", "TASK-A"], { state, env }); // replaced by the dump; the fake writes no ledger
+  const third = runPeer(["ask", "TASK-B-MUST-NOT-RUN"], { state, env });
+  assert.doesNotMatch(third, /first=TASK-B-MUST-NOT-RUN/, `ordinary work resumed past the hard limit — this is the burn; got: ${third.slice(-400)}`);
+  assert.match(third, /first=\[ENGINE\]/, "an unwritten ledger must produce another dump, not a disarmed gate");
+});
+
+test("once the ledger is written the ENGINE refreshes the body itself — it does not ask", async (t) => {
+  const state = freshState();
+  const fleet = join(state, "campaign-fleet");
+  const env = { TANDEM_ROLE: "apex", TANDEM_LABEL: "refresh-apex", FAKE_CTX: "800000", TANDEM_HARD_AT: "300000", TANDEM_FLEET_DIR: fleet };
+  t.after(() => stopDaemon(state, env));
+  runPeer(["ask", "PRIME"], { state, env });
+  runPeer(["ask", "TASK-A"], { state, env }); // replaced by the dump
+  assert.ok(existsSync(join(state, "claude.session")), "precondition: the body has a session to forget");
+
+  // the dump "lands": the ledger is written after the dump fired, which is the only evidence the
+  // engine accepts. No further ask is needed — the refresh must be self-firing.
+  mkdirSync(join(fleet, "apex"), { recursive: true });
+  writeFileSync(join(fleet, "apex", "CURRENT.md"), "# orientation\nwhat was in flight\n");
+
+  const deadline = Date.now() + 15_000;
+  while (existsSync(join(state, "claude.session")) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  assert.ok(!existsSync(join(state, "claude.session")), "the engine must FORGET the session — the next ask has to open a fresh body");
+  const events = readFileSync(join(state, "tandem.log.jsonl"), "utf8");
+  assert.match(events, /"apex-refresh"/, "and record that it did so");
+
+  // AND IT MUST COME BACK BRIEFED. A refresh that produced a memoryless body would be worse than
+  // the burn it replaced — the engine would be destroying context on a schedule. The brief is
+  // derived at ask time from the ledger, so the reborn body's turn carries it AHEAD of the task.
+  const reborn = runPeer(["ask", "AFTER-REBIRTH"], { state, env });
+  assert.match(reborn, /last=AFTER-REBIRTH/, `the reborn body must run the task; got: ${reborn.slice(-400)}`);
+  assert.doesNotMatch(reborn, /first=AFTER-REBIRTH/, "the rehydration brief must be PREPENDED — a body reborn without its ledger is worse than one that burned");
+  assert.ok(existsSync(join(state, "claude.session")), "and the fresh body records its own session");
 });
 
 test("between the thresholds the turn is delivered WITH an in-band meter notice", (t) => {

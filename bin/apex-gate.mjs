@@ -18,11 +18,14 @@
 //     sees every turn from every dispatcher. Metering at a peer-side dispatch path reads a
 //     per-turn file that is deleted moments later — one statement-ordering mistake from
 //     certifying "under the limit" forever.
-//  3. THE HARD LIMIT INJECTS, IT DOES NOT REFUSE. A refusal stalls an autonomous campaign into a
-//     log nobody reads (measured: an hour of nudges logging "sent" into /dev/null). Injecting a
-//     fixed engine-authored turn has precedent in this very daemon — the T5 progress capture
-//     (CAPTURE_PROMPT) is an engine-authored turn already. Fixed text is mechanism, not judgment.
-import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+//  3. THE HARD LIMIT ACTUATES. It does not merely refuse — a refusal stalls an autonomous campaign
+//     into a log nobody reads (measured: an hour of nudges logging "sent" into /dev/null) — and it
+//     does not merely ASK, which is worse: the first version dumped correctly and then requested a
+//     self-refresh from a mind at 320k, and 29 dead turns followed. So it injects a fixed
+//     engine-authored dump turn (precedent: the T5 progress capture is already one), verifies the
+//     ledger was written, and then the ENGINE performs the refresh itself. Fixed text is mechanism,
+//     not judgment; the recovery is mechanism too, and belongs to nobody's judgment at all.
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -125,45 +128,90 @@ export function meterNotice({ context = 0, threshold = 100_000, hard = 300_000 }
   );
 }
 
-// allow      — may the requested task run this turn?
-// injectDump — replace this turn with the fixed DUMP_PROMPT (once per cycle)
+// DID THE DUMP LAND? The engine believes the FILE, never the answer. A mind at 320k that replies
+// "DUMPED" without writing anything would otherwise latch the gate permanently open — which is the
+// exact shape of the failure this module exists to prevent, one level up.
+export function ledgerWrittenSince(ledgerDir, sinceTs) {
+  try {
+    if (!ledgerDir) return false;
+    const f = join(ledgerDir, "CURRENT.md");
+    if (!existsSync(f)) return false;
+    return statSync(f).mtimeMs > sinceTs;
+  } catch {
+    return false; // evidence-gathering must never throw into a dispatch path
+  }
+}
+
+// allow      — may the REQUESTED task run this turn? (false does not mean "stall": see action)
+// action     — what the ENGINE must do: "" | "dump" | "refresh"
+// injectDump — replace this turn with the fixed DUMP_PROMPT
 // notice     — in-band text to prepend to the turn (never a console warning: the autonomous
 //              dispatcher discards console output, which is how an hour of failures went unseen)
+//
+// THE BACKSTOP ACTUATES; IT DOES NOT ASK. The first version detected the limit correctly, injected
+// the dump correctly, the apex complied correctly — and then the gate latched open and returned
+// "allow, please refresh yourself" to a mind whose judgment was impaired by the very condition
+// being detected. Twenty-nine turns and 86 minutes of zero-tool-call replies followed, ending only
+// because a human intervened. Past the hard limit there is now NO dump state that yields an
+// ordinary turn: every path terminates in a dump or a refresh, and the refresh is the engine's job.
 export function apexGateDecision({
   role = "",
   context = 0,
   threshold = 100_000,
   hard = 300_000,
-  dumpedThisCycle = false,
+  dump = {},
+  maxDumpAttempts = 2,
 } = {}) {
-  if (role !== "apex") return { allow: true, injectDump: false, notice: "", unmeasured: false, reason: "not an apex lane" };
+  const base = { allow: true, action: "", injectDump: false, notice: "", unmeasured: false };
+  if (role !== "apex") return { ...base, reason: "not an apex lane" };
   if (!context) {
     // An unmeasured turn is not a violation — but never silently certify "under the limit".
-    return { allow: true, injectDump: false, notice: "", unmeasured: true, reason: "no context reading yet for this session" };
+    return { ...base, unmeasured: true, reason: "no context reading yet for this session" };
   }
   if (context >= hard) {
-    if (!dumpedThisCycle) {
+    const attempts = Number(dump.attempts) || 0;
+    const landed = dump.landed === true;
+    if (attempts === 0) {
       return {
+        ...base,
         allow: false,
+        action: "dump",
         injectDump: true,
         prompt: DUMP_PROMPT,
-        notice: "",
-        unmeasured: false,
         reason: `hard limit: context ${context} >= ${hard} — this turn is the engine's dump turn; refresh follows`,
       };
     }
-    // The dump already ran this cycle. Do NOT inject again (that is how a gate becomes a loop);
-    // let work proceed so the refresh can be performed.
+    if (landed) {
+      return {
+        ...base,
+        allow: false,
+        action: "refresh",
+        reason: `hard limit: context ${context} >= ${hard}, ledger written — refreshing this body now`,
+      };
+    }
+    if (attempts < maxDumpAttempts) {
+      // The mind answered but wrote nothing. Ask again rather than disarming: a gate that treats a
+      // reply as compliance is a gate that can be talked out of firing.
+      return {
+        ...base,
+        allow: false,
+        action: "dump",
+        injectDump: true,
+        prompt: DUMP_PROMPT,
+        reason: `hard limit: dump attempt ${attempts + 1}/${maxDumpAttempts} — the ledger was not written last turn`,
+      };
+    }
+    // Out of attempts and still nothing on disk. Refresh anyway: unwritten state is lost either
+    // way, and an endless burn loses it too — plus everything it costs to keep burning.
     return {
-      allow: true,
-      injectDump: false,
-      notice: meterNotice({ context, threshold, hard }) + " The dump for this cycle has already run — refresh now.",
-      unmeasured: false,
-      reason: "dump already taken this cycle",
+      ...base,
+      allow: false,
+      action: "refresh",
+      reason: `hard limit: refreshing WITHOUT a landed dump after ${attempts} attempts — in-flight state was lost`,
     };
   }
   if (context >= threshold) {
-    return { allow: true, injectDump: false, notice: meterNotice({ context, threshold, hard }), unmeasured: false, reason: "past the refresh threshold" };
+    return { ...base, notice: meterNotice({ context, threshold, hard }), reason: "past the refresh threshold" };
   }
-  return { allow: true, injectDump: false, notice: "", unmeasured: false, reason: "under the threshold" };
+  return { ...base, reason: "under the threshold" };
 }
