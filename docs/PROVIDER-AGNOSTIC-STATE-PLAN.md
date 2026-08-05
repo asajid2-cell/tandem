@@ -1,16 +1,19 @@
 # Provider-Agnostic Campaign State Plan
 
-Status: design plan, no implementation accepted yet.
+Status: conditional design agreement; current implementation is a no-go for cross-provider
+round-trip continuity until the Phase 0 and smallest-slice gates pass.
 
-This plan was produced on 2026-08-04 from:
+This plan was produced on 2026-08-04 and refined on 2026-08-05 from:
 
 - the current tandem fleet implementation and tests;
 - the parked Astro Harness music campaign;
 - the campaign-state custody rules;
-- an independent Codex Sol max tandem review in
-  `tandems/provider-agnostic-engine/`.
+- independent Codex Sol max tandem reviews in
+  `tandems/provider-agnostic-engine/` and
+  `tandems/provider-agnostic-glass-plane/`.
 
-The music campaign remains parked while this work changes the shared substrate.
+The music campaign is operationally paused but not yet transactionally parked. Shared-substrate
+implementation must not begin until the legacy park precondition is complete.
 
 ## 1. Goal
 
@@ -60,21 +63,27 @@ memory and ordinary recovery must not depend on them.
 2. A seat ID is never a provider session ID.
 3. Every provider body belongs to one seat and one monotonically increasing seat epoch.
 4. At most one body holds a seat's fenced lease.
-5. Every controller mutation carries campaign ID, seat ID, body ID, epoch, and lease token.
-6. Stale epochs fail closed.
-7. Only the controller writes mutable machine state.
-8. Only the acceptance runner advances accepted state.
-9. Models submit commands and immutable reasoning artifacts; they do not write accepted state.
-10. An outstanding task is never silently discarded. An uncertain attempt is recorded as
+5. Every controller startup has one monotonically increasing controller generation.
+6. Every controller mutation carries campaign ID, controller generation, seat ID, body ID, epoch,
+   and lease token.
+7. Stale controller generations, seat epochs, and lease tokens fail closed.
+8. Only the controller writes mutable machine state.
+9. Only a signed acceptance-runner attestation can authorize the controller to advance accepted
+   state.
+10. Models submit commands and immutable reasoning artifacts; they do not write accepted state.
+11. External glass agents can submit commands and observations but cannot mutate queue, lease, or
+    accepted state directly.
+12. An outstanding task is never silently discarded. An uncertain attempt is recorded as
     `outcome=unknown` and must be reconciled before replay.
-11. A successful handoff leaves zero or one active body, never two.
-12. No ordinary recovery requires a provider transcript.
+13. A successful handoff leaves zero or one active body, never two.
+14. No ordinary recovery requires a provider transcript.
 
 ## 4. Custody Model
 
 ### Machine-authoritative
 
 - campaign identity and status;
+- owner charter identity and digest;
 - accepted checkpoint and gate evidence;
 - observed repository HEAD and tree state;
 - queue state transitions;
@@ -107,7 +116,12 @@ Portable campaign artifacts live under the project:
   accepted/
     current.json
     checkpoints/<checkpoint-id>.json
-    gates/<run-id>/
+    gate-attestations/<run-id>/
+  control/
+    snapshots/<snapshot-id>/
+      manifest.json
+      state.json
+    events/<sequence>-<event-id>.json
   strategy/
     active.json
     plans/<plan-id>.md
@@ -130,6 +144,10 @@ Portable campaign artifacts live under the project:
   evidence/
     manifests/<evidence-id>.json
     blobs/sha256/<hash>
+  glass/
+    commands/<command-id>.json
+    observations/<observation-id>.json
+    receipt-events/<command-id>/<sequence>.json
   packets/
     <packet-id>/
       manifest.json
@@ -139,35 +157,79 @@ Portable campaign artifacts live under the project:
   views/
     CURRENT.md
     QUEUE.md
+    GLASS.json
+    GLASS.md
 ```
 
 A controller-owned local SQLite database stores runtime control state:
 
 - seats;
 - bodies;
+- controller generations and singleton ownership;
+- controller store UUID and store-generation ownership;
 - epochs and leases;
 - lifecycle transactions;
 - idempotency keys;
+- transactional export outbox;
 - indexes over portable artifacts;
 - controller events.
 
 The control database must remain on a local disk. It must not live on SMB or another network
 filesystem. Portable artifacts remain the recovery source and are exported into the project.
+The database and controller signing material must be outside every model body's filesystem write
+scope.
+
+The local database is authoritative for ordinary same-host restart. Portable recovery consists of
+a signed control snapshot plus the ordered controller-event tail after that snapshot. A database
+transaction that changes portable state also appends an outbox record. The exporter writes the
+artifact idempotently, verifies it, then marks that outbox record delivered. Restart replays any
+undelivered outbox rows before accepting new commands.
 
 ## 6. Writer Rules
 
 - Owner or explicit campaign initializer writes `campaign.json`.
-- Acceptance runner alone writes `accepted/`.
-- Fenced apex or human writes strategy artifacts.
+- Acceptance runner produces immutable signed gate attestations. Only that principal can authorize
+  acceptance advancement.
+- Controller performs the atomic acceptance commit: checkpoint, accepted pointer, canonical ref,
+  queue transition, and generated views move together or not at all.
+- Apex or human writes immutable strategy proposals. Controller alone writes
+  `strategy/active.json`.
 - Controller alone transitions work-item state.
 - Child seat writes its fold; parent writes the fold disposition.
 - Owning seat writes its hypothesis; controller appends lifecycle metadata.
 - Controller or importer captures immutable raw review bundles.
 - Requesting parent writes review reconciliation.
 - Evidence collectors write evidence manifests and content-addressed blobs.
+- External glass agents submit commands or observations through the authenticated broker.
+- Controller writes one immutable portable command or observation file per accepted submission.
+- Controller alone writes glass receipt events, transition events, command-status projections, and
+  generated operator views.
 - Controller builds packets and generated views.
 
 No file has two live writers.
+
+Glass commands are proposals, not engine mutations. Immutable receipt events describe command
+lifecycle transitions such as `received | deferred | applied | rejected | failed | stale |
+duplicate | invalid`. A generated status projection reports the latest state. Raw glass
+observations never enter an apex packet automatically.
+
+### Enforced trust boundary
+
+Writer rules must be enforced by process capability, not documentation:
+
+- Every apex and branch body receives an epoch-scoped worktree and declared write scope.
+- The canonical accepted branch is read-only to provider bodies.
+- Controller state, lease material, acceptance credentials, and signing keys are inaccessible to
+  provider and glass-agent processes.
+- The controller alone can merge a candidate commit into the canonical branch, and only while
+  consuming a valid signed acceptance-runner attestation.
+- Portable controller exports are hash-chained and signed. Direct edits remain visible as
+  untrusted drift and cannot be imported silently.
+- A fenced body may keep running or writing its abandoned worktree, but it cannot mutate controller
+  state, the canonical branch, accepted artifacts, or another epoch's workspace.
+
+On Windows this requires an actual process/account or sandbox boundary. Same-user advisory checks
+inside `peer.mjs` are not sufficient.
 
 ## 7. Seat and Body Lifecycle
 
@@ -216,6 +278,38 @@ Capabilities state whether the adapter supports:
 Warm resume is an optimization. Fresh launch from a durable packet is the portability
 requirement.
 
+### Controller incarnation
+
+The controller is also replaceable runtime machinery:
+
+1. On startup it acquires exclusive ownership of the campaign's one controller store and atomically
+   increments the controller generation.
+2. Every issued lease is bound to that controller generation.
+3. A clean shutdown reaches `PARKED` with zero active leases before releasing ownership.
+4. After a crash, the next controller generation invalidates every lease from the dead generation
+   before recovering lifecycle transactions.
+5. Two controller processes racing to start cannot both acquire ownership.
+
+This is what permits the full engine process to stop under one provider regime and restart under
+another without trusting a surviving provider body.
+
+There is never more than one writable controller store for a campaign. Restoring from portable
+state into a replacement store requires an explicit owner-authorized adoption transaction that:
+
+1. verifies the signed snapshot and complete event tail;
+2. assigns a new store UUID and store generation;
+3. records the prior store as retired;
+4. increments the controller generation;
+5. fences every prior lease.
+
+A copied database or portable snapshot cannot silently become a second controller.
+
+The supported authority domain is one host. Multi-host active/passive failover is out of scope
+because the design deliberately rejects distributed consensus. A replacement store may be adopted
+only after the old controller host is offline and its store has produced a signed retirement
+record, or after an explicit disaster-recovery ceremony that permanently abandons the old
+authority domain. The old host must never be restarted against that campaign afterward.
+
 ## 8. Transactional Handoff
 
 Every handoff uses a durable transaction:
@@ -237,10 +331,26 @@ At `OLD_FENCED`, one controller transaction:
 
 1. increments the seat epoch;
 2. revokes the old lease;
-3. records the pending packet and candidate specification.
+3. freezes the old epoch's worktree as recovery evidence;
+4. records the pending packet and candidate specification.
 
 A crash after fencing leaves no apex rather than two apexes. Candidate launch is idempotently
 recoverable. Once the candidate is `ACTIVE`, all mutations from the old epoch fail.
+
+The candidate starts without mutation authority. It returns a structured readiness response that
+includes the semantic-packet digest and adapter capability result. The controller verifies that
+response, then atomically grants the lease and marks the body and seat `ACTIVE`.
+
+Rollback is forward-only. Before `OLD_FENCED`, the transaction may abort and retain the old body.
+After `OLD_FENCED`, no old epoch is reactivated. A failed candidate is fenced, its attempt is
+recorded, and any replacement receives a newer epoch and lease token. Unknown external side
+effects must be reconciled before replay; irreversible operations require idempotency or an
+explicit human gate.
+
+The pre-fence abort rule applies only while the same controller generation remains alive. Any
+controller crash invalidates all leases from the old generation. Recovery is forward-only even
+when the persisted handoff stage was only `PREPARED` or `QUIESCED`; the old body must not be
+silently reauthorized.
 
 ## 9. Campaign Park and Resume
 
@@ -265,6 +375,75 @@ Resume:
 6. Restore other seats only when their work becomes active.
 
 A long park must remain resumable even when every provider session has expired.
+
+### Body rotation versus full engine stop
+
+Routine Claude-to-Codex or Codex-to-Claude changes are body handoffs. The controller stays active,
+the stable apex seat remains unchanged, and the seat epoch advances.
+
+A full engine stop is a campaign park:
+
+1. Quiesce and capture the active attempt.
+2. Build and verify the restart packet.
+3. Fence every seat and reach zero active leases.
+4. Commit the park manifest and controller generation.
+5. Stop the controller process.
+6. Restart the controller, acquire a new controller generation, and verify the park manifest.
+7. Launch a fresh apex body using the selected provider adapter.
+
+"Resume on Claude" means launching a new Claude body for the same apex seat at a new epoch. Warm
+resume is forbidden after a provider change, controller-generation change, seat succession, or
+apex refresh. Every successor apex uses `launchFresh`. `resumeWarm` is allowed only to reconnect
+the same body in the same controller generation, seat epoch, and lease. It never restores
+authority by itself. A body from an earlier controller generation or seat epoch remains fenced
+even if its provider process is still alive.
+
+## 9A. Glass-Agent Coordination Plane
+
+Owner-driven Claude and Codex chats operate outside the insulated campaign engine. They need a
+shared coordination plane, but it must not become a second `CURRENT.md`.
+
+Glass agents may append:
+
+- commands: owner intent, requested provider switch, pause/resume request, or proposed queue action;
+- observations: what the outside agent inspected or changed, with evidence and repository anchors.
+
+Each object is one immutable file, never a shared multi-writer JSONL. A command records:
+
+- command ID and idempotency key;
+- controller store UUID;
+- actor type, provider, session ID, and provenance;
+- campaign ID plus the controller generation and seat epoch the actor observed;
+- observed accepted checkpoint and queue version;
+- intent, scope, evidence references, and timestamp.
+
+Agent-authored commands are proposals. Owner directives use a separate authenticated submission
+path and cannot be forged merely by writing a JSON file. Human charter changes always require that
+owner path.
+
+The controller writes:
+
+- immutable receipt events and a generated latest-status projection;
+- immutable engine events for body activation, fencing, park, resume, accepted checkpoints, and
+  queue transitions;
+- generated `views/GLASS.json` and `views/GLASS.md` operator views.
+
+When an outside Claude session resumes after Codex ran the engine, it reads `GLASS.json` or
+`GLASS.md`, receipt events, and referenced accepted evidence. It can see which provider body held
+which epoch, what commands were applied, what checkpoints were accepted, and what remains
+unresolved.
+
+The apex packet does not ingest raw glass chatter. It receives only controller-materialized queue
+items, acknowledged owner directives, reconciled evidence, and unresolved contradictions selected
+by the packet policy. This keeps external coordination transparent without contaminating apex
+reasoning.
+
+Glass submission uses a narrow `glass submit` command or equivalent API. The controller imports the
+proposal, validates actor class, campaign/store identity, observed versions, and idempotency key,
+then writes the receipt and controller event through the transactional outbox. Consumers advance
+advisory cursors in local client state outside signed campaign artifacts; they never mark shared
+events read or mutate the generated view. Generated views summarize claims and evidence anchors but
+never render raw observation text automatically.
 
 ## 10. Durable Review Objects
 
@@ -313,18 +492,23 @@ verdict text is included only when:
 
 ## 11. Deterministic Packet Builder
 
-Use a canonical UTF-8 byte ceiling with a safety reserve and an adapter token preflight.
+Use a canonical UTF-8 byte ceiling with a safety reserve and an adapter token preflight. Each seat
+has a portability profile sized to the minimum supported apex capacity. Provider adapters may
+accept or reject that canonical packet; they may not silently reselect, summarize, or truncate it.
 
 Mandatory content is all-or-fail:
 
 - campaign identity;
-- seat, body, and epoch;
+- stable seat identity;
 - human charter;
 - accepted checkpoint;
 - observed workspace state;
 - active queue item;
 - unresolved contradictions;
 - packet manifest.
+
+Body ID, seat epoch, controller generation, provider identity, and lease authority are not semantic
+packet content. The controller supplies them in a separate activation envelope.
 
 Remaining budget is allocated deterministically:
 
@@ -346,6 +530,37 @@ digest, byte count, accepted baseline, observed HEAD, dirty-tree snapshot, and c
 Machine facts defeat contradictory reasoning only inside the facts' proven scope.
 Reasoning-versus-reasoning contradictions include both sides. New evidence that contradicts an
 accepted checkpoint opens a revalidation item; it does not rewrite accepted history.
+
+### Semantic state versus activation envelope
+
+Provider parity is defined by a stable semantic state digest, not identical prose. The semantic
+digest covers canonical encodings of:
+
+- campaign and owner-charter digest;
+- accepted checkpoint and gate-evidence digests;
+- active strategy IDs and digests;
+- queue item IDs, versions, states, attempts, and unknown outcomes;
+- review IDs, claim dispositions, and unresolved contradictions;
+- selected reasoning-object IDs and digests;
+- observed repository HEAD and dirty-state digest.
+
+The activation envelope is separate and intentionally changes across provider switches:
+
+- controller store UUID and generation;
+- controller generation;
+- seat ID and epoch;
+- body ID and an opaque lease-capability reference;
+- provider, model, effort, transport, and provider-session provenance;
+- packet ID and launch transaction.
+
+Lease secrets are never written into the semantic packet, portable artifacts, model-visible text,
+or glass records. The provider adapter or controller-side command proxy attaches authority
+out-of-band and exposes only an opaque capability reference to the body.
+
+A Claude-to-Codex-to-Claude round trip with no accepted work must preserve the semantic digest
+exactly while changing only activation envelopes and lifecycle events. Output quality is protected
+by the same provider-neutral acceptance gates; textual similarity between model responses is not an
+acceptance signal.
 
 ## 12. Astro Harness Migration
 
@@ -444,7 +659,36 @@ verdicts. Import must preserve both the committed file hash and the raw captured
 9. Plant an unwritten nonce before handoff. It must disappear; durable state must survive.
 10. Delete imported provider transcripts and prove normal rehydration still succeeds.
 11. Leave an old body alive after handoff and prove it is fenced and reported orphaned.
-12. Repeat acceptance runs to detect timing flakes.
+12. Park the full controller under Claude, restart under Codex, park again, and restart under
+    Claude. Accepted checkpoint, queue position, review visibility, and artifact hashes must remain
+    unchanged except for explicit accepted work.
+13. Submit concurrent and stale glass commands. Prove one command identity and ordered receipt-event
+    stream per idempotency key, stale commands cannot mutate state, and unacknowledged observations
+    never enter an apex packet.
+14. Prove a resumed outside Claude session can reconstruct the intervening Codex operations from
+    the generated glass view without reading the apex transcript.
+15. Leave fenced Claude and Codex bodies alive and attempt direct writes to controller files,
+    accepted artifacts, the canonical branch, and the new epoch's worktree. Every attempt must
+    fail or remain quarantined outside accepted state.
+16. Tamper with a portable event, receipt, and checkpoint. Signature/hash-chain verification must
+    reject recovery from the modified artifacts.
+17. Crash after each database mutation but before, during, and after portable export. Outbox replay
+    must yield one verified artifact and one controller event, never zero or duplicates.
+18. Start from a copied database or snapshot while the original store remains live. The second
+    controller must fail closed until an owner-authorized adoption retires the original store.
+19. Compare semantic digests before Claude -> Codex -> Claude rotation. They must be byte-identical
+    unless an acceptance-runner checkpoint explicitly changed semantic state.
+20. Fail candidate activation after old-body fencing. Recovery must move forward to a newer epoch,
+    never restore authority to the old body.
+21. Assert that every provider change, controller-generation change, seat succession, and apex
+    refresh invokes `launchFresh` and that `resumeWarm` is rejected.
+22. Crash between gate attestation, canonical-ref update, accepted-pointer update, and queue
+    transition. Recovery must expose either the old accepted state or the complete new state.
+23. Exercise glass `deferred -> applied` and `deferred -> failed` transitions, duplicate
+    idempotency keys with the same payload, and duplicate keys with different payloads.
+24. Attempt controller startup from a second host and store path. It must fail outside the declared
+    single-host authority domain.
+25. Repeat acceptance runs to detect timing flakes.
 
 ## 15. Smallest Useful Slice
 
@@ -456,7 +700,9 @@ The first accepted slice contains:
 4. a bounded deterministic Astro packet;
 5. a real fresh Claude-to-Codex handoff;
 6. proof that the old epoch is rejected;
-7. proof that the new apex can orient without either provider transcript.
+7. proof that the new apex can orient without either provider transcript;
+8. one full controller park and restart with a new controller generation;
+9. a glass command, controller receipt-event stream, transition event, and generated operator view.
 
 Do not build branch-mind restoration, PTY rotation, or all legacy review imports before this slice
 passes. The slice must prove the central thesis first.
@@ -518,8 +764,10 @@ Every phase lands as a separate accepted checkpoint:
 | Lifecycle | transactional handoff, park, and resume | failpoint restart matrix |
 | Astro proof | fresh Codex apex, imported reviews, no transcript dependency | cross-provider acceptance experiments |
 
-Only the acceptance runner updates accepted state after a phase gate. A model verdict can reject a
-candidate checkpoint or create work, but cannot accept it.
+Only a signed acceptance-runner attestation authorizes accepted-state advancement after a phase
+gate. The controller commits the accepted pointer, canonical ref, queue transition, and generated
+views atomically. A model verdict can reject a candidate checkpoint or create work, but cannot
+accept it.
 
 ## 19. Rejected Designs
 
@@ -533,4 +781,6 @@ candidate checkpoint or create work, but cannot accept it.
 - Mandatory provider brands in campaign logic.
 - Distributed consensus.
 - Controller SQLite on a network drive.
+- Advisory-only writer rules while provider bodies share unrestricted access to authoritative
+  state and the canonical branch.
 - Changing the shared substrate while a campaign is active.
