@@ -78,6 +78,22 @@ Status: done for slice 1. Sol-max independently reproduced the stale-body resurr
 three weaknesses in the first controller draft. All three were resolved before acceptance. Durable
 review: `docs/reviews/provider-neutral-impl-sol-max.md`.
 
+### L6 - Production Adapter Round Trip
+
+Invariant: the controller, not `peer.mjs` or `serve.mjs`, owns a real fresh
+Claude -> Codex -> Claude activation sequence, and each provider returns packet-bound readiness
+before receiving authority.
+
+Verifier: one live run records three distinct provider session IDs, controller generations and
+seat epochs; old bodies remain alive long enough to prove their authority is fenced; the final
+Claude packet has the same semantic digest as the first packet; imported transcript sources are
+unavailable during the final launch.
+
+Status: BLOCKED for the full round trip. Slice 1 provides the controller contract, CLI, readiness
+gate, park verification, and fake-adapter proof. Production adapter integration is not yet routed
+through this controller, and a fresh Claude body is unavailable while the five-hour limit is
+exhausted. Astro remains safely parked rather than being resumed through a half-integrated path.
+
 ## Progress
 
 - 2026-08-05: Astro parked transactionally before shared-substrate edits.
