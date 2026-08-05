@@ -30,6 +30,7 @@ function runPeer(args, { state, env = {} }) {
         TANDEM_CLAUDE_BIN: FAKE,
         TANDEM_PARTNER: "claude",
         TANDEM_CWD: ROOT,
+        TANDEM_MODEL: "fake-opus",
         FAKE_DELAY: "0",
         ...env,
       },
@@ -98,6 +99,7 @@ test("once the ledger is written the ENGINE refreshes the body itself — it doe
   runPeer(["ask", "PRIME"], { state, env });
   runPeer(["ask", "TASK-A"], { state, env }); // replaced by the dump
   assert.ok(existsSync(join(state, "claude.session")), "precondition: the body has a session to forget");
+  const oldSession = readFileSync(join(state, "claude.session"), "utf8").trim();
 
   // the dump "lands": the ledger is written after the dump fired, which is the only evidence the
   // engine accepts. No further ask is needed — the refresh must be self-firing.
@@ -115,10 +117,18 @@ test("once the ledger is written the ENGINE refreshes the body itself — it doe
   // AND IT MUST COME BACK BRIEFED. A refresh that produced a memoryless body would be worse than
   // the burn it replaced — the engine would be destroying context on a schedule. The brief is
   // derived at ask time from the ledger, so the reborn body's turn carries it AHEAD of the task.
-  const reborn = runPeer(["ask", "AFTER-REBIRTH"], { state, env });
+  const reborn = runPeer(["ask", "AFTER-REBIRTH"], {
+    state,
+    env: { ...env, FAKE_CTX: "20000" },
+  });
   assert.match(reborn, /last=AFTER-REBIRTH/, `the reborn body must run the task; got: ${reborn.slice(-400)}`);
   assert.doesNotMatch(reborn, /first=AFTER-REBIRTH/, "the rehydration brief must be PREPENDED — a body reborn without its ledger is worse than one that burned");
   assert.ok(existsSync(join(state, "claude.session")), "and the fresh body records its own session");
+  assert.notEqual(
+    readFileSync(join(state, "claude.session"), "utf8").trim(),
+    oldSession,
+    "refresh must launch a different provider body, never recover the old pairing from groups.json",
+  );
 });
 
 // THE PUMP, live. Context exhaustion was why the apex stalled that night; it is not the only way

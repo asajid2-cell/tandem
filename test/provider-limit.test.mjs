@@ -88,6 +88,16 @@ function stopState(root) {
 
 function freshState(t) {
   const d = mkdtempSync(join(tmpdir(), "tandem-limit-"));
+  writeFileSync(
+    join(d, "tandem.config.json"),
+    JSON.stringify({
+      cwd: ROOT,
+      codexModel: "gpt-x",
+      codexEffort: "medium",
+      claudeModel: "gpt-x",
+      claudeEffort: "medium",
+    }),
+  );
   ACTIVE_ROOTS.add(d);
   t.after(() => {
     const leaked = stopState(d);
@@ -123,6 +133,7 @@ function buildEnv(state, driver, partner, env) {
 function peer(args, { state, driver, partner = "codex", env = {} } = {}) {
   const r = spawnSync(process.execPath, [PEER, ...args], {
     encoding: "utf8",
+    cwd: state,
     env: buildEnv(state, driver, partner, env),
     windowsHide: true,
     timeout: TEST_PROCESS_TIMEOUT_MS,

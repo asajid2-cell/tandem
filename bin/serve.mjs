@@ -23,7 +23,7 @@ import { brandTask, recordSpawnedSession } from "./brand.mjs";
 import { ensureRegistered, resolveIdentity } from "./fleet-identity.mjs";
 import { apexGateDecision, ledgerWrittenSince, readBoundIdentity, recordBoundIdentity, stallDecision } from "./apex-gate.mjs";
 import { fleetDirFor } from "./fleet-inbox.mjs";
-import { recordGroup, readGroups, readDetached, jobKey, stateDir } from "./groups.mjs";
+import { recordGroup, readGroups, readDetached, markDetached, jobKey, stateDir } from "./groups.mjs";
 import {
   clearDoneSignal,
   finishDispatch,
@@ -1330,6 +1330,13 @@ function performApexRefresh(gate) {
     if (existsSync(CLAUDE_SEED)) rmSync(CLAUDE_SEED); // a stale seed would re-introduce the loss path
   } catch {
     /* ignore */
+  }
+  try {
+    // Removing claude.session alone is not a fresh launch: claudePartnerFor() can recover the old
+    // body from groups.json. Fence that pairing before exit; keep it in history as evidence.
+    markDetached(DETACHED, CODEX_DRIVER_ID);
+  } catch {
+    /* the session pointer is already gone; telemetry below still exposes a failed refresh */
   }
   try {
     console.log(`  ▸ ENGINE REFRESH: ${gate.reason}`);
