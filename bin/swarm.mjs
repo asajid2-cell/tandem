@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { inspectDispatch, readJson, writeJsonAtomic } from "./jobs.mjs";
@@ -63,6 +64,30 @@ function scopedLaneLabel(swarmName, laneName) {
   const hash = createHash("sha256").update(combined).digest("hex").slice(0, 8);
   const prefix = combined.slice(0, 51).replace(/^[-.]+|[-.]+$/g, "") || "swarm-lane";
   return `${prefix}-${hash}`;
+}
+
+export function captureDirtyPaths(cwd) {
+  const result = spawnSync(
+    "git",
+    ["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+    { cwd, encoding: "utf8" },
+  );
+  if (result.error || result.status !== 0) return [];
+
+  const fields = String(result.stdout || "").split("\0");
+  const paths = [];
+  for (let index = 0; index < fields.length; index += 1) {
+    const field = fields[index];
+    if (!field) continue;
+    const status = field.slice(0, 2);
+    const path = field.slice(3);
+    if (path) paths.push(path);
+    if (/[RC]/.test(status) && fields[index + 1]) {
+      paths.push(fields[index + 1]);
+      index += 1;
+    }
+  }
+  return [...new Set(paths)].sort();
 }
 
 function reserveSwarm(file, record) {
@@ -146,6 +171,7 @@ export function prepareSwarm({
       wedgeAfterSec: lane.wedgeAfterSec ?? wedgeAfterSec,
       worktree: lane.worktree || null,
       writes,
+      preDirty: captureDirtyPaths(cwd),
       // resolved against the lane's cwd so "bin/x.mjs" and an absolute spelling of the same file
       // still collide in the overlap gate regardless of declaration style
       writesResolved: (writes || []).map((w) => (typeof w === "string" && w.trim() ? resolveFrom(cwd, w) : w)),
@@ -291,6 +317,7 @@ export function prepareSwarm({
       expectGreen: lane.expectGreen,
       seeds: lane.seeds,
       seedStamp: null,
+      preDirty: lane.preDirty,
       account: lane.account,
       role: lane.role,
       dispatch: "pending",
@@ -342,6 +369,7 @@ export function prepareSwarm({
         });
         lane.cwd = info.cwd;
         lane.worktree = info;
+        record.lanes[lane.index].preDirty = captureDirtyPaths(lane.cwd);
       }
       // stamp the apex's seeded graders so a lane editing its own assertions is caught
       // mechanically at collection instead of by a hand-maintained hash file

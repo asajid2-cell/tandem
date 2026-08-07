@@ -24,6 +24,10 @@
         "model": "gpt-5.6-luna",
         "effort": "medium"
       },
+      "luna-max": {
+        "model": "gpt-5.6-luna",
+        "effort": "max"
+      },
       "deep": {
         "model": "gpt-5.6-sol",
         "effort": "max"

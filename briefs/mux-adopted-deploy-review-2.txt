@@ -1,0 +1,32 @@
+Context: mux-local-retrieval adds a Windows feature that mirrors an already-running local Claude or Codex console into the Multiplex web terminal without relaunching the agent.
+
+Task: independently review the current uncommitted diff for deployment readiness.
+
+Repository: Z:\328\CMPUT328-A2\codexworks\301\mux-local-retrieval
+
+Read:
+- the current `git diff`
+- only the changed tests needed to understand the intended behavior
+- targeted surrounding functions when a diff hunk is ambiguous
+
+Write: read-only; do not modify repository files.
+
+Confirm these contracts:
+1. Starting or losing the mirror sidecar does not stop the existing local agent.
+2. Screen updates and remote terminal input reach the same attached Windows console.
+3. Reattachment accepts only the same process instance and session identity.
+4. Explicit Multiplex Stop waits for the exact adopted target to exit and cannot act on a recycled PID.
+5. Desktop, headless bridge, relay, and agent-command paths require the exact live PID/session/tool tuple and are replay-safe.
+6. Adopted state persists without auto-relaunch, and deployment includes every runtime file.
+7. Existing mux-owned and /tomux behavior is not regressed.
+
+Verify with bounded commands of your choice. Existing expected gates include:
+- `python -m pytest muxd/tests/test_muxrun_attach.py muxd/tests/test_muxd_local_integration.py -q`
+- focused .NET tests for AdoptedMuxLauncher, MuxdTaskLaunch, RemoteCommandProtocol, and RemoteApi
+- `npm test` in relay
+
+Deliverable: findings ordered by severity with exact file/line evidence and a final standalone verdict:
+- `CLEAR` only if no deployment blocker remains.
+- `BLOCKED` with the exact required fixes otherwise.
+
+Stop after the verdict.

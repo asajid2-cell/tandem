@@ -16,7 +16,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveChildIdentity } from "../bin/fleet-identity.mjs";
-import { auditLaneScope } from "../bin/write-scope.mjs";
+import { auditLaneScope, reportedLaneChanges } from "../bin/write-scope.mjs";
 import { reapDisposition } from "../bin/fleet-doctor.mjs";
 
 const fresh = (p) => mkdtempSync(join(tmpdir(), p));
@@ -78,6 +78,53 @@ test("F1: no declared writes means nothing can be audited — say so rather than
   const v = auditLaneScope({ changed: ["a.rs"], writes: [] });
   assert.equal(v.ok, false);
   assert.match(v.detail, /no declared writes/i);
+});
+
+test("F1: collection attributes writes from the lane's own completed file_change telemetry", () => {
+  const stream = [
+    JSON.stringify({
+      type: "item.completed",
+      item: {
+        type: "file_change",
+        status: "completed",
+        changes: [{ path: "C:\\repo\\src\\owned.mjs", kind: "add" }],
+      },
+    }),
+    JSON.stringify({
+      type: "item.completed",
+      item: {
+        type: "file_change",
+        status: "completed",
+        changes: [{ path: "C:\\repo\\src\\owned.mjs", kind: "update" }],
+      },
+    }),
+    JSON.stringify({
+      type: "item.completed",
+      item: {
+        type: "file_change",
+        status: "completed",
+        changes: [{ path: "C:\\repo\\src\\outside.mjs", kind: "add" }],
+      },
+    }),
+  ].join("\n");
+
+  assert.deepEqual(reportedLaneChanges(stream), [
+    "C:\\repo\\src\\owned.mjs",
+    "C:\\repo\\src\\outside.mjs",
+  ]);
+  const audit = auditLaneScope({
+    changed: reportedLaneChanges(stream),
+    writes: ["C:\\repo\\src\\owned.mjs"],
+  });
+  assert.equal(audit.ok, false);
+  assert.deepEqual(audit.outside, ["C:\\repo\\src\\outside.mjs"]);
+});
+
+test("F1: absent file_change telemetry is explicit, never an empty green scope proof", () => {
+  assert.deepEqual(
+    reportedLaneChanges('{"type":"item.completed","item":{"type":"agent_message","text":"done"}}\n'),
+    [],
+  );
 });
 
 // ---- F3 -------------------------------------------------------------------------------------

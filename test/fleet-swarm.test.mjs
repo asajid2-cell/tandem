@@ -4,6 +4,7 @@
 // prepareSwarm never dispatches, so all of this runs modelless and offline.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -136,6 +137,34 @@ test("prepareSwarm: gates pass, registry stamped with driver->junior edge, chart
     assert.ok(sessions["ok/a"].charter.includes("FROZEN CONTRACT"));
     assert.ok(sessions["ok/a"].state.length > 0, "lane state dir recorded for fleet-doctor");
     assert.equal(sessions["ok/b"].model, "deepseek-flash", "profile wins as the recorded model");
+  });
+});
+
+test("prepareSwarm: records files already dirty at dispatch for collection-time scope custody", () => {
+  const root = freshTmp("prep-dirty-");
+  const state = freshTmp("prep-dirty-state-");
+  const manifestDir = freshTmp("prep-dirty-manifest-");
+  const runGit = (...args) => {
+    const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+  };
+
+  runGit("init");
+  writeFileSync(join(root, "existing.txt"), "before\n");
+  runGit("add", "existing.txt");
+  runGit("-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", "seed");
+  writeFileSync(join(root, "existing.txt"), "after\n");
+
+  withEnv({ TANDEM_FLEET_DIR: undefined, TANDEM_STATE: state }, () => {
+    const manifestPath = writeManifest(manifestDir, {
+      lanes: [sealedLane("a", { cwd: root })],
+    });
+    const record = prep(root, state, manifestPath, "dirty");
+    assert.deepEqual(
+      record.lanes[0].preDirty,
+      ["existing.txt"],
+      "the collector must be able to exempt dirt that predates the lane",
+    );
   });
 });
 

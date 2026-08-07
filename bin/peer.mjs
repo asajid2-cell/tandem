@@ -70,7 +70,7 @@ import {
 import { appendLedger, latestRateLimits, parseUsageFromStream, quotaVerdict } from "./lane-ledger.mjs";
 import { reapDisposition } from "./fleet-doctor.mjs";
 import { buildRehydrationBrief } from "./apex-memory.mjs";
-import { auditLaneScope } from "./write-scope.mjs";
+import { auditLaneScope, reportedLaneChanges } from "./write-scope.mjs";
 import { recheckSeeds } from "./lane-seeds.mjs";
 import { accountHome as accountHomeFor } from "./codex-accounts.mjs";
 import { locateOwnLane } from "./apex-gate.mjs";
@@ -2043,12 +2043,15 @@ async function swarmCommand(args, cfg) {
           pass = run.status === 0 && !run.error;
           tailText = `${run.stdout || ""}\n${run.stderr || ""}`.trim().split(/\r?\n/).slice(-3).join(" | ");
         }
+        const streamFile = join(lane.state, "turn.jsonl");
+        let streamText = "";
         let usage = {};
         try {
-          const streamFile = join(lane.state, "turn.jsonl");
-          usage = existsSync(streamFile) ? parseUsageFromStream(readFileSync(streamFile, "utf8")) : {};
+          streamText = existsSync(streamFile) ? readFileSync(streamFile, "utf8") : "";
+          usage = streamText ? parseUsageFromStream(streamText) : {};
           delete usage.rate_limits;
         } catch {
+          streamText = "";
           usage = {};
         }
         // CUSTODY: prove mechanically that the lane did not edit the assertions grading it. This
@@ -2062,35 +2065,23 @@ async function swarmCommand(args, cfg) {
             scopeNote += ` | SEEDS: ${seedCheck.detail}`;
           }
         }
-        // F1: the write-scope gate ran at DISPATCH and nothing checked what the lane ACTUALLY
-        // touched, so an out-of-scope write was invisible unless the driver hashed its own files.
-        // Audit at collection, where the evidence exists.
+        // F1: attribute writes from THIS lane's own completed file_change telemetry. A shared
+        // worktree's git status cannot identify an author: sibling outputs and driver work appear
+        // in every lane's view. Missing telemetry is inconclusive, never an empty green proof.
         try {
           const declared = lane.writesResolved?.length ? lane.writesResolved : lane.writes;
           if (declared?.length) {
-            const st = spawnSync("git", ["status", "--porcelain"], { cwd: lane.cwd, encoding: "utf8" });
-            if (!st.error && st.status === 0) {
-              const changed = String(st.stdout || "")
-                .split(/\r?\n/)
-                .filter(Boolean)
-                .map((l) => join(lane.cwd, l.slice(3).trim()));
-              // exempt the declared graders AND everything already dirty at dispatch (driver
-              // briefs, manifests, pre-existing work) — only NEW changes are the lane's doing
-              const exempt = [
-                ...(lane.seeds || []).map((s) => join(lane.cwd, s)),
-                ...(lane.preDirty || []).map((s) => join(lane.cwd, s)),
-              ];
-              const audit = auditLaneScope({ changed, writes: declared, seeds: exempt });
-              if (!audit.ok) {
-                scopeNote += ` | SCOPE: ${audit.detail}`; // APPEND — a plain assignment here
-                // silently erased the SEEDS finding, which is the graver one
-                if (audit.outside.length) {
-                  pass = false; // a content write outside the declared scope is never acceptable
-                  // GRADER-TAMPERED outranks a scope breach: editing the assertions that judge
-                  // you invalidates the verdict itself, so it must not be overwritten by a
-                  // lesser finding discovered afterwards
-                  if (verdictWord !== "GRADER-TAMPERED") verdictWord = "SCOPE-BREACH";
-                }
+            const changed = reportedLaneChanges(streamText);
+            if (!changed.length) {
+              scopeNote += " | SCOPE: inconclusive - no completed file_change telemetry";
+              pass = false;
+              if (verdictWord !== "GRADER-TAMPERED") verdictWord = "SCOPE-INCONCLUSIVE";
+            } else {
+              const audit = auditLaneScope({ changed, writes: declared });
+              scopeNote += ` | SCOPE: ${audit.detail}`;
+              if (!audit.ok && audit.outside.length) {
+                pass = false;
+                if (verdictWord !== "GRADER-TAMPERED") verdictWord = "SCOPE-BREACH";
               }
             }
           }

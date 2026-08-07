@@ -232,6 +232,36 @@ export function auditLaneScope({ changed = [], writes = [], formattingOnly = [],
   };
 }
 
+export function reportedLaneChanges(streamText) {
+  const changed = [];
+  const seen = new Set();
+  for (const line of String(streamText || "").split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const item = record?.item;
+    if (
+      record?.type !== "item.completed" ||
+      item?.type !== "file_change" ||
+      item?.status !== "completed" ||
+      !Array.isArray(item.changes)
+    ) {
+      continue;
+    }
+    for (const change of item.changes) {
+      const path = change?.path;
+      if (typeof path !== "string" || !path.trim() || seen.has(path)) continue;
+      seen.add(path);
+      changed.push(path);
+    }
+  }
+  return changed;
+}
+
 // VERIFIER CUSTODY — the audit's central hole, made mechanical.
 //
 // The engine runs whatever verify command the manifest names. Rust unit tests live inside the
